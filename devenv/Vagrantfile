@@ -1,0 +1,31 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+VAGRANTFILE_API_VERSION = "2"
+
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+  config.vm.synced_folder "../app", "/home/vagrant/app", create: true
+  config.vm.synced_folder "../", "/home/vagrant/linc-api", create: true
+
+  # Use an Ubuntu box
+  config.vm.box = "ubuntu/trusty64"
+
+  # For Heroku Deploy
+  config.vm.network :forwarded_port, guest:  5000, host: 5000 # API Port
+  config.vm.network :forwarded_port, guest: 27017, host: 27017 # MongoDB
+  config.vm.network :forwarded_port, guest: 8081, host: 8081 # MongoDB Adimin Dev Purposes
+
+  config.vm.network :private_network, ip: "192.168.100.10"
+
+  config.vm.provider :virtualbox do |vb|
+    vb.customize ["setextradata", :id, "VBoxInternal2/SharedFoldersEnableSymlinksCreate/app", "1"]
+    vb.customize ["setextradata", :id, "VBoxInternal2/SharedFoldersEnableSymlinksCreate/linc-api", "1"]
+    vb.customize ["modifyvm", :id, "--memory", "1024"]
+  end
+
+  # Provision without puppet or cheff, using shell scripts
+  config.vm.provision :shell, path: "./provision/ubuntu_provision.sh"
+
+  # ssh
+  config.ssh.forward_x11 = true
+end
