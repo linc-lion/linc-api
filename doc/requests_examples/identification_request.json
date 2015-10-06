@@ -1,0 +1,17 @@
+{ "identification" : {
+    "images": [
+        {
+        "id":131,
+        "type": "main-id",
+        "url":"http://linc-production.s3.amazonaws.com/2015/06/16/01/35/13/801/uploads_2F2015_2F6_2F16_2F514e42ad_436e_49ec_a2f4_9335acc63047_2FIMG_5633.JPG"
+        }
+    ],
+    "gender":"m",
+    "age":5,
+    "lions":[
+        {"id": 3, "url":"http://lion-guardians-api.herokuapp.com/lions/3", "updated_at":"2015-08-16T02:28:06.911Z"}
+    ]
+}
+}
+
+
