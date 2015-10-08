@@ -8,6 +8,8 @@ import tornado
 import tornado.template
 from tornado.options import define, options
 from handlers.error import ErrorHandler
+from tornado.ioloop import IOLoop
+from motorengine.connection import connect
 
 # make filepaths relative to settings.
 ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -58,6 +60,9 @@ tornado.options.parse_command_line()
 # import hashlib
 # hashlib.sha256('sample').hexdigest()
 
+io_loop = IOLoop.instance()
+db = connect("linc-api-lions", host="localhost", port=27017, io_loop=io_loop)
+
 # API settings
 api = {}
 api['debug'] = options.debug
@@ -67,9 +72,4 @@ api['app_path'] = os.path.dirname(os.path.realpath(__file__))
 api['default_handler_class'] = ErrorHandler
 api['default_handler_args'] = dict(status_code=404)
 api['version'] = 'api version 0.1'
-
-
-
-
-
-
+api['db'] = db

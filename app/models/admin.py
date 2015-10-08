@@ -2,7 +2,8 @@
 # -*- coding: utf-8 -*-
 
 import sys; sys.path.append('../')
-from monguo.field import StringField,DateTimeField,ReferenceField,BooleanField,LocationField,ListField,GenericDictField,EmailField,IntegerField
+from monguo.field import StringField,DateTimeField,ReferenceField,\
+    BooleanField,LocationField,ListField,GenericDictField,EmailField,IntegerField
 from monguo.document import Document
 import datetime
 
