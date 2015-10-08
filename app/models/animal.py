@@ -2,7 +2,9 @@
 # -*- coding: utf-8 -*-
 
 import sys; sys.path.append('../')
-from monguo.field import StringField,DateTimeField,ReferenceField,BooleanField,LocationField,ListField,GenericDictField,EmailField,IntegerField,FloatField
+from monguo.field import StringField,DateTimeField,\
+    ReferenceField,BooleanField,LocationField,ListField,\
+    GenericDictField,EmailField,IntegerField,FloatField
 from monguo.document import Document
 import datetime
 
@@ -10,7 +12,8 @@ animal = 'lion'
 animals = 'lions'
 
 class Animal(Document):
-    name = StringField()
+    name = StringField(required=True,unique=True)
+    iid = IntegerField(required=True,unique=True)
     organization_id = StringField()
     created_at = DateTimeField(required=True,default=datetime.datetime.now())
     updated_at = DateTimeField(required=True,default=datetime.datetime.now())

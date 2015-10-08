@@ -2,12 +2,14 @@
 # -*- coding: utf-8 -*-
 
 import sys; sys.path.append('../')
-from monguo.field import StringField,DateTimeField,ReferenceField,BooleanField,LocationField,ListField,GenericDictField,EmailField,IntegerField,FloatField
-from monguo.document import Document
-import datetime
+from datetime import datetime
+from motorengine.fields import StringField,DateTimeField,IntField,BooleanField
+from motorengine.document import Document
 
 class Organization(Document):
-    name = StringField()
-    created_at = DateTimeField(required=True,default=datetime.datetime.now())
-    updated_at = DateTimeField(required=True,default=datetime.datetime.now())
-    meta = {'collection':organizations}
+    __collection__ = "organizations"
+    name = StringField(required=True,unique=True)
+    iid = IntField(required=True,unique=True)
+    created_at = DateTimeField(required=True,auto_now_on_insert=True)
+    updated_at = DateTimeField(required=True,default=datetime.now())
+    trashed = BooleanField(required=True,default=False)
