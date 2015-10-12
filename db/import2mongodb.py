@@ -16,19 +16,26 @@ from datetime import datetime
 from handlers.base import BaseHandler
 
 # Import models
-from organization import Organization
-from user import User
-#from animal import Animal, animal as specie
+from models.organization import Organization
+from models.user import User
+from models.animal import Animal, animal as specie
+from models.imageset import ImageSet,Image
+from models.cv import CVRequest,CVResult
 
 jsonpath = realpath(dirname(__file__))+'/pg_exported2json/'
 
 files = ['organizations.json',
          'users.json',
-         'lions.json',
          'admin_users.json',
-         'active_admin_comments.json', 'cv_requests.json',
+         'lions.json',
+
+         'image_sets.json',
          'images.json',
-         'cv_results.json', 'image_sets.json',
+
+         'cv_requests.json',
+         'cv_results.json',
+
+         'active_admin_comments.json',
          'schema_migrations.json']
 
 def readData(filename):
@@ -75,42 +82,138 @@ class ImportHandler(BaseHandler):
             elif fn == 'lions.json':
                 for d in data:
                     obj = dict(d)
-                    print('\n\n'+str(obj))
+                    obj['iid'] = obj['id']
+                    del obj['id']
+                    obj['organization_iid'] = obj['organization_id']
+                    del obj['organization_id']
+                    obj['primary_image_set_iid'] = obj['primary_image_set_id']
+                    del obj['primary_image_set_id']
+                    obj['updated_at'] = datetime.strptime(obj['updated_at'], '%Y-%m-%d %H:%M:%S.%f')
+                    obj['created_at'] = datetime.strptime(obj['created_at'], '%Y-%m-%d %H:%M:%S.%f')
+                    #try:
+                    if True:
+                        newobj = yield Animal(**obj).save()
+                    else:
+                    #except:
+                        print('Fail to import lions')
+                        break
                 response['messages'].append('lions imported')
             elif fn in ['users.json','admin_users.json']:
                 for d in data:
                     obj = dict(d)
-                    # Get organization_id object
-                    try:
-                        orgobj = yield Organization.objects.limit(1).filter(iid=obj['organization_id']).find_all()
-                    except:
-                        orgobj = None
                     obj['iid'] = obj['id']
                     del obj['id']
-                    if orgobj:
-                        obj['organization_id'] = orgobj[0]._id
-                    else:
-                        obj['organization_id'] = orgobj
                     obj['last_sign_in_at'] = datetime.strptime(obj['last_sign_in_at'], '%Y-%m-%d %H:%M:%S.%f')
                     obj['updated_at'] = datetime.strptime(obj['updated_at'], '%Y-%m-%d %H:%M:%S.%f')
                     obj['created_at'] = datetime.strptime(obj['created_at'], '%Y-%m-%d %H:%M:%S.%f')
                     obj['current_sign_in_at'] = datetime.strptime(obj['current_sign_in_at'], '%Y-%m-%d %H:%M:%S.%f')
                     obj['trashed'] = False
                     obj['reset_password_sent_at'] = datetime.now()
-                    obj['authentication_token'] = ''
+                    obj['authentication_token'] = '--'
+                    if fn == 'admin_users.json':
+                        obj['iid'] = obj['iid'] + 10
+                        obj['email'] = 'admin-'+obj['email']
+                        obj['organization_iid'] = -1
+                    else:
+                        obj['organization_iid'] = obj['organization_id']
+                        del obj['organization_id']
                     obj['admin'] = (fn == 'admin_users.json')
                     if True:
                         newobj = yield User(**obj).save()
-                        print('\n Insert OK: '+fn)
                     else:
                         print('Fail to import users')
                         break
                 if fn == 'admin_users.json':
-                    response['messages'].append('users imported')
+                    response['messages'].append('admin users imported')
                 else:
                     response['messages'].append('users imported')
-            elif fn == 'other':
+            elif fn == 'image_sets.json':
                 for d in data:
                     obj = dict(d)
+                    obj['iid'] = obj['id']
+                    del obj['id']
+                    obj['animal_iid'] = obj['lion_id']
+                    del obj['lion_id']
+                    obj['main_image_iid'] = obj['main_image_id']
+                    del obj['main_image_id']
+                    obj['uploading_organization_iid'] = obj['uploading_organization_id']
+                    del obj['uploading_organization_id']
+                    obj['uploading_user_iid'] = obj['uploading_user_id']
+                    del obj['uploading_user_id']
+                    obj['owner_organization_iid'] = obj['owner_organization_id']
+                    del obj['owner_organization_id']
 
+                    obj['updated_at'] = datetime.strptime(obj['updated_at'], '%Y-%m-%d %H:%M:%S.%f')
+                    obj['created_at'] = datetime.strptime(obj['created_at'], '%Y-%m-%d %H:%M:%S.%f')
+                    if obj['photo_date']:
+                        obj['photo_date'] = datetime.strptime(obj['photo_date'], '%Y-%m-%d %H:%M:%S.%f')
+                    if obj['date_of_birth']:
+                        obj['date_of_birth'] = datetime.strptime(obj['date_of_birth'], '%Y-%m-%d %H:%M:%S.%f')
+                    if obj['date_stamp']:
+                        obj['date_stamp'] = datetime.strptime(obj['date_stamp'], '%Y-%m-%d')
+                    obj['tags'] = str(obj['tags'])
+                    #try:
+                    if True:
+                        newobj = yield ImageSet(**obj).save()
+                    else:
+                    #except:
+                        print('Fail to import image sets')
+                        break
+                response['messages'].append('image sets imported')
+            elif fn == 'images.json':
+                for d in data:
+                    obj = dict(d)
+                    obj['iid'] = obj['id']
+                    del obj['id']
+                    obj['image_set_iid'] = obj['image_set_id']
+                    del obj['image_set_id']
+                    obj['updated_at'] = datetime.strptime(obj['updated_at'], '%Y-%m-%d %H:%M:%S.%f')
+                    obj['created_at'] = datetime.strptime(obj['created_at'], '%Y-%m-%d %H:%M:%S.%f')
+                    #try:
+                    if True:
+                        newobj = yield Image(**obj).save()
+                    else:
+                    #except:
+                        print('Fail to import images')
+                        break
+                response['messages'].append('images imported')
+            elif fn == 'cv_requests.json':
+                for d in data:
+                    obj = dict(d)
+                    obj['iid'] = obj['id']
+                    del obj['id']
+                    obj['image_set_iid'] = obj['image_set_id']
+                    del obj['image_set_id']
+                    obj['uploading_organization_iid'] = obj['uploading_organization_id']
+                    del obj['uploading_organization_id']
+                    obj['updated_at'] = datetime.strptime(obj['updated_at'], '%Y-%m-%d %H:%M:%S.%f')
+                    obj['created_at'] = datetime.strptime(obj['created_at'], '%Y-%m-%d %H:%M:%S.%f')
+                    #try:
+                    if True:
+                        newobj = yield CVRequest(**obj).save()
+                    else:
+                    #except:
+                        print('Fail to import cv requests')
+                        break
+                response['messages'].append('cv requests imported')
+            elif fn == 'cv_results.json':
+                for d in data:
+                    obj = dict(d)
+                    print(str(obj))
+                    obj['iid'] = obj['id']
+                    del obj['id']
+                    obj['cv_request_iid'] = obj['cv_request_id']
+                    del obj['cv_request_id']
+                    obj['lion_iid'] = obj['lion_id']
+                    del obj['lion_id']
+                    obj['updated_at'] = datetime.strptime(obj['updated_at'], '%Y-%m-%d %H:%M:%S.%f')
+                    obj['created_at'] = datetime.strptime(obj['created_at'], '%Y-%m-%d %H:%M:%S.%f')
+                    #try:
+                    if True:
+                        newobj = yield CVResult(**obj).save()
+                    else:
+                    #except:
+                        print('Fail to import cv results')
+                        break
+                response['messages'].append('cv results imported')
         self.finish(response)

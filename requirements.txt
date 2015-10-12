@@ -1,3 +1,8 @@
-tornado==4.2
-Pillow
-git+https://github.com/aemitos/Monguo.git
+tornado==4.2.1
+Pillow==3.0.0
+easydict==1.6
+greenlet==0.4.9
+motor==0.2
+motorengine==0.9.0
+pymongo==2.7
+six==1.10.0
