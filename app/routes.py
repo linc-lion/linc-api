@@ -5,18 +5,26 @@ from handlers.base import VersionHandler
 from handlers.error import ErrorHandler
 from handlers.auth import AuthHandler
 import sys
-sys.path.append("../db")
-sys.path.append("../")
-from db.import2mongodb import ImportHandler
-
+#from db.import2mongodb import ImportHandler
+from handlers.animals import AnimalsHandler
+from handlers.organizations import OrganizationsHandler
+from handlers.users import UsersHandler
+from handlers.imagesets import ImageSetsHandler,ImagesHandler
+from handlers.cv import CVRequestsHandler,CVResultsHandler
 
 # Defining routes
-url_patterns = [
-    #(r"/auth/", AuthHandler),
-    #(r"/auth/(?P<id>[a-zA-Z0-9_]+)/?$", AuthQueryHandler),
-    #(r"/signal/", xHandler),
-    #(r"/signal/(.*)", yHandler),
-    (r"/version", VersionHandler),
-    # The handler above will be used only for import data from pg in development phase
-    (r"/import", ImportHandler)
-]
+def url_patterns(animals='lions'):
+    routes = [
+        (r"/version", VersionHandler),
+        # The handler above will be used only for import
+        # data from pg in development phase
+        #(r"/import", ImportHandler),
+        (r"/"+animals, AnimalsHandler),
+        (r"/organizations", OrganizationsHandler),
+        (r"/users", UsersHandler),
+        (r"/imagesets", ImageSetsHandler),
+        (r"/images", ImagesHandler),
+        (r"/cvrequests", CVRequestsHandler),
+        (r"/cvresults", CVResultsHandler)
+    ]
+    return routes

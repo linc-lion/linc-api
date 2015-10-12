@@ -9,6 +9,7 @@ from datetime import datetime
 
 class CVRequest(Document):
     __collection__ = 'cvrequests'
+    iid = IntField(required=True,unique=True)
     uploading_organization_iid = IntField(required=False,default=-1)
     image_set_iid = IntField(required=False,default=-1)
     status = StringField(required=False,default='registered')
