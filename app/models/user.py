@@ -12,7 +12,7 @@ class User(Document):
     __collection__ = 'users'
     email = EmailField(required=True,unique=True)
     iid = IntField(required=True,unique=True)
-    organization_id = ReferenceField(required=False,reference_document_type=Organization)
+    organization_iid = IntField(required=False,default=-1)
     created_at = DateTimeField(required=True,default=datetime.now())
     updated_at = DateTimeField(required=True,default=datetime.now())
 

@@ -66,6 +66,8 @@ and password `pass`.
 
 ## PgAdmin3 - PostgreSQL Admin Tool
 
+This application was included in the devenv to help visualization of PostgreSQL database.
+
 Execute:
 ```
 $ cd <git-repository-clone>/devenv

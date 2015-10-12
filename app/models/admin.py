@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 
 import sys; sys.path.append('../')
-from monguo.field import StringField,DateTimeField,ReferenceField,\
+from motorengine.field import StringField,DateTimeField,\
     BooleanField,LocationField,ListField,GenericDictField,EmailField,IntegerField
-from monguo.document import Document
+from motorengine.document import Document
 import datetime
 
 class ActiveAdminComment(Document):

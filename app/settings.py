@@ -11,6 +11,8 @@ from handlers.error import ErrorHandler
 from tornado.ioloop import IOLoop
 from motorengine.connection import connect
 
+# Adjusting path for the app
+
 # make filepaths relative to settings.
 ROOT = os.path.dirname(os.path.abspath(__file__))
 path = lambda *a: os.path.join(ROOT, *a)
@@ -36,21 +38,9 @@ for item in list(sys.path):
         sys.path.remove(item)
 sys.path[:0] = new_sys_path
 
-# port defined as heroku deploy
-define("port",
-    default=5000,
-    type=int,
-    help=("Server port")
-    )
-define("config",
-    default=None,
-    help=("Tornado configuration file")
-    )
-define('debug',
-    default=True,
-    type=bool,
-    help=("Turn on autoreload, log to stderr only")
-    )
+define("port",default=5000,type=int,help=("Server port"))
+define("config",default=None,help=("Tornado configuration file"))
+define('debug',default=True,type=bool,help=("Turn on autoreload, log to stderr only"))
 
 tornado.options.parse_command_line()
 
@@ -73,3 +63,5 @@ api['default_handler_class'] = ErrorHandler
 api['default_handler_args'] = dict(status_code=404)
 api['version'] = 'api version 0.1'
 api['db'] = db
+api['animal'] = 'lion'
+api['animals'] = 'lions'

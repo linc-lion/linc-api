@@ -1,29 +1,27 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import sys; sys.path.append('../')
-from monguo.field import StringField,DateTimeField,\
-    ReferenceField,BooleanField,LocationField,ListField,\
-    GenericDictField,EmailField,IntegerField,FloatField
-from monguo.document import Document
-import datetime
+from motorengine.fields import StringField,DateTimeField,\
+    ReferenceField,BooleanField,IntField
+from motorengine.document import Document
+from datetime import datetime
 
 animal = 'lion'
 animals = 'lions'
 
 class Animal(Document):
+    __collection__ = animals
     name = StringField(required=True,unique=True)
-    iid = IntegerField(required=True,unique=True)
-    organization_id = StringField()
-    created_at = DateTimeField(required=True,default=datetime.datetime.now())
-    updated_at = DateTimeField(required=True,default=datetime.datetime.now())
-    primary_image_set_id = StringField()
-    meta = {'collection':animals}
+    iid = IntField(required=True,unique=True)
+    organization_iid = IntField(required=False,default=-1)
+    created_at = DateTimeField(required=True,default=datetime.now())
+    updated_at = DateTimeField(required=True,default=datetime.now())
+    primary_image_set_iid = IntField(required=False,default=-1)
 
     @classmethod
     def set_collection(cls,collname):
         """ Changes the default collection name for a object in MongoDB """
-        cls.meta = {'collection':collname}
+        cls.__collection__ = collname
 
     def list_animals(self):
         """ List animals in the database """
