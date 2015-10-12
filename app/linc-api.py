@@ -22,16 +22,18 @@ logging.basicConfig(
     datefmt='%H:%M:%S'
 )
 
+url_routes = url_patterns(settings['animals'])
+
 # Tornado application
 class Application(tornado.web.Application):
     def __init__(self):
-        tornado.web.Application.__init__(self, url_patterns, **settings)
+        tornado.web.Application.__init__(self, url_routes, **settings)
 
 # Run server
 def main():
     app = Application()
     print('API handlers:')
-    for h in url_patterns:
+    for h in url_routes:
         print(h)
     httpserver = tornado.httpserver.HTTPServer(app)
     httpserver.listen(options.port)
