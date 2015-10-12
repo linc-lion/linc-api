@@ -93,7 +93,7 @@ redirect_stderr=true
 stdout_logfile=/tmp/linc-api.log
 numprocs=1
 user=vagrant
-directory=/home/vagrant/app/app
+directory=/home/vagrant/app
 
 EOF
 
