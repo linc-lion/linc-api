@@ -64,14 +64,7 @@ Once you have the vagrant env running go to browser and access
 [http://localhost:8081](http://localhost:8081). To access use username `admin`
 and password `pass`.
 
-## PgAdmin3 - PostgreSQL Admin Tool
+## PostgreSQL Admin Tool for development purposes
 
 This application was included in the devenv to help visualization of PostgreSQL database.
-
-Execute:
-```
-$ cd <git-repository-clone>/devenv
-$ vagrant ssh -c '/usr/bin/pgadmin3'
-```
-It requires a X Window Server (in Mac XQuartz, Linux commonly installs one).
-You will have to create a connection and provide name, and the password 'postgres' for the user 'postgres'.
+To open go to [http://localhost:7081](http://localhost:7081). To access use username `admin` and password `P4Ssw0rd`.
