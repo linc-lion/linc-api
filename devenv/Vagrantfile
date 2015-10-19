@@ -1,14 +1,20 @@
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 
+# Helper for host configuration - 32 or 64 bits systems
+require './helper/core'
+require './helper/utils'
+require './helper/config'
+
 VAGRANTFILE_API_VERSION = "2"
 
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.vm.synced_folder "../app", "/home/vagrant/app", create: true
   config.vm.synced_folder "../", "/home/vagrant/linc-api", create: true
 
-  # Use an Ubuntu box
-  config.vm.box = "ubuntu/trusty64"
+  # Use an Ubuntu box based in the host arch
+  arch = Vagrant::Util::Platform::bit64? ? 64 : 32
+  config.vm.box = "ubuntu/trusty#{arch}"
 
   # For Heroku Deploy
   config.vm.network :forwarded_port, guest:  5000, host: 5000 # API Port
