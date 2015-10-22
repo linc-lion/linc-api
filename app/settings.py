@@ -66,5 +66,11 @@ api['default_handler_class'] = ErrorHandler
 api['default_handler_args'] = dict(status_code=404)
 api['version'] = 'api version 0.1'
 api['db'] = db
+
+# Setting about deploy and CV Server
 api['animal'] = 'lion'
 api['animals'] = 'lions'
+
+api['CVSERVER_URL_IDENTIFICATION'] = 'https://linc.semantic.md/identifications'
+api['CV_USERNAME'] = 'simba@semantic.md'
+api['CV_PASSWORD'] = 'Admin123'
