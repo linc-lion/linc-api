@@ -46,7 +46,12 @@ class ImageSetsHandler(BaseHandler):
                         url = obji[0].url[:obji[0].url.index('.com/')+5]
                         imgset_obj['thumbnail'] = url + obji[0].thumbnail_image_uid
                     else:
-                        imgset_obj['thumbnail'] = '-'
+                        obji = yield Image.objects.filter(image_set_iid=obj.iid).find_all()
+                        if len(obji) > 0:
+                            url = obji[0].url[:obji[0].url.index('.com/')+5]
+                            imgset_obj['thumbnail'] = url + obji[0].thumbnail_image_uid
+                        else:
+                            imgset_obj['thumbnail'] = '-'
 
                     if obj.date_of_birth:
                         imgset_obj['age'] = self.age(born=obj.date_of_birth)
@@ -66,13 +71,14 @@ class ImageSetsHandler(BaseHandler):
                     objcvreq = yield CVRequest.objects.filter(image_set_iid=obj.iid).find_all()
                     if len(objcvreq) > 0:
                         imgset_obj['cvrequest'] = str(objcvreq[0]._id)
-                        objcvres = yield CVResult.objects.filter(cv_request_iid=objcvreq[0].iid).find_all()
-                        if len(objcvres) > 0:
-                             imgset_obj['cvresults'] = str(objcvres[0]._id)
-                        else:
-                             imgset_obj['cvresults'] = None
                     else:
                         imgset_obj['cvrequest'] = None
+
+                    imgset_obj['cvresults'] = None
+                    if len(objcvreq) > 0:
+                        objcvres = yield CVResult.objects.filter(cv_request_iid=objcvreq[0].iid).find_all()
+                        if len(objcvres) > 0:
+                            imgset_obj['cvresults'] = str(objcvres[0]._id)
                     output.append(imgset_obj)
                 self.finish(self.json_encode({'status':'success','data':output}))
             elif cvrequest:
