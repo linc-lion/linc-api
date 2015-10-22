@@ -12,5 +12,11 @@ class ErrorHandler(EHandler, BaseHandler):
     def post(self):
         self.reqresp(self)
 
+    def put(self):
+        self.reqresp(self)
+
+    def delete(seld):
+        self.reqresp(self)
+
     def reqresp(self):
         self.write({'status':'error','message':'resource can not be found','code':str(self.status_code)})

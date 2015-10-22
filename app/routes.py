@@ -20,7 +20,12 @@ def url_patterns(animals='lions'):
         # data from pg in development phase
         #(r"/import", ImportHandler),
         (r"/"+animals+'/?', AnimalsHandler),
-        (r"/organizations/?", OrganizationsHandler),
+
+        #(r"/organizations/?", OrganizationsHandler),
+        (r"/organizations/?$", OrganizationsHandler),
+        (r"/organizations/(.*)$", OrganizationsHandler),
+        (r"/organizations/(\w+)/(edit)$", OrganizationsHandler),
+
         (r"/users/?", UsersHandler),
 
         (r"/imagesets/?$", ImageSetsHandler),
