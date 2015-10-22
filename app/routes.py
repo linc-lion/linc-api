@@ -15,16 +15,20 @@ from handlers.cv import CVRequestsHandler,CVResultsHandler
 # Defining routes
 def url_patterns(animals='lions'):
     routes = [
-        (r"/version", VersionHandler),
+        (r"/version/?", VersionHandler),
         # The handler above will be used only for import
         # data from pg in development phase
         #(r"/import", ImportHandler),
-        (r"/"+animals, AnimalsHandler),
-        (r"/organizations", OrganizationsHandler),
-        (r"/users", UsersHandler),
-        (r"/imagesets", ImageSetsHandler),
-        (r"/images", ImagesHandler),
-        (r"/cvrequests", CVRequestsHandler),
-        (r"/cvresults", CVResultsHandler)
+        (r"/"+animals+'/?', AnimalsHandler),
+        (r"/organizations/?", OrganizationsHandler),
+        (r"/users/?", UsersHandler),
+
+        (r"/imagesets/?$", ImageSetsHandler),
+        (r"/imagesets/(\w+$)", ImageSetsHandler),
+        (r"/imagesets/(\w+)/(cvrequest)$", ImageSetsHandler),
+
+        (r"/images/?", ImagesHandler),
+        (r"/cvrequests/?", CVRequestsHandler),
+        (r"/cvresults/?", CVResultsHandler)
     ]
     return routes

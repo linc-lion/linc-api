@@ -6,11 +6,8 @@ from motorengine.fields import StringField,DateTimeField,\
 from motorengine.document import Document
 from datetime import datetime
 
-animal = 'lion'
-animals = 'lions'
-
 class Animal(Document):
-    __collection__ = animals
+    #__collection__ = animals
     name = StringField(required=True,unique=True)
     iid = IntField(required=True,unique=True)
     organization_iid = IntField(required=False,default=-1)

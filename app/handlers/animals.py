@@ -12,6 +12,9 @@ class AnimalsHandler(BaseHandler):
     @asynchronous
     @coroutine
     def get(self):
-        objs = yield Animal.objects.find_all()
+        # Configuring the Animal
+        Animals = Animal()
+        Animals.set_collection(self.settings['animals'])
+        objs = yield Animals.objects.find_all()
         objs = [x.to_son() for x in objs]
         self.finish(self.json_encode(objs))

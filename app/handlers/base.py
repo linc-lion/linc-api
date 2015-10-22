@@ -5,7 +5,7 @@ from json import load,loads,dumps,dump
 from tornado.web import RequestHandler,asynchronous
 from tornado.gen import engine,coroutine
 import string,os
-
+from datetime import date
 
 class BaseHandler(RequestHandler):
     """A class to collect common handler methods - all other handlers should
@@ -76,6 +76,11 @@ class BaseHandler(RequestHandler):
          self.set_status(404)
          self.write({'status':'fail','message':message})
          self.finish()
+
+    def age(self,born):
+        today = date.today()
+        return today.year - born.year - ((today.month, today.day) < (born.month, born.day))
+
 
 class VersionHandler(BaseHandler):
     def get(self):

@@ -18,9 +18,13 @@ class ImageSet(Document):
     owner_organization_iid = IntField(required=False,default=-1)
 
     is_verified = BooleanField(required=True,default=False)
+
     latitude = FloatField(required=False,default=0.0)
-    decimal = FloatField(required=False,default=None)
     longitude = FloatField(required=False,default=0.0)
+
+    geopos = [19.000,200.00]
+
+    decimal = FloatField(required=False,default=None)
     photo_date = DateTimeField(required=False,default=None)
     gender = StringField(required=False,default=None)
     is_primary = BooleanField(required=True,default=False)
