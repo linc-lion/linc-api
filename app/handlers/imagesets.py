@@ -51,7 +51,7 @@ class ImageSetsHandler(BaseHandler):
                             url = obji[0].url[:obji[0].url.index('.com/')+5]
                             imgset_obj['thumbnail'] = url + obji[0].thumbnail_image_uid
                         else:
-                            imgset_obj['thumbnail'] = '-'
+                            imgset_obj['thumbnail'] = ''
 
                     if obj.date_of_birth:
                         imgset_obj['age'] = self.age(born=obj.date_of_birth)
