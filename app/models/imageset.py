@@ -9,23 +9,14 @@ from datetime import datetime
 
 class ImageSet(Document):
     __collection__ = 'imagesets'
-    iid = IntField(required=True,unique=True)
-
     animal_iid = IntField(required=False,default=-1)
+    iid = IntField(required=True,unique=True)
     main_image_iid = IntField(required=False,default=-1)
     uploading_organization_iid = IntField(required=False,default=-1)
     uploading_user_iid = IntField(required=False,default=-1)
     owner_organization_iid = IntField(required=False,default=-1)
-
     is_verified = BooleanField(required=True,default=False)
-
-    latitude = FloatField(required=False,default=0.0)
-    longitude = FloatField(required=False,default=0.0)
-
-    geopos = [19.000,200.00]
-
-    decimal = FloatField(required=False,default=None)
-    photo_date = DateTimeField(required=False,default=None)
+    location = ListField(ListField(FloatField()))
     gender = StringField(required=False,default=None)
     is_primary = BooleanField(required=True,default=False)
     created_at = DateTimeField(required=True,default=datetime.now())
@@ -37,8 +28,8 @@ class ImageSet(Document):
 
 class Image(Document):
     __collection__ = 'images'
-    iid = IntField(required=True,unique=True)
     image_type = StringField(required=True)
+    iid = IntField(required=True,unique=True)
     image_set_iid = IntField(required=False,default=-1)
     is_public = BooleanField(required=True,default=False)
     url = URLField(required=True)

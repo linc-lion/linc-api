@@ -18,8 +18,8 @@ PROGRAM_NAME=linc-api
 PROGRAMA_LABEL_NAME=LINC-API
 
 # Timezone definition
-#msg "Setting timezone: America/Sao_Paulo"
-#sudo timedatectl set-timezone America/Sao_Paulo
+msg "Setting timezone: EST"
+sudo timedatectl set-timezone EST > /dev/null
 
 # Adding repos
 msg "Adding packages repos"

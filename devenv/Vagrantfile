@@ -16,7 +16,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   arch = Vagrant::Util::Platform::bit64? ? 64 : 32
   config.vm.box = "ubuntu/trusty#{arch}"
 
-  # For Heroku Deploy
+  # Ports for services and api in development mode - 5000 for heroky deploy
   config.vm.network :forwarded_port, guest:  5000, host: 5000 # API Port
   config.vm.network :forwarded_port, guest: 27017, host: 27017 # MongoDB
   config.vm.network :forwarded_port, guest: 8081, host: 8081 # MongoDB Adimin Dev Purposes
@@ -34,7 +34,6 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   # Provision without puppet or cheff, using shell scripts
   config.vm.provision :shell, path: "./provision/ubuntu_provision.sh"
 
-  # ssh
-  config.ssh.forward_agent = true
+  # X11 over ssh
   config.ssh.forward_x11 = true
 end

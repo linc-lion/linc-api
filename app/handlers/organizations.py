@@ -17,13 +17,7 @@ class OrganizationsHandler(BaseHandler):
             if org_id == 'list':
                 # return a list of organizations for the website
                 objs = yield Organization.objects.find_all()
-                output = list()
-                for x in objs:
-                    obj = dict()
-                    obj['id'] = x.iid
-                    obj['name'] = x.name
-                    output.append(obj)
-                self.finish(self.json_encode({'status':'success','data':output}))
+                self.finish(self.json_encode({'status':'success','data':self.list(objs)}))
             elif edit:
                 pass
             else:
@@ -31,9 +25,9 @@ class OrganizationsHandler(BaseHandler):
                 try:
                     query = { 'iid' : int(org_id) }
                 except:
-                    if len(org_id) > 23:
+                    try:
                         query = { 'id' : ObjId(org_id) }
-                    else:
+                    except:
                         query = { 'name' : org_id}
                 objs = yield Organization.objects.filter(**query).limit(1).find_all()
                 if len(objs) > 0:
@@ -56,6 +50,7 @@ class OrganizationsHandler(BaseHandler):
                 obj['id'] = obj['iid']
                 del obj['iid']
                 output.append(obj)
+            self.set_status(200)
             self.finish(self.json_encode({'status':'success','data':output}))
 
     def put(self, org_id):
@@ -69,3 +64,13 @@ class OrganizationsHandler(BaseHandler):
     def delete(self, item_id):
         # delete an organization
         pass
+
+    def list(self,objs):
+        """ Implements the list output used for UI in the website """
+        output = list()
+        for x in objs:
+            obj = dict()
+            obj['id'] = x.iid
+            obj['name'] = x.name
+            output.append(obj)
+        return output

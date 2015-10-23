@@ -130,7 +130,6 @@ class ImageSetsHandler(BaseHandler):
         # delete an imageset
         pass
 
-
 class ImagesHandler(BaseHandler):
     """A class that handles requests about images
     """
