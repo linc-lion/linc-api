@@ -43,19 +43,12 @@ class BaseHandler(RequestHandler):
         obj['id'] = obj['iid']
         del obj['iid']
 
-    def sanitizestr(self,strs):
-        txt = "%s%s" % (string.ascii_letters, string.digits)
-        return ''.join(c for c in strs if c in txt)
+    def dropError(self,code=400,message=""):
+        self.set_status(code)
+        self.finish({'status':'error', 'message':message})
 
     def json_encode(self,value):
         return dumps(value,default=str).replace("</", "<\\/")
-
-    def set_default_headers(self):
-        self.set_header('Content-Type', 'application/json; charset=UTF-8')
-
-    def write_error(self, status_code, **kwargs):
-        self.write({'status':'error','message':'fail to execute request','code':str(status_code)})
-        self.finish()
 
     def auth_check(self):
         # This method depends of the authentication method defined for the project
@@ -63,11 +56,6 @@ class BaseHandler(RequestHandler):
         #key = self.get_argument('auth_key',None)
         #if key != self.settings['auth_key']:
         #    self.authfail()
-
-    def dropError(self,code=400,message=""):
-        self.set_status(code)
-        self.write({'status':'error', 'message':message})
-        self.finish()
 
     def prepare(self):
         self.auth_check()
@@ -80,6 +68,24 @@ class BaseHandler(RequestHandler):
                     self.input_data[k] = v[0].decode("utf-8")
         except ValueError:
             self.dropError(400,'Failure parsing input data.')
+
+    def set_default_headers(self):
+        self.set_header('Content-Type', 'application/json; charset=UTF-8')
+
+    def age(self,born):
+        today = date.today()
+        return today.year - born.year - ((today.month, today.day) < (born.month, born.day))
+
+
+
+
+    def sanitizestr(self,strs):
+        txt = "%s%s" % (string.ascii_letters, string.digits)
+        return ''.join(c for c in strs if c in txt)
+
+    def write_error(self, status_code, **kwargs):
+        self.write({'status':'error','message':'fail to execute request','code':str(status_code)})
+        self.finish()
 
     # http status code returned will be rechecked soon
     def authfail(self):
@@ -103,17 +109,10 @@ class BaseHandler(RequestHandler):
         self.write({"status":"fail", "message":message})
         self.finish()
 
-
-
     def not_found(self,message=""):
          self.set_status(404)
          self.write({'status':'fail','message':message})
          self.finish()
-
-    def age(self,born):
-        today = date.today()
-        return today.year - born.year - ((today.month, today.day) < (born.month, born.day))
-
 
 class VersionHandler(BaseHandler):
     def get(self):
