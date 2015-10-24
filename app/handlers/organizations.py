@@ -11,8 +11,19 @@ from tornado.escape import json_decode
 from datetime import datetime
 
 class OrganizationsHandler(BaseHandler):
-    """A class that handles requests about organizations informartion
-    """
+    """A class that handles requests about organizations informartion"""
+
+    def query_id(self,org_id):
+        """This method configures the query that will find an object"""
+        try:
+            query = { 'iid' : int(org_id) }
+        except:
+            try:
+                query = { 'id' : ObjId(org_id) }
+            except:
+                query = { 'name' : org_id}
+        return query
+
     @asynchronous
     @coroutine
     def get(self, org_id=None):
@@ -27,13 +38,7 @@ class OrganizationsHandler(BaseHandler):
                 self.finish(self.json_encode({'status':'success','data':self.list(objs)}))
             else:
                 # return a specific organization accepting as id the integer id, hash and name
-                try:
-                    query = { 'iid' : int(org_id) }
-                except:
-                    try:
-                        query = { 'id' : ObjId(org_id) }
-                    except:
-                        query = { 'name' : org_id}
+                query = self.query_id(org_id)
                 objs = yield Organization.objects.filter(**query).limit(1).find_all()
                 if len(objs) > 0:
                     objorg = objs[0].to_son()
@@ -47,26 +52,23 @@ class OrganizationsHandler(BaseHandler):
                     self.finish(self.json_encode({'status':'error','message':'not found'}))
         else:
             # return a list of organizations
-            objs = yield Organization.objects.find_all()
+            #objs = yield Organization.objects.find_all()
+            objs = yield self.settings['db'].organizations.find().to_list(None)
             output = list()
             for x in objs:
-                obj = x.to_son()
-                obj['obj_id'] = str(x._id)
-                obj['id'] = obj['iid']
-                del obj['iid']
+                obj = dict(x)
+                obj['obj_id'] = str(x['_id'])
+                del obj['_id']
+                self.switch_iid(obj)
                 output.append(obj)
             self.set_status(200)
             self.finish(self.json_encode({'status':'success','data':output}))
-
-    def put(self, org_id):
-        # update an organization
-        pass
 
     @asynchronous
     @engine
     def post(self):
         # create a new organization
-        # parse data recept by POST and get only fields of the
+        # parse data recept by POST and get only fields of the object
         newobj = self.parseInput(Organization)
         # getting new integer id
         newobj['iid'] = yield Task(self.new_iid,Organization.__collection__)
@@ -88,12 +90,56 @@ class OrganizationsHandler(BaseHandler):
             # received data is invalid in some way
             self.dropError(400,'Invalid input data.')
 
+    @asynchronous
+    @coroutine
+    def put(self, org_id=None):
+        # update an organization
+        # parse data recept by PUT and get only fields of the object
+        update_data = self.parseInput(Organization)
+        fields_allowed_to_be_update = ['name']
+        # validate the input for update
+        update_ok = False
+        for k in fields_allowed_to_be_update:
+            if k in update_data.keys():
+                update_ok = True
+                break
+        if org_id and update_ok:
+            query = self.query_id(org_id)
+            #updobj = yield self.settings['db'].organizations.find_one(query)
+            updobj = yield Organization.objects.filter(**query).limit(1).find_all()
+            if len(updobj) > 0:
+                updobj = updobj[0]
+                for field in fields_allowed_to_be_update:
+                    exec("updobj."+field+" = '"+update_data[field]+"'")
+                updobj.updated_at = datetime.now()
+                try:
+                    if updobj.validate():
+                        # the object is valid, so try to save
+                        try:
+                            saved = yield updobj.save()
+                            output = saved.to_son()
+                            output['obj_id'] = str(saved._id)
+                            # Change iid to id in the output
+                            self.switch_iid(output)
+                            self.finish(self.json_encode({'status':'success','message':'organization updated','data':output}))
+                        except:
+                            # duplicated index error
+                            self.dropError(409,'duplicated name for an organization')
+                except:
+                    # received data is invalid in some way
+                    self.dropError(400,'Invalid input data.')
+            else:
+                self.dropError(404,'organization not found')
+        else:
+            self.dropError(400,'Update requests (PUT) must have a resource ID and update pairs for key and value.')
+
     def delete(self, item_id):
         # delete an organization
         pass
 
     def list(self,objs):
-        """ Implements the list output used for UI in the website """
+        """ Implements the list output used for UI in the website
+        """
         output = list()
         for x in objs:
             obj = dict()
