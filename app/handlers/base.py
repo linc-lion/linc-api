@@ -12,6 +12,37 @@ class BaseHandler(RequestHandler):
     inherit this one.
     """
 
+    def prepare(self):
+        self.input_data = dict()
+        if self.request.headers["Content-Type"].startswith("application/json"):
+            try:
+                if self.request.body:
+                    self.input_data = json_decode(self.request.body.decode("utf-8"))
+                for k,v in self.request.arguments.items():
+                    if str(k) != str(self.request.body.decode("utf-8")):
+                        self.input_data[k] = v[0].decode("utf-8")
+                self.input_data = recursive_unicode(self.input_data)
+            except ValueError:
+                self.send_error(400, reason='Invalid input data.')
+
+    @asynchronous
+    @engine
+    def new_iid(self,collection,callback=None):
+        iid = yield self.settings['db'].counters.find_and_modify(query={'_id':collection}, update={'$inc' : {'next':1}}, new=True, upsert=True)
+        callback(iid['next'])
+
+    def parseInput(self,objmodel):
+        valid_fields = objmodel._fields.keys()
+        newobj = dict()
+        for k,v in self.input_data.items():
+            if k in valid_fields:
+                newobj[k] = v
+        return newobj
+
+    def switch_iid(self,obj):
+        obj['id'] = obj['iid']
+        del obj['iid']
+
     def sanitizestr(self,strs):
         txt = "%s%s" % (string.ascii_letters, string.digits)
         return ''.join(c for c in strs if c in txt)
@@ -33,6 +64,11 @@ class BaseHandler(RequestHandler):
         #if key != self.settings['auth_key']:
         #    self.authfail()
 
+    def dropError(self,code=400,message=""):
+        self.set_status(code)
+        self.write({'status':'error', 'message':message})
+        self.finish()
+
     def prepare(self):
         self.auth_check()
         self.input_data = dict()
@@ -43,7 +79,7 @@ class BaseHandler(RequestHandler):
                 if str(k) != str(self.request.body.decode("utf-8")):
                     self.input_data[k] = v[0].decode("utf-8")
         except ValueError:
-            self.send_error(400, message='Failure parsing input data.') # Bad Request
+            self.dropError(400,'Failure parsing input data.')
 
     # http status code returned will be rechecked soon
     def authfail(self):
@@ -67,10 +103,7 @@ class BaseHandler(RequestHandler):
         self.write({"status":"fail", "message":message})
         self.finish()
 
-    def drop_error(self,message=""):
-        self.set_status(500)
-        self.write({'status':'error', 'message':message})
-        self.finish()
+
 
     def not_found(self,message=""):
          self.set_status(404)
