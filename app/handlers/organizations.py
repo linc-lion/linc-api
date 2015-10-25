@@ -13,7 +13,7 @@ from datetime import datetime
 class OrganizationsHandler(BaseHandler):
     """A class that handles requests about organizations informartion"""
 
-    def query_id(self,org_id):
+    def query_id(self,org_id,trashed=False):
         """This method configures the query that will find an object"""
         try:
             query = { 'iid' : int(org_id) }
@@ -22,6 +22,7 @@ class OrganizationsHandler(BaseHandler):
                 query = { 'id' : ObjId(org_id) }
             except:
                 query = { 'name' : org_id}
+        query = {'$and':[query,{'trashed':trashed}]}
         return query
 
     @asynchronous
@@ -33,7 +34,7 @@ class OrganizationsHandler(BaseHandler):
                 # ORM way
                 #objs = yield Organization.objects.find_all()
                 # Motor way
-                objs = yield self.settings['db'].organizations.find().to_list(None)
+                objs = yield self.settings['db'].organizations.find({'trashed':False}).to_list(None)
                 self.set_status(200)
                 self.finish(self.json_encode({'status':'success','data':self.list(objs)}))
             else:
@@ -53,7 +54,7 @@ class OrganizationsHandler(BaseHandler):
         else:
             # return a list of organizations
             #objs = yield Organization.objects.find_all()
-            objs = yield self.settings['db'].organizations.find().to_list(None)
+            objs = yield self.settings['db'].organizations.find({'trashed':False}).to_list(None)
             output = list()
             for x in objs:
                 obj = dict(x)
@@ -96,7 +97,7 @@ class OrganizationsHandler(BaseHandler):
         # update an organization
         # parse data recept by PUT and get only fields of the object
         update_data = self.parseInput(Organization)
-        fields_allowed_to_be_update = ['name']
+        fields_allowed_to_be_update = ['name','trashed']
         # validate the input for update
         update_ok = False
         for k in fields_allowed_to_be_update:
@@ -133,9 +134,42 @@ class OrganizationsHandler(BaseHandler):
         else:
             self.dropError(400,'Update requests (PUT) must have a resource ID and update pairs for key and value.')
 
-    def delete(self, item_id):
+    @asynchronous
+    @coroutine
+    def delete(self, org_id=None):
         # delete an organization
-        pass
+        if org_id:
+            query = self.query_id(org_id)
+            updobj = yield self.settings['db'].organizations.find_one(query)
+            if updobj:
+                # check for references
+                refcount = 0
+                iid = updobj['iid']
+                # user - organization_iid
+                userrc = yield self.settings['db'].users.find({'organization_iid':iid,'trashed':False}).count()
+                refcount += userrc
+                # imageset - uploading_organization_iid
+                # imageset - owner_organization_iid
+                imgsetrc = yield self.settings['db'].imagesets.find({'$or' : [{'uploading_organization_iid':iid},{'owner_organization_iid':iid},{'trashed':False}]}).count()
+                refcount += imgsetrc
+                # animal - organization_iid
+                animalsrc = yield self.settings['db'].animals.find({'organization_iid':iid,'trashed':False}).count()
+                refcount += animalsrc
+                # cvrequest - uploading_organization_iid
+                cvreqrc = yield self.settings['db'].cvrequests.find({'uploading_organization_iid':iid,'trashed':False}).count()
+                refcount += cvreqrc
+                if refcount > 0:
+                    self.dropError(409,"organization can't be deleted because it has references in the database.")
+                else:
+                    try:
+                        updobj = yield self.settings['db'].organizations.update(query,{'$set':{'trashed':True,'updated_at':datetime.now()}})
+                        self.setSuccess(200,'organization successfully deleted')
+                    except:
+                        self.dropError(500,'fail to delete organization')
+            else:
+                self.dropError(404,'organization not found')
+        else:
+            self.dropError(400,'Remove requests (DELETE) must have a resource ID.')
 
     def list(self,objs):
         """ Implements the list output used for UI in the website

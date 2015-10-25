@@ -43,6 +43,13 @@ class BaseHandler(RequestHandler):
         obj['id'] = obj['iid']
         del obj['iid']
 
+    def setSuccess(self,code=200,message="",data=None):
+        output_response = {'status':'success','message':message}
+        if data:
+            output_response['data'] = data
+        self.set_status(code)
+        self.finish(output_response)
+
     def dropError(self,code=400,message=""):
         self.set_status(code)
         self.finish({'status':'error', 'message':message})
@@ -83,25 +90,10 @@ class BaseHandler(RequestHandler):
         txt = "%s%s" % (string.ascii_letters, string.digits)
         return ''.join(c for c in strs if c in txt)
 
-    def write_error(self, status_code, **kwargs):
-        self.write({'status':'error','message':'fail to execute request','code':str(status_code)})
-        self.finish()
-
     # http status code returned will be rechecked soon
     def authfail(self):
         self.set_status(401)
         self.write({'status':'fail','message':'authentication failed'})
-        self.finish()
-
-    def success(self,message="",data=None,create=False):
-        if create:
-            self.set_status(201)
-        else:
-            self.set_status(200)
-        output_response = {'status':'success','message':message}
-        if data:
-            output_response['data'] = data
-        self.write(output_response)
         self.finish()
 
     def data_exists(self,message=""):
