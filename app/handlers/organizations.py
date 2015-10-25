@@ -97,7 +97,7 @@ class OrganizationsHandler(BaseHandler):
         # update an organization
         # parse data recept by PUT and get only fields of the object
         update_data = self.parseInput(Organization)
-        fields_allowed_to_be_update = ['"name"','trashed']
+        fields_allowed_to_be_update = ['name','trashed']
         # validate the input for update
         update_ok = False
         for k in fields_allowed_to_be_update:
@@ -114,7 +114,12 @@ class OrganizationsHandler(BaseHandler):
                 updobj = updobj[0]
                 for field in fields_allowed_to_be_update:
                     if field in update_data.keys():
-                        exec("updobj."+field+" = "+str(update_data[field]))
+                        cmd = "updobj."+field+" = "
+                        if isinstance(update_data[field],str):
+                            cmd = cmd + "'" + str(update_data[field]) + "'"
+                        else:
+                            cmd = cmd + str(update_data[field])
+                        exec(cmd)
                 updobj.updated_at = datetime.now()
                 try:
                     if updobj.validate():
