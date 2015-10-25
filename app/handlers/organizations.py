@@ -22,7 +22,7 @@ class OrganizationsHandler(BaseHandler):
                 query = { 'id' : ObjId(org_id) }
             except:
                 query = { 'name' : org_id}
-        query = {'$and':[query,{'trashed':trashed}]}
+        query['trashed'] = trashed
         return query
 
     @asynchronous
@@ -97,7 +97,7 @@ class OrganizationsHandler(BaseHandler):
         # update an organization
         # parse data recept by PUT and get only fields of the object
         update_data = self.parseInput(Organization)
-        fields_allowed_to_be_update = ['name','trashed']
+        fields_allowed_to_be_update = ['"name"','trashed']
         # validate the input for update
         update_ok = False
         for k in fields_allowed_to_be_update:
@@ -106,12 +106,15 @@ class OrganizationsHandler(BaseHandler):
                 break
         if org_id and update_ok:
             query = self.query_id(org_id)
+            if 'trashed' in update_data.keys():
+                del query['trashed']
             #updobj = yield self.settings['db'].organizations.find_one(query)
             updobj = yield Organization.objects.filter(**query).limit(1).find_all()
             if len(updobj) > 0:
                 updobj = updobj[0]
                 for field in fields_allowed_to_be_update:
-                    exec("updobj."+field+" = '"+update_data[field]+"'")
+                    if field in update_data.keys():
+                        exec("updobj."+field+" = "+str(update_data[field]))
                 updobj.updated_at = datetime.now()
                 try:
                     if updobj.validate():
