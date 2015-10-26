@@ -28,15 +28,22 @@ class OrganizationsHandler(BaseHandler):
     @asynchronous
     @coroutine
     def get(self, org_id=None):
+        trashed = self.get_argument('trashed',False)
+        if trashed:
+            if trashed.lower() == 'true':
+                trashed = True
+            else:
+                trashed = False
         if org_id:
             if org_id == 'list':
                 # return a list of organizations for the website
                 # ORM way
                 #objs = yield Organization.objects.find_all()
                 # Motor way
-                objs = yield self.settings['db'].organizations.find({'trashed':False}).to_list(None)
+                objs = yield self.settings['db'].organizations.find({'trashed':trashed}).to_list(None)
                 self.set_status(200)
                 self.finish(self.json_encode({'status':'success','data':self.list(objs)}))
+
             else:
                 # return a specific organization accepting as id the integer id, hash and name
                 query = self.query_id(org_id)
@@ -54,7 +61,7 @@ class OrganizationsHandler(BaseHandler):
         else:
             # return a list of organizations
             #objs = yield Organization.objects.find_all()
-            objs = yield self.settings['db'].organizations.find({'trashed':False}).to_list(None)
+            objs = yield self.settings['db'].organizations.find({'trashed':trashed}).to_list(None)
             output = list()
             for x in objs:
                 obj = dict(x)

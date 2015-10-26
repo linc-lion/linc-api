@@ -4,8 +4,10 @@
 from json import load,loads,dumps,dump
 from tornado.web import RequestHandler,asynchronous
 from tornado.gen import engine,coroutine
+from tornado.escape import utf8
 import string,os
 from datetime import date
+import hashlib
 
 class BaseHandler(RequestHandler):
     """A class to collect common handler methods - all other handlers should
@@ -83,6 +85,8 @@ class BaseHandler(RequestHandler):
         today = date.today()
         return today.year - born.year - ((today.month, today.day) < (born.month, born.day))
 
+    def encryptPassword(self,pattern):
+        return hashlib.sha256(utf8(pattern)).hexdigest()
 
 
 
