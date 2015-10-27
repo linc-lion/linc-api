@@ -168,7 +168,7 @@ class OrganizationsHandler(BaseHandler):
                 imgsetrc = yield self.settings['db'].imagesets.find({'$or' : [{'uploading_organization_iid':iid},{'owner_organization_iid':iid},{'trashed':False}]}).count()
                 refcount += imgsetrc
                 # animal - organization_iid
-                animalsrc = yield self.settings['db'].animals.find({'organization_iid':iid,'trashed':False}).count()
+                animalsrc = yield self.settings['db'][self.settings['animals']].find({'organization_iid':iid,'trashed':False}).count()
                 refcount += animalsrc
                 # cvrequest - uploading_organization_iid
                 cvreqrc = yield self.settings['db'].cvrequests.find({'uploading_organization_iid':iid,'trashed':False}).count()

@@ -19,12 +19,13 @@ class ImageSet(Document):
     location = ListField(ListField(FloatField()))
     gender = StringField(required=False,default=None)
     is_primary = BooleanField(required=True,default=False)
-    created_at = DateTimeField(required=True,default=datetime.now())
-    updated_at = DateTimeField(required=True,default=datetime.now())
+    created_at = DateTimeField(required=True,auto_now_on_insert=True)
+    updated_at = DateTimeField(required=True,auto_now_on_insert=True)
     date_of_birth = DateTimeField(required=False,default=None)
     tags = StringField(required=False,default='[]')
     date_stamp = DateTimeField(required=False,default=None)
     notes = StringField(required=False)
+    trashed = BooleanField(required=True,default=False)
 
 class Image(Document):
     __collection__ = 'images'
@@ -33,9 +34,12 @@ class Image(Document):
     image_set_iid = IntField(required=False,default=-1)
     is_public = BooleanField(required=True,default=False)
     url = URLField(required=True)
-    created_at = DateTimeField(required=True,default=datetime.now())
-    updated_at = DateTimeField(required=True,default=datetime.now())
+    created_at = DateTimeField(required=True,auto_now_on_insert=True)
+    updated_at = DateTimeField(required=True,auto_now_on_insert=True)
     is_deleted = BooleanField(required=True,default=False)
+
     full_image_uid = StringField(required=True)
     thumbnail_image_uid = StringField(required=True)
     main_image_uid = StringField(required=True)
+    
+    trashed = BooleanField(required=True,default=False)
