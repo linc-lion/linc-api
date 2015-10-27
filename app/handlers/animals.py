@@ -7,6 +7,7 @@ from handlers.base import BaseHandler
 from models.animal import Animal
 from tornado.escape import utf8
 from datetime import datetime,time
+from bson import ObjectId as ObjId
 
 class AnimalsHandler(BaseHandler):
     """A class that handles requests about animals informartion
@@ -82,10 +83,13 @@ class AnimalsHandler(BaseHandler):
                 noimages = True
             else:
                 noimages = False
-            print(noimages)
-            objs = yield self.settings['db'].imagesets.find(queryfilter).to_list(None)
-            iids = [x['animal_iid'] for x in objs]
-            objs = yield self.settings['db'][self.settings['animals']].find({'iid': { '$in' : iids }}).to_list(None)
+            if not trashed:
+                objs = yield self.settings['db'].imagesets.find(queryfilter).to_list(None)
+                iids = [x['animal_iid'] for x in objs]
+                iids = list(set(iids))
+                objs = yield self.settings['db'][self.settings['animals']].find({'iid': { '$in' : iids }}).to_list(None)
+            else:
+                objs = yield self.settings['db'][self.settings['animals']].find(queryfilter).to_list(None)
             output = list()
             apiout = self.get_argument('api',None)
             for x in objs:
@@ -114,16 +118,27 @@ class AnimalsHandler(BaseHandler):
         # create a new animal
         # parse data recept by POST and get only fields of the object
         newobj = self.parseInput(Animal)
-        Animals = Animal()
-        Animals.set_collection(self.settings['animals'])
         # getting new integer id
-        newobj['iid'] = yield Task(self.new_iid,Animals.__collection__)
-        # encrypt password
-        newobj['encrypted_password'] = self.encryptPassword(self.input_data['password'])
-        newobj['organization_iid'] = self.input_data['organization_id']
-        #try:
-        if True:
-            newanimal = Animals(**newobj)
+        newobj['iid'] = yield Task(self.new_iid,self.settings['animals'])
+        # checking for required fields
+        if 'organization_id' in self.input_data.keys() and \
+            'primary_image_set_id' in self.input_data.keys() and \
+            'name' in self.input_data.keys():
+            newobj['organization_iid'] = self.input_data['organization_id']
+            newobj['primary_image_set_iid'] = self.input_data['primary_image_set_id']
+            check_org = yield self.settings['db'].organizations.find_one({'iid':newobj['organization_iid'],'trashed':False})
+            if not check_org:
+                self.dropError(409,'invalid organization_id')
+                return
+            check_imageset = yield self.settings['db'].imagesets.find_one({'iid':newobj['primary_image_set_iid'],'trashed':False})
+            if not check_imageset:
+                self.dropError(409,'invalid primary_image_set_id')
+                return
+        else:
+            self.dropError(400,'You must define name, organization_id and primary_image_set_id for the new lion.')
+        try:
+            newanimal = Animal(**newobj)
+            newanimal.set_collection(self.settings['animals'])
             if newanimal.validate():
                 # the new object is valid, so try to save
                 try:
@@ -131,13 +146,15 @@ class AnimalsHandler(BaseHandler):
                     output = newsaved.to_son()
                     output['obj_id'] = str(newsaved._id)
                     self.switch_iid(output)
-                    del output['encrypted_password']
+                    output['organization_id'] = output['organization_iid']
+                    del output['organization_iid']
+                    output['primary_image_set_id'] = output['primary_image_set_iid']
+                    del output['primary_image_set_iid']
                     self.finish(self.json_encode({'status':'success','message':'new '+self.settings['animal']+' saved','data':output}))
                 except:
                     # duplicated index error
-                    self.dropError(409,'key violation')
-        #except:
-        else:
+                    self.dropError(409,'Key violation. Check if you are using a name from a lion that already exists in the database.')
+        except:
             # received data is invalid in some way
             self.dropError(400,'Invalid input data.')
 
@@ -147,11 +164,21 @@ class AnimalsHandler(BaseHandler):
         # update an animal
         # parse data recept by PUT and get only fields of the object
         update_data = self.parseInput(Animal)
-        Animals = Animal()
-        Animals.set_collection(self.settings['animals'])
-        fields_allowed_to_be_update = ['email','trashed','organization_iid','admin']
+        fields_allowed_to_be_update = ['name','trashed','organization_iid','primary_image_set_iid']
         if 'organization_id' in self.input_data.keys():
             update_data['organization_iid'] = self.input_data['organization_id']
+            del self.input_data['organization_id']
+            check_org = yield self.settings['db'].organizations.find_one({'iid':update_data['organization_iid'],'trashed':False})
+            if not check_org:
+                self.dropError(409,'invalid organization_id')
+                return
+        if 'primary_image_set_id' in self.input_data.keys():
+            update_data['primary_image_set_iid'] = self.input_data['primary_image_set_id']
+            del self.input_data['primary_image_set_id']
+            check_imageset = yield self.settings['db'].imagesets.find_one({'iid':update_data['primary_image_set_iid'],'trashed':False})
+            if not check_imageset:
+                self.dropError(409,'invalid primary_image_set_id')
+                return
         # validate the input for update
         update_ok = False
         for k in fields_allowed_to_be_update:
@@ -162,6 +189,8 @@ class AnimalsHandler(BaseHandler):
             query = self.query_id(animal_id)
             if 'trashed' in update_data.keys():
                 del query['trashed']
+            Animals = Animal()
+            Animals.set_collection(self.settings['animals'])
             updobj = yield Animals.objects.filter(**query).limit(1).find_all()
             if len(updobj) > 0:
                 updobj = updobj[0]
@@ -183,7 +212,10 @@ class AnimalsHandler(BaseHandler):
                             output['obj_id'] = str(saved._id)
                             # Change iid to id in the output
                             self.switch_iid(output)
-                            del output['encrypted_password']
+                            output['organization_id'] = output['organization_iid']
+                            del output['organization_iid']
+                            output['primary_image_set_id'] = output['primary_image_set_iid']
+                            del output['primary_image_set_iid']
                             self.finish(self.json_encode({'status':'success','message':self.settings['animal']+' updated','data':output}))
                         except:
                             # duplicated index error
@@ -209,6 +241,7 @@ class AnimalsHandler(BaseHandler):
                 iid = updobj['iid']
                 # imageset - uploading_user_iid
                 imgsetrc = yield self.settings['db'].imagesets.find({'animal_iid':iid,'trashed':False}).count()
+                print(imgsetrc)
                 refcount += imgsetrc
                 if refcount > 0:
                     self.dropError(409,"the "+self.settings['animal']+" can't be deleted because it has references in the database.")
