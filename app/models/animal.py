@@ -13,6 +13,7 @@ class Animal(Document):
     created_at = DateTimeField(required=True,default=datetime.now())
     updated_at = DateTimeField(required=True,default=datetime.now())
     primary_image_set_iid = IntField(required=False,default=-1)
+    trashed = BooleanField(required=True,default=False)
 
     @classmethod
     def set_collection(cls,collname):

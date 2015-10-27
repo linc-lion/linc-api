@@ -19,7 +19,8 @@ def url_patterns(animals='lions'):
         # The handler above will be used only for import
         # data from pg in development phase
         #(r"/import", ImportHandler),
-        (r"/"+animals+'/?', AnimalsHandler),
+        (r"/"+animals+"/?$", AnimalsHandler),
+        (r"/"+animals+"/(.*)$", AnimalsHandler),
 
         (r"/organizations/?$", OrganizationsHandler),
         (r"/organizations/(.*)$", OrganizationsHandler),
