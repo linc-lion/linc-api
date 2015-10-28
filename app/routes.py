@@ -11,7 +11,8 @@ from handlers.organizations import OrganizationsHandler
 from handlers.users import UsersHandler
 from handlers.imagesets import ImageSetsHandler
 from handlers.images import ImagesHandler
-from handlers.cv import CVRequestsHandler,CVResultsHandler
+from handlers.cvrequests import CVRequestsHandler
+from handlers.cvresults import CVResultsHandler
 
 # Defining routes
 def url_patterns(animals='lions'):
@@ -29,12 +30,17 @@ def url_patterns(animals='lions'):
         (r"/users/?$", UsersHandler),
         (r"/users/(.*)$", UsersHandler),
 
+        (r"/images/?$", ImagesHandler),
+        (r"/images/(\w+$)", ImagesHandler),
+
         (r"/imagesets/?$", ImageSetsHandler),
         (r"/imagesets/(\w+$)", ImageSetsHandler),
         (r"/imagesets/(\w+)/(cvrequest)$", ImageSetsHandler),
 
-        (r"/images/?", ImagesHandler),
-        (r"/cvrequests/?", CVRequestsHandler),
-        (r"/cvresults/?", CVResultsHandler)
+        (r"/cvrequests/?$", CVRequestsHandler),
+        (r"/cvrequests/(\w+$)", CVRequestsHandler),
+
+        (r"/cvresults/?$", CVResultsHandler),
+        (r"/cvresults/(\w+$)", CVResultsHandler)
     ]
     return routes

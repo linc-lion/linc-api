@@ -4,21 +4,21 @@
 from tornado.web import asynchronous
 from tornado.gen import engine,coroutine,Task
 from handlers.base import BaseHandler
-from models.imageset import Image
+from models.cv import CVRequest
 from bson import ObjectId as ObjId
 from datetime import datetime
 
-class ImagesHandler(BaseHandler):
-    """A class that handles requests about images informartion
+class CVRequestsHandler(BaseHandler):
+    """A class that handles requests about CV indentification informartion
     """
 
-    def query_id(self,image_id,trashed=False):
+    def query_id(self,req_id,trashed=False):
         """This method configures the query that will find an object"""
         try:
-            query = { 'iid' : int(image_id) }
+            query = { 'iid' : int(req_id) }
         except:
             try:
-                query = { 'id' : ObjId(image_id) }
+                query = { 'id' : ObjId(req_id) }
             except:
                 self.dropError(400,'invalid id key')
                 return
@@ -28,39 +28,36 @@ class ImagesHandler(BaseHandler):
 
     @asynchronous
     @coroutine
-    def get(self, image_id=None):
+    def get(self, req_id=None):
         trashed = self.get_argument('trashed',False)
         if trashed:
             if trashed.lower() == 'true':
                 trashed = True
             else:
                 trashed = False
-        print(image_id)
-        if image_id:
-            if image_id == 'list':
-                objs = yield self.settings['db'].images.find({'trashed':trashed}).to_list(None)
+        print(req_id)
+        if req_id:
+            if req_id == 'list':
+                objs = yield self.settings['db'].cvrequests.find({'trashed':trashed}).to_list(None)
                 self.set_status(200)
                 self.finish(self.json_encode({'status':'success','data':self.list(objs)}))
             else:
-                # return a specific image accepting as id the integer id, hash and name
-                query = self.query_id(image_id,trashed)
+                query = self.query_id(req_id,trashed)
                 print(query)
-                objs = yield Image.objects.filter(**query).limit(1).find_all()
+                objs = yield req.objects.filter(**query).limit(1).find_all()
                 if len(objs) > 0:
-                    objimage = objs[0].to_son()
-                    objimage['id'] = objs[0].iid
-                    objimage['obj_id'] = str(objs[0]._id)
-                    del objimage['iid']
+                    objreq = objs[0].to_son()
+                    objreq['id'] = objs[0].iid
+                    objreq['obj_id'] = str(objs[0]._id)
+                    del objreq['iid']
 
                     self.set_status(200)
-                    self.finish(self.json_encode({'status':'success','data':objimage}))
+                    self.finish(self.json_encode({'status':'success','data':objreq}))
                 else:
                     self.set_status(404)
                     self.finish(self.json_encode({'status':'error','message':'not found'}))
         else:
-            # return a list of images
-            #objs = yield Image.objects.find_all()
-            objs = yield self.settings['db'].images.find({'trashed':trashed}).to_list(None)
+            objs = yield self.settings['db'].cvrequests.find({'trashed':trashed}).to_list(None)
             output = list()
             for x in objs:
                 obj = dict(x)
@@ -74,17 +71,17 @@ class ImagesHandler(BaseHandler):
     @asynchronous
     @engine
     def post(self):
-        # create a new image
+        # create a new req
         # parse data recept by POST and get only fields of the object
-        newobj = self.parseInput(Image)
+        newobj = self.parseInput(CVRequest)
         # getting new integer id
-        newobj['iid'] = yield Task(self.new_iid,Image.__collection__)
+        newobj['iid'] = yield Task(self.new_iid,CVRequest.__collection__)
         # prepare new obj
         dt = datetime.now()
         newobj['created_at'] = dt
         newobj['updated_at'] = dt
-        fields_needed = ['is_deleted','image_set_id',
-        'is_public','url','image_type']
+        fields_needed = ['requesting_organization_id','iid','image_set_id','status',
+        'server_uuid','request_body']
         for field in fields_needed:
             if field not in self.input_data.keys():
                 self.dropError(400,'you need to provide the field '+field)
@@ -100,17 +97,25 @@ class ImagesHandler(BaseHandler):
         else:
             self.dropError(409,"image set id referenced doesn't exist")
             return
+        orgid = self.input_data['requesting_organization_id']
+        orge = yield self.settings['db'].organizations.find_one({'iid':orgid,'trashed':False})
+        if orge:
+            newobj['requesting_organization_iid'] = orgid
+            del newobj['requesting_organization_id']
+        else:
+            self.dropError(409,"organization id referenced doesn't exist")
+            return
 
         try:
-            newimage = Image(**newobj)
-            if newimage.validate():
+            newreq = CVRequest(**newobj)
+            if newreq.validate():
                 # the new object is valid, so try to save
                 try:
-                    newsaved = yield newimage.save()
+                    newsaved = yield newreq.save()
                     output = newsaved.to_son()
                     output['obj_id'] = str(newsaved._id)
                     self.switch_iid(output)
-                    self.finish(self.json_encode({'status':'success','message':'new image saved','data':output}))
+                    self.finish(self.json_encode({'status':'success','message':'new cv request saved','data':output}))
                 except:
                     # duplicated index error
                     self.dropError(409,'key violation')
@@ -120,12 +125,12 @@ class ImagesHandler(BaseHandler):
 
     @asynchronous
     @coroutine
-    def put(self, image_id=None):
-        # update an image
+    def put(self, req_id=None):
+        # update an req
         # parse data recept by PUT and get only fields of the object
-        update_data = self.parseInput(Image)
-        fields_allowed_to_be_update = ['is_deleted','image_set_id',
-        'is_public','url','image_type','trashed']
+        update_data = self.parseInput(CVRequest)
+        fields_allowed_to_be_update = ['requesting_organization_id','iid','image_set_id','status',
+        'server_uuid','request_body','trashed']
         if 'image_set_id' in self.input_data.keys():
             imgiid = self.input_data['image_set_id']
             imgset = yield self.settings['db'].imagesets.find_one({'iid':imgiid,'trashed':False})
@@ -134,17 +139,25 @@ class ImagesHandler(BaseHandler):
             else:
                 self.dropError(409,"image set referenced doesn't exist")
                 return
+        if 'requesting_organization_id' in self.input_data.keys():
+            orgiid = self.input_data['requesting_organization_id']
+            orgset = yield self.settings['db'].organizations.find_one({'iid':orgiid,'trashed':False})
+            if orgset:
+                update_data['requesting_organization_iid'] = orgiid
+            else:
+                self.dropError(409,"organization referenced doesn't exist")
+                return
         # validate the input for update
         update_ok = False
         for k in fields_allowed_to_be_update:
             if k in update_data.keys():
                 update_ok = True
                 break
-        if image_id and update_ok:
-            query = self.query_id(image_id)
+        if req_id and update_ok:
+            query = self.query_id(req_id)
             if 'trashed' in update_data.keys():
                 del query['trashed']
-            updobj = yield Image.objects.filter(**query).limit(1).find_all()
+            updobj = yield CVRequest.objects.filter(**query).limit(1).find_all()
             if len(updobj) > 0:
                 updobj = updobj[0]
                 for field in fields_allowed_to_be_update:
@@ -175,28 +188,39 @@ class ImagesHandler(BaseHandler):
                     # received data is invalid in some way
                     self.dropError(400,'Invalid input data.')
             else:
-                self.dropError(404,'image not found')
+                self.dropError(404,'cv request not found')
         else:
             self.dropError(400,'Update requests (PUT) must have a resource ID and update pairs for key and value.')
 
     @asynchronous
     @coroutine
-    def delete(self, image_id=None):
-        # delete an image
-        if image_id:
-            query = self.query_id(image_id)
-            updobj = yield self.settings['db'].images.find_one(query)
+    def delete(self, req_id=None):
+        # delete an req
+        if req_id:
+            query = self.query_id(req_id)
+            updobj = yield self.settings['db'].cvrequests.find_one(query)
             if updobj:
-                # check for references
-                refcount = 0
-                iid = updobj['image_set_iid']
-                try:
-                    updobj = yield self.settings['db'].images.update(query,{'$set':{'trashed':True,'updated_at':datetime.now()}})
-                    self.setSuccess(200,'image successfully deleted')
-                except:
-                    self.dropError(500,'fail to delete image')
+                # removing cvrequest and cvresult related and they will be added in
+                # a history collection
+                #try:
+                if True:
+                    # get cvresult if it exists
+                    cvres = yield self.settings['db'].cvresults.find_one({'cv_request_iid':req_id})
+                    if cvres:
+                        idcvres = ObjId(str(cvres['_id']))
+                        del cvres['_id']
+                        newhres = yield self.settings['db'].cvresults_history.insert(cvres)
+                        cvres = yield self.settings['db'].cvresults.remove({'_id':idcvres})
+                    idcvreq = ObjId(str(updobj))
+                    del updobj['_id']
+                    newhreq = yield self.settings['db'].cvrequests_history.insert(updobj)
+                    cvreq = yield self.settings['db'].cvrequests.remove({'_id':idcvreq})
+                    self.setSuccess(200,'cvrequest successfully deleted')
+                #except:
+                else:
+                    self.dropError(500,'fail to delete cvrequest')
             else:
-                self.dropError(404,'image not found')
+                self.dropError(404,'cvrequest not found')
         else:
             self.dropError(400,'Remove requests (DELETE) must have a resource ID.')
 
