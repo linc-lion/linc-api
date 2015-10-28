@@ -5,7 +5,6 @@ from tornado.web import asynchronous
 from tornado.gen import coroutine,engine,Task
 from handlers.base import BaseHandler
 from models.animal import Animal
-from tornado.escape import utf8
 from datetime import datetime,time
 from bson import ObjectId as ObjId
 
@@ -34,6 +33,11 @@ class AnimalsHandler(BaseHandler):
                 trashed = True
             else:
                 trashed = False
+        noimages = self.get_argument('no_images','')
+        if noimages.lower() == 'true':
+            noimages = True
+        else:
+            noimages = False
         if animal_id:
             if animal_id == 'list':
                 objs = yield self.settings['db'][self.settings['animals']].find({'trashed':trashed}).to_list(None)
@@ -45,12 +49,12 @@ class AnimalsHandler(BaseHandler):
                 self.finish(self.json_encode({'status':'success','data':self.list(objs,orgnames)}))
             else:
                 # return a specific animal accepting as id the integer id, hash and name
-                query = self.query_id(animal_id)
+                query = self.query_id(animal_id,trashed)
                 Animals = Animal()
                 Animals.set_collection(self.settings['animals'])
                 objs = yield Animals.objects.filter(**query).limit(1).find_all()
                 if len(objs) > 0:
-                    objanimal = yield Task(self.prepareOutput,objs[0].to_son(),trashed)
+                    objanimal = yield Task(self.prepareOutput,objs[0].to_son(),trashed,noimages)
                     self.set_status(200)
                     self.finish(self.json_encode(objanimal))
                 else:
@@ -78,11 +82,6 @@ class AnimalsHandler(BaseHandler):
             except:
                 self.dropError(400,'invalid value for dob_start/dob_end')
                 return
-            noimages = self.get_argument('no_images','')
-            if noimages.lower() == 'true':
-                noimages = True
-            else:
-                noimages = False
             if not trashed:
                 objs = yield self.settings['db'].imagesets.find(queryfilter).to_list(None)
                 iids = [x['animal_iid'] for x in objs]

@@ -9,7 +9,8 @@ import sys
 from handlers.animals import AnimalsHandler
 from handlers.organizations import OrganizationsHandler
 from handlers.users import UsersHandler
-from handlers.imagesets import ImageSetsHandler,ImagesHandler
+from handlers.imagesets import ImageSetsHandler
+from handlers.images import ImagesHandler
 from handlers.cv import CVRequestsHandler,CVResultsHandler
 
 # Defining routes
