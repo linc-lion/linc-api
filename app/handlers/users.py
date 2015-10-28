@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from tornado.web import asynchronous
-from tornado.gen import engine,coroutine
+from tornado.gen import engine,coroutine,Task
 from handlers.base import BaseHandler
 from models.user import User
 from bson import ObjectId as ObjId
@@ -46,7 +46,7 @@ class UsersHandler(BaseHandler):
                 self.finish(self.json_encode({'status':'success','data':self.list(objs,orgnames)}))
             else:
                 # return a specific user accepting as id the integer id, hash and name
-                query = self.query_id(user_id)
+                query = self.query_id(user_id,trashed)
                 objs = yield User.objects.filter(**query).limit(1).find_all()
                 if len(objs) > 0:
                     objuser = objs[0].to_son()
@@ -90,11 +90,12 @@ class UsersHandler(BaseHandler):
         # encrypt password
         newobj['encrypted_password'] = self.encryptPassword(self.input_data['password'])
         orgiid = self.input_data['organization_id']
-        orgexists = yield self.settings['db'].organizations.find_one({'iid':orgiid,'trashed':trashed})
+        orgexists = yield self.settings['db'].organizations.find_one({'iid':orgiid,'trashed':False})
         if orgexists:
             newobj['organization_iid'] = orgiid
         else:
             self.dropError(409,"organization referenced doesn't exist")
+            return
         try:
             newuser = User(**newobj)
             if newuser.validate():
@@ -127,6 +128,7 @@ class UsersHandler(BaseHandler):
                 update_data['organization_iid'] = orgiid
             else:
                 self.dropError(409,"organization referenced doesn't exist")
+                return
         # validate the input for update
         update_ok = False
         for k in fields_allowed_to_be_update:

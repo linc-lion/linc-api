@@ -46,7 +46,7 @@ class OrganizationsHandler(BaseHandler):
 
             else:
                 # return a specific organization accepting as id the integer id, hash and name
-                query = self.query_id(org_id)
+                query = self.query_id(org_id,trashed)
                 objs = yield Organization.objects.filter(**query).limit(1).find_all()
                 if len(objs) > 0:
                     objorg = objs[0].to_son()

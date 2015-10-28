@@ -13,14 +13,15 @@ class CVRequest(Document):
     iid = IntField(required=True,unique=True)
     image_set_iid = IntField(required=False,default=-1)
     status = StringField(required=False,default='registered')
-    created_at = DateTimeField(required=True,default=datetime.now())
-    updated_at = DateTimeField(required=True,default=datetime.now())
+    created_at = DateTimeField(required=True,auto_now_on_insert=True)
+    updated_at = DateTimeField(required=True,auto_now_on_insert=True)
     server_uuid = StringField(required=False,default=None)
+    request_body = StringField(required=False,default='')
 
 class CVResult(Document):
     __collection__ = 'cvresults'
     cv_request_iid = IntField(required=False,default=-1)
     iid = IntField(required=True,unique=True)
     match_probability = StringField(required=True,default='[]')
-    created_at = DateTimeField(required=True,default=datetime.now())
-    updated_at = DateTimeField(required=True,default=datetime.now())
+    created_at = DateTimeField(required=True,auto_now_on_insert=True)
+    updated_at = DateTimeField(required=True,auto_now_on_insert=True)
