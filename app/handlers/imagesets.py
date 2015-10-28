@@ -28,6 +28,7 @@ class ImageSetsHandler(BaseHandler):
                 query = { '_id' : ObjId(imageset_id) }
             except:
                 self.dropError(400,'invalid id key')
+                return
         query['trashed'] = trashed
         return query
 
@@ -68,8 +69,12 @@ class ImageSetsHandler(BaseHandler):
                     del output['owner_organization_iid']
                     output['uploading_organization_id'] = objimgset['uploading_organization_iid']
                     del output['uploading_organization_iid']
-                    output['latitude'] = objimgset['location'][0][0]
-                    output['longitude'] = objimgset['location'][0][1]
+                    if objimgset['location']:
+                        output['latitude'] = objimgset['location'][0][0]
+                        output['longitude'] = objimgset['location'][0][1]
+                    else:
+                        output['latitude'] = None
+                        output['longitude'] = None
                     del output['location']
                     output['obj_id'] = str(objimgset['_id'])
                     del output['_id']

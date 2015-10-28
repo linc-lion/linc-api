@@ -37,10 +37,6 @@ class Image(Document):
 
     created_at = DateTimeField(required=True,auto_now_on_insert=True)
     updated_at = DateTimeField(required=True,auto_now_on_insert=True)
-    is_deleted = BooleanField(required=True,default=False)
-
-    full_image_uid = StringField(required=True)
-    thumbnail_image_uid = StringField(required=True)
-    main_image_uid = StringField(required=True)
+    #is_deleted = BooleanField(required=True,default=False)
 
     trashed = BooleanField(required=True,default=False)
