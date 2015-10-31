@@ -72,5 +72,8 @@ api['animal'] = 'lion'
 api['animals'] = 'lions'
 
 api['CVSERVER_URL_IDENTIFICATION'] = 'https://linc.semantic.md/identifications'
+api['CVSERVER_URL_RESULTS'] = 'https://linc.semantic.md/results/'
 api['CV_USERNAME'] = 'c0a5531d33b987dc76af6298c3f6765a34793ba5'
 api['CV_PASSWORD'] = 'cbfdac6008f9cab4083784cbd1874f76618d2a97'
+
+api['S3_URL'] = 'http://linc-production.s3.amazonaws.com/'

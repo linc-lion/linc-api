@@ -23,7 +23,7 @@ class ImageSet(Document):
     updated_at = DateTimeField(required=True,auto_now_on_insert=True)
     date_of_birth = DateTimeField(required=False,default=None)
     tags = StringField(required=False,default='[]')
-    date_stamp = StringField(required=False,default='')
+    date_stamp = StringField(required=False,default='-')
     notes = StringField(required=False)
     trashed = BooleanField(required=True,default=False)
 
@@ -33,10 +33,7 @@ class Image(Document):
     iid = IntField(required=True,unique=True)
     image_set_iid = IntField(required=False,default=-1)
     is_public = BooleanField(required=True,default=False)
-    url = URLField(required=True)
-
+    url = StringField(required=True)
     created_at = DateTimeField(required=True,auto_now_on_insert=True)
     updated_at = DateTimeField(required=True,auto_now_on_insert=True)
-    #is_deleted = BooleanField(required=True,default=False)
-
     trashed = BooleanField(required=True,default=False)

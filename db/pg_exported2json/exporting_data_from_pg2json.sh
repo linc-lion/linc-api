@@ -1,6 +1,11 @@
 #!/bin/bash
 
 # This script export data from PostgreSQL to JSON
+# The source for data is backup acquired in Heroku
+# To create the database local you have to:
+# 1 - create user uinncqqseaysgl;
+# 2 - create database dbnameyouwant; >> you will provide the same name below in the db variable
+# 3 - pg_restore -d dbnameyouwant postgre-backup-2015-10-28
 
 ## Listing tables in the schema to generate the commands below
 # select * from pg_tables where tableowner = 'uinncqqseaysgl';
@@ -13,11 +18,11 @@
 # $ bash exporting_data_from_pg2json.sh
 # You will need to provide 'postgres' as password for each table
 # The password was defined in the provision of Vagrant
-
+db=new_db_lion
 ldir=$(pwd)
 export () {
     echo " Exporting data from table: "$1
-    echo "select row_to_json($1) from $1;" | psql -U postgres -W postgres > $ldir/$1.json
+    echo "select row_to_json($1) from $1;" | psql -U postgres -W $db > $ldir/$1.json
     return 0
 }
 

@@ -31,5 +31,8 @@
  {"id":29,"uploading_organization_id":3,"image_set_id":16,"status":"submitted","created_at":"2015-08-24 16:23:43.771548","updated_at":"2015-08-24 16:23:43.878626","server_uuid":"a5d71f81-2a41-4fc5-ae16-1ecea22ab808"}
  {"id":30,"uploading_organization_id":3,"image_set_id":25,"status":"submitted","created_at":"2015-08-24 17:27:28.955138","updated_at":"2015-08-24 17:27:29.076471","server_uuid":"e5fad2ae-8d6e-4740-91b5-e5b004c03982"}
  {"id":31,"uploading_organization_id":3,"image_set_id":29,"status":"submitted","created_at":"2015-08-26 03:49:58.403416","updated_at":"2015-08-26 03:50:02.448206","server_uuid":"5924b3e0-15a3-47b4-a7ea-83be9a0891f8"}
-(31 rows)
+ {"id":32,"uploading_organization_id":2,"image_set_id":70,"status":"created","created_at":"2015-08-28 08:31:45.648192","updated_at":"2015-08-28 08:31:45.648192","server_uuid":null}
+ {"id":33,"uploading_organization_id":3,"image_set_id":23,"status":"submitted","created_at":"2015-09-23 18:50:05.28011","updated_at":"2015-09-23 18:50:06.070496","server_uuid":"addb6118-61e0-459a-a6a1-1b98c6adbaf6"}
+ {"id":34,"uploading_organization_id":2,"image_set_id":15,"status":"created","created_at":"2015-10-08 18:01:10.614342","updated_at":"2015-10-08 18:01:10.614342","server_uuid":null}
+(34 rows)
 

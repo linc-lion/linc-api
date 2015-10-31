@@ -9,9 +9,9 @@ from datetime import datetime
 
 class CVRequest(Document):
     __collection__ = 'cvrequests'
-    requesting_organization_iid = IntField(required=False,default=-1)
+    requesting_organization_iid = IntField(required=False,default=None)
     iid = IntField(required=True,unique=True)
-    image_set_iid = IntField(required=False,default=-1)
+    image_set_iid = IntField(required=False,default=None)
     status = StringField(required=False,default='registered')
     created_at = DateTimeField(required=True,auto_now_on_insert=True)
     updated_at = DateTimeField(required=True,auto_now_on_insert=True)
@@ -20,7 +20,7 @@ class CVRequest(Document):
 
 class CVResult(Document):
     __collection__ = 'cvresults'
-    cvrequest_iid = IntField(required=False,default=-1)
+    cvrequest_iid = IntField(required=False,default=None)
     iid = IntField(required=True,unique=True)
     match_probability = StringField(required=True,default='[]')
     created_at = DateTimeField(required=True,auto_now_on_insert=True)

@@ -1,0 +1,289 @@
+<!DOCTYPE html><html><head><meta charset="utf-8"><title>LINC API</title><link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css"><style>@import url(http://fonts.googleapis.com/css?family=Roboto:400,700|Inconsolata|Raleway:200);.hljs-comment,.hljs-title{color:#8e908c}.hljs-variable,.hljs-attribute,.hljs-tag,.hljs-regexp,.ruby .hljs-constant,.xml .hljs-tag .hljs-title,.xml .hljs-pi,.xml .hljs-doctype,.html .hljs-doctype,.css .hljs-id,.css .hljs-class,.css .hljs-pseudo{color:#c82829}.hljs-number,.hljs-preprocessor,.hljs-pragma,.hljs-built_in,.hljs-literal,.hljs-params,.hljs-constant{color:#f5871f}.ruby .hljs-class .hljs-title,.css .hljs-rules .hljs-attribute{color:#eab700}.hljs-string,.hljs-value,.hljs-inheritance,.hljs-header,.ruby .hljs-symbol,.xml .hljs-cdata{color:#718c00}.css .hljs-hexcolor{color:#3e999f}.hljs-function,.python .hljs-decorator,.python .hljs-title,.ruby .hljs-function .hljs-title,.ruby .hljs-title .hljs-keyword,.perl .hljs-sub,.javascript .hljs-title,.coffeescript .hljs-title{color:#4271ae}.hljs-keyword,.javascript .hljs-function{color:#8959a8}.hljs{display:block;background:white;color:#4d4d4c;padding:.5em}.coffeescript .javascript,.javascript .xml,.tex .hljs-formula,.xml .javascript,.xml .vbscript,.xml .css,.xml .hljs-cdata{opacity:.5}body{color:black;background:white;font-family:'Roboto',Helvetica,sans-serif;font-size:14px;line-height:1.42}header{border-bottom:1px solid #f2f2f2;margin-bottom:12px}h1,h2,h3,h4,h5{color:black;margin:12px 0}h1 .permalink,h2 .permalink,h3 .permalink,h4 .permalink,h5 .permalink{margin-left:6px;opacity:0;transition:opacity .25s ease}h1:hover .permalink,h2:hover .permalink,h3:hover .permalink,h4:hover .permalink,h5:hover .permalink{opacity:1}h1{font-family:'Raleway',Helvetica,sans-serif;font-size:36px;font-weight:500}h2{font-family:'Raleway',Helvetica,sans-serif;font-size:30px;font-weight:500}h3{font-size:100%;text-transform:uppercase}h5{font-size:100%;font-weight:normal}p{margin:0 0 10px}p.choices{line-height:1.6}a{color:#428bca;text-decoration:none}li p{margin:0}dl dt{float:left;width:160px;clear:left;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:700}dl dd{margin-left:180px}blockquote{color:rgba(0,0,0,0.5);font-size:15.5px;padding:10px 20px;margin:12px 0;border-left:5px solid #e8e8e8}blockquote p:last-child{margin-bottom:0}pre{background-color:#f5f5f5;padding:12px;border:1px solid #cfcfcf;border-radius:6px}pre code{background-color:transparent;padding:0;border:none}code{color:#444;background-color:#f5f5f5;font-family:'Inconsolata',monospace;padding:1px 4px;border:1px solid #cfcfcf;border-radius:3px}ul,ol{padding-left:2em}table{border-collapse:collapse;border-spacing:0}table tr:nth-child(2n){background-color:#fafafa}table th,table td{padding:6px 12px;border:1px solid #d9d9d9}nav{position:fixed;top:24px;bottom:0;overflow-y:auto}nav .resource-group{padding:0}nav .resource-group .heading{position:relative}nav .resource-group .heading .chevron{position:absolute;top:12px;right:12px;opacity:.5}nav .resource-group .heading a{display:block;color:black;opacity:.7;border-left:2px solid transparent;margin:0}nav .resource-group .heading a:hover{border-left:2px solid black}nav ul{list-style-type:none;padding-left:0}nav ul a{display:block;font-size:13px;color:rgba(0,0,0,0.7);padding:8px 12px;border-top:1px solid #d9d9d9;border-left:2px solid transparent;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}nav ul a:hover{border-left:2px solid black}nav ul>li{margin:0}nav ul>li:first-child{margin-top:-12px}nav ul>li:last-child{margin-bottom:-12px}nav ul ul a{padding-left:24px}nav ul ul li{margin:0}nav ul ul li:first-child{margin-top:0}nav ul ul li:last-child{margin-bottom:0}nav>div>div>ul>li:first-child>a{border-top:none}.preload *{transition:none !important}.pull-left{float:left}.pull-right{float:right}.badge{display:inline-block;float:right;min-width:10px;min-height:14px;padding:3px 7px;font-size:12px;color:#000;background-color:#f2f2f2;border-radius:10px;margin-top:-2px;margin-bottom:-2px}.badge.get{color:#70bbe1;background-color:#d9edf7}.badge.head{color:#70bbe1;background-color:#d9edf7}.badge.options{color:#70bbe1;background-color:#d9edf7}.badge.put{color:#f0db70;background-color:#fcf8e3}.badge.patch{color:#f0db70;background-color:#fcf8e3}.badge.post{color:#93cd7c;background-color:#dff0d8}.badge.delete{color:#ce8383;background-color:#f2dede}.collapse-button{float:right}.collapse-button .close{display:none;color:#428bca;cursor:pointer}.collapse-button .open{color:#428bca;cursor:pointer}.collapse-button.show .close{display:inline}.collapse-button.show .open{display:none}.collapse-content{max-height:0;overflow:hidden;transition:max-height .3s ease-in-out}nav{width:220px}.container{max-width:940px;margin-left:auto;margin-right:auto}.container .row .content{margin-left:244px;width:696px}.container .row:after{content:'';display:block;clear:both}.container-fluid nav{width:22%}.container-fluid .row .content{margin-left:24%;width:76%}@media (max-width:1200px){nav{width:200px}.container{max-width:840px}.container .row .content{margin-left:224px;width:606px}}@media (max-width:992px){nav{width:170px}.container{max-width:720px}.container .row .content{margin-left:194px;width:526px}}@media (max-width:768px){nav{display:none}.container{width:95%;max-width:none}.container .row .content,.container-fluid .row .content{margin-left:auto;margin-right:auto;width:95%}}.back-to-top{position:fixed;z-index:1;bottom:0;right:24px;padding:4px 8px;color:rgba(0,0,0,0.5);background-color:#f2f2f2;text-decoration:none !important;border-top:1px solid #d9d9d9;border-left:1px solid #d9d9d9;border-right:1px solid #d9d9d9;border-top-left-radius:3px;border-top-right-radius:3px}.resource-group{padding:12px;margin-bottom:12px;background-color:white;border:1px solid #d9d9d9;border-radius:6px}.resource-group h2.group-heading,.resource-group .heading a{padding:12px;margin:-12px -12px 12px -12px;background-color:#f2f2f2;border-bottom:1px solid #d9d9d9;border-top-left-radius:6px;border-top-right-radius:6px;white-space:nowrap;text-overflow:ellipsis;overflow:hidden}nav .resource-group .heading a{margin-bottom:0}nav .resource-group .collapse-content{padding:0}.action{margin-bottom:12px;padding:12px 12px 0 12px;overflow:hidden;border:1px solid transparent;border-radius:6px}.action h4{padding:12px;margin:-12px -12px 12px -12px;border-bottom:1px solid transparent;border-top-left-radius:6px;border-top-right-radius:6px;white-space:nowrap;text-overflow:ellipsis;overflow:hidden}.action h4 .name{float:right;font-weight:normal}.action h4 .method{padding:6px 12px;margin-right:12px;border-radius:3px}.action h4 .method.get{color:#fff;background-color:#337ab7}.action h4 .method.head{color:#fff;background-color:#337ab7}.action h4 .method.options{color:#fff;background-color:#337ab7}.action h4 .method.put{color:#000;background-color:#f0ad4e}.action h4 .method.patch{color:#000;background-color:#f0ad4e}.action h4 .method.post{color:#fff;background-color:#5cb85c}.action h4 .method.delete{color:#fff;background-color:#d9534f}.action h4 code{color:#444;background-color:#f5f5f5;border-color:#cfcfcf}.action dl.inner{padding-bottom:2px}.action .title{border-bottom:1px solid white;margin:0 -12px -1px -12px;padding:12px}.action.get{border-color:#bce8f1}.action.get h4{color:#337ab7;background:#d9edf7;border-bottom-color:#bce8f1}.action.head{border-color:#bce8f1}.action.head h4{color:#337ab7;background:#d9edf7;border-bottom-color:#bce8f1}.action.options{border-color:#bce8f1}.action.options h4{color:#337ab7;background:#d9edf7;border-bottom-color:#bce8f1}.action.post{border-color:#d6e9c6}.action.post h4{color:#5cb85c;background:#dff0d8;border-bottom-color:#d6e9c6}.action.put{border-color:#faebcc}.action.put h4{color:#f0ad4e;background:#fcf8e3;border-bottom-color:#faebcc}.action.patch{border-color:#faebcc}.action.patch h4{color:#f0ad4e;background:#fcf8e3;border-bottom-color:#faebcc}.action.delete{border-color:#ebccd1}.action.delete h4{color:#d9534f;background:#f2dede;border-bottom-color:#ebccd1}</style></head><body class="preload"><a href="#top" class="text-muted back-to-top"><i class="fa fa-toggle-up"></i>&nbsp;Back to top</a><div class="container"><div class="row"><nav><div class="resource-group"><div class="heading"><div class="chevron"><i class="open fa fa-angle-down"></i></div><a href="#">Resource Group</a></div><div class="collapse-content"><ul><li><a href="#-linc-api-root">LINC API Root</a><ul></ul></li></ul></div></div><div class="resource-group"><div class="heading"><div class="chevron"><i class="open fa fa-angle-down"></i></div><a href="#authentication">Authentication</a></div><div class="collapse-content"><ul></ul></div></div><div class="resource-group"><div class="heading"><div class="chevron"><i class="open fa fa-angle-down"></i></div><a href="#user">User</a></div><div class="collapse-content"><ul></ul></div></div><div class="resource-group"><div class="heading"><div class="chevron"><i class="open fa fa-angle-down"></i></div><a href="#lion">Lion</a></div><div class="collapse-content"><ul><li><a href="#lion-lion-get"><span class="badge get"><i class="fa fa-arrow-down"></i></span>View a Lion Detail</a></li><li><a href="#lion-find-lions-get"><span class="badge get"><i class="fa fa-arrow-down"></i></span>Find a Lion</a></li></ul></div></div><div class="resource-group"><div class="heading"><div class="chevron"><i class="open fa fa-angle-down"></i></div><a href="#model">Model</a></div><div class="collapse-content"><ul><li><a href="#model-model">Model</a><ul><li><a href="#model-model-get"><span class="badge get"><i class="fa fa-arrow-down"></i></span>View a Model Detail</a></li><li><a href="#model-model-post"><span class="badge post"><i class="fa fa-plus"></i></span>Learn a Model</a></li><li><a href="#model-model-delete"><span class="badge delete"><i class="fa fa-times"></i></span>Delete a Model</a></li></ul></li><li><a href="#model-recognition-post"><span class="badge post"><i class="fa fa-plus"></i></span>Recognition</a></li><li><a href="#model-status-get"><span class="badge get"><i class="fa fa-arrow-down"></i></span>Status</a></li></ul></div></div><div class="resource-group"><div class="heading"><div class="chevron"><i class="open fa fa-angle-down"></i></div><a href="#terms-of-use">Terms of Use</a></div><div class="collapse-content"><ul></ul></div></div><p style="text-align: center; word-wrap: break-word;"><a href="https://simbadx.herokuapp.com">https://simbadx.herokuapp.com</a></p></nav><div class="content"><header><h1 id="top">LINC API</h1></header><p>LINC is a simple API allowing Lion Guardians to identify lions in Africa.</p>
+<section id="" class="resource-group"><h2 class="group-heading">Resource Group<a href="#" class="permalink">&para;</a></h2><div id="-linc-api-root" class="resource"><h3>LINC API Root<a href="#-linc-api-root" class="permalink">&para;</a></h3></div></section><section id="authentication" class="resource-group"><h2 class="group-heading">Authentication<a href="#authentication" class="permalink">&para;</a></h2><p>Resources related to authentication in the API.</p>
+</section><section id="user" class="resource-group"><h2 class="group-heading">User<a href="#user" class="permalink">&para;</a></h2><p>Resources related to users in the API.</p>
+</section><section id="lion" class="resource-group"><h2 class="group-heading">Lion<a href="#lion" class="permalink">&para;</a></h2><p>Resources related to lions in the API.</p>
+<div id="lion-lion" class="resource"><h3>Lion<a href="#lion-lion" class="permalink">&para;</a></h3><div id="lion-lion-get" class="action get"><h4><div class="name">View a Lion Detail</div><a href="#lion-lion-get" class="method get">GET</a><code class="uri">/lions/{lion_id}</code></h4><div class="title"><strong>Parameters</strong><div class="collapse-button show"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><dl class="inner"><dt>lion_id</dt><dd><code>numeric</code>&nbsp;<span class="required">(required)</span>&nbsp;<span class="text-muted example"><strong>Example:&nbsp;</strong><span>2</span></span><p>ID of the lion in form of a numeric</p>
+</dd></dl></div><div class="title"><strong>Response&nbsp;&nbsp;<code>200</code></strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{
+  "<span class="hljs-attribute">id</span>": <span class="hljs-value"><span class="hljs-number">2</span></span>,
+  "<span class="hljs-attribute">name</span>": <span class="hljs-value"><span class="hljs-string">"Lauren"</span></span>,
+  "<span class="hljs-attribute">primary_image_set_id</span>": <span class="hljs-value"><span class="hljs-number">2</span></span>,
+  "<span class="hljs-attribute">organization_id</span>": <span class="hljs-value"><span class="hljs-number">2</span></span>,
+  "<span class="hljs-attribute">_embedded</span>": <span class="hljs-value">{
+    "<span class="hljs-attribute">image_sets</span>": <span class="hljs-value">[
+      {
+        "<span class="hljs-attribute">id</span>": <span class="hljs-value"><span class="hljs-number">2</span></span>,
+        "<span class="hljs-attribute">is_verified</span>": <span class="hljs-value"><span class="hljs-literal">false</span></span>,
+        "<span class="hljs-attribute">latitude</span>": <span class="hljs-value"><span class="hljs-string">"-2.6527"</span></span>,
+        "<span class="hljs-attribute">longitude</span>": <span class="hljs-value"><span class="hljs-string">"37.26058"</span></span>,
+        "<span class="hljs-attribute">gender</span>": <span class="hljs-value"><span class="hljs-string">"female"</span></span>,
+        "<span class="hljs-attribute">date_of_birth</span>": <span class="hljs-value"><span class="hljs-string">"2005-05-31T16:17:56.817Z"</span></span>,
+        "<span class="hljs-attribute">main_image_id</span>": <span class="hljs-value"><span class="hljs-number">6</span></span>,
+        "<span class="hljs-attribute">uploading_organization_id</span>": <span class="hljs-value"><span class="hljs-number">2</span></span>,
+        "<span class="hljs-attribute">notes</span>": <span class="hljs-value"><span class="hljs-literal">null</span></span>,
+        "<span class="hljs-attribute">organization_id</span>": <span class="hljs-value"><span class="hljs-number">2</span></span>,
+        "<span class="hljs-attribute">user_id</span>": <span class="hljs-value"><span class="hljs-number">2</span></span>,
+        "<span class="hljs-attribute">has_cv_results</span>": <span class="hljs-value"><span class="hljs-literal">false</span></span>,
+        "<span class="hljs-attribute">has_cv_request</span>": <span class="hljs-value"><span class="hljs-literal">false</span></span>,
+        "<span class="hljs-attribute">_embedded</span>": <span class="hljs-value">{
+          "<span class="hljs-attribute">images</span>": <span class="hljs-value">[
+            {
+              "<span class="hljs-attribute">id</span>": <span class="hljs-value"><span class="hljs-number">4</span></span>,
+              "<span class="hljs-attribute">image_type</span>": <span class="hljs-value"><span class="hljs-string">"cv"</span></span>,
+              "<span class="hljs-attribute">is_public</span>": <span class="hljs-value"><span class="hljs-literal">true</span></span>,
+              "<span class="hljs-attribute">thumbnail_url</span>": <span class="hljs-value"><span class="hljs-string">"http://lion-guardians-production.s3.amazonaws.com/2015/05/31/16/17/59/133/uploads_2Fe3f10f18_d176_41a7_84b9_0b2c5fef81e7_2F38yrs_Sikiria_300x300.jpg"</span></span>,
+              "<span class="hljs-attribute">main_url</span>": <span class="hljs-value"><span class="hljs-string">"http://lion-guardians-production.s3.amazonaws.com/2015/05/31/16/18/00/752/uploads_2Fe3f10f18_d176_41a7_84b9_0b2c5fef81e7_2F38yrs_Sikiria_300x300.jpg"</span></span>,
+              "<span class="hljs-attribute">url</span>": <span class="hljs-value"><span class="hljs-string">"http://lion-guardians-production.s3.amazonaws.com/2015/05/31/16/17/59/608/uploads_2Fe3f10f18_d176_41a7_84b9_0b2c5fef81e7_2F38yrs_Sikiria_300x300.jpg"</span>
+            </span>},
+            {
+              "<span class="hljs-attribute">id</span>": <span class="hljs-value"><span class="hljs-number">6</span></span>,
+              "<span class="hljs-attribute">image_type</span>": <span class="hljs-value"><span class="hljs-string">"markings"</span></span>,
+              "<span class="hljs-attribute">is_public</span>": <span class="hljs-value"><span class="hljs-literal">true</span></span>,
+              "<span class="hljs-attribute">thumbnail_url</span>": <span class="hljs-value"><span class="hljs-string">"http://lion-guardians-production.s3.amazonaws.com/2015/05/31/16/17/58/984/uploads_2F7d89e575_29b0_4012_85b0_280ae741e620_2FLion_waiting_in_Namibia.jpg"</span></span>,
+              "<span class="hljs-attribute">main_url</span>": <span class="hljs-value"><span class="hljs-string">"http://lion-guardians-production.s3.amazonaws.com/2015/05/31/16/17/59/923/uploads_2F7d89e575_29b0_4012_85b0_280ae741e620_2FLion_waiting_in_Namibia.jpg"</span></span>,
+              "<span class="hljs-attribute">url</span>": <span class="hljs-value"><span class="hljs-string">"http://lion-guardians-production.s3.amazonaws.com/2015/05/31/16/17/58/141/uploads_2F7d89e575_29b0_4012_85b0_280ae741e620_2FLion_waiting_in_Namibia.jpg"</span>
+            </span>},
+            {
+              "<span class="hljs-attribute">id</span>": <span class="hljs-value"><span class="hljs-number">5</span></span>,
+              "<span class="hljs-attribute">image_type</span>": <span class="hljs-value"><span class="hljs-string">"whisker"</span></span>,
+              "<span class="hljs-attribute">is_public</span>": <span class="hljs-value"><span class="hljs-literal">true</span></span>,
+              "<span class="hljs-attribute">thumbnail_url</span>": <span class="hljs-value"><span class="hljs-string">"http://lion-guardians-production.s3.amazonaws.com/2015/05/31/16/17/59/384/uploads_2Fc949fccd_1784_42bd_8ce4_99035c887874_2F58yrs_male_Sikiria.jpg"</span></span>,
+              "<span class="hljs-attribute">main_url</span>": <span class="hljs-value"><span class="hljs-string">"http://lion-guardians-production.s3.amazonaws.com/2015/05/31/16/17/59/859/uploads_2Fc949fccd_1784_42bd_8ce4_99035c887874_2F58yrs_male_Sikiria.jpg"</span></span>,
+              "<span class="hljs-attribute">url</span>": <span class="hljs-value"><span class="hljs-string">"http://lion-guardians-production.s3.amazonaws.com/2015/05/31/16/17/59/285/uploads_2Fc949fccd_1784_42bd_8ce4_99035c887874_2F58yrs_male_Sikiria.jpg"</span>
+            </span>}
+          ]
+        </span>}</span>,
+        "<span class="hljs-attribute">lion_id</span>": <span class="hljs-value"><span class="hljs-number">2</span>
+      </span>}
+    ]
+  </span>}
+</span>}</code></pre><div style="height: 1px;"></div></div></div></div></div><div id="lion-find-lions" class="resource"><h3>Find Lions<a href="#lion-find-lions" class="permalink">&para;</a></h3><div id="lion-find-lions-get" class="action get"><h4><div class="name">Find a Lion</div><a href="#lion-find-lions-get" class="method get">GET</a><code class="uri">/lions{?gender}{?organization_id}{?dob_start}{?dob_end}</code></h4><div class="title"><strong>Parameters</strong><div class="collapse-button show"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><dl class="inner"><dt>gender</dt><dd><code>string</code>&nbsp;<span>(optional)</span>&nbsp;<span class="text-muted example"><strong>Example:&nbsp;</strong><span>&quot;m&quot;</span></span><p>gender of the lion in form of a string</p>
+</dd><dt>organization_id</dt><dd><code>alphanumeric</code>&nbsp;<span>(optional)</span>&nbsp;<span class="text-muted example"><strong>Example:&nbsp;</strong><span>&quot;20150507&quot;</span></span><p>ID of the organization in form of an alphanumeric string</p>
+</dd><dt>dob_start</dt><dd><code>string</code>&nbsp;<span class="required">(required)</span>&nbsp;<span class="text-muted example"><strong>Example:&nbsp;</strong><span>&quot;YYYY</span></span><p>MM-DD&quot; (optional, string) - start date for lion’s birthdate range in YYYY-MM-DD format</p>
+</dd><dt>dob_end</dt><dd><code>string</code>&nbsp;<span class="required">(required)</span>&nbsp;<span class="text-muted example"><strong>Example:&nbsp;</strong><span>&quot;YYYY</span></span><p>MM-DD&quot; (optional, string) - end date for lion’s birthdate range in YYYY-MM-DD format</p>
+</dd></dl></div><div class="title"><strong>Response&nbsp;&nbsp;<code>200</code></strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{}</code></pre><div style="height: 1px;"></div></div></div></div></div></section><section id="model" class="resource-group"><h2 class="group-heading">Model<a href="#model" class="permalink">&para;</a></h2><p>Resources related to models in the API.</p>
+<div id="model-model" class="resource"><h3>Model<a href="#model-model" class="permalink">&para;</a></h3><div id="model-model-get" class="action get"><h4><div class="name">View a Model Detail</div><a href="#model-model-get" class="method get">GET</a><code class="uri">/model/{model_id}</code></h4><div class="title"><strong>Parameters</strong><div class="collapse-button show"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><dl class="inner"><dt>model_id</dt><dd><code>alphanumeric</code>&nbsp;<span>(optional)</span>&nbsp;<span class="text-muted example"><strong>Example:&nbsp;</strong><span>&quot;20150507&quot;</span></span><p>ID of the model in form of an alphanumeric string</p>
+</dd></dl></div><div class="title"><strong>Response&nbsp;&nbsp;<code>200</code></strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{
+  "<span class="hljs-attribute">model_id</span>": <span class="hljs-value"><span class="hljs-string">"20150507-092034-8ceb"</span></span>,
+  "<span class="hljs-attribute">model_name</span>": <span class="hljs-value"><span class="hljs-string">"masusu"</span></span>,
+  "<span class="hljs-attribute">status</span>": <span class="hljs-value"><span class="hljs-string">"finished"</span>
+</span>}</code></pre><div style="height: 1px;"></div></div></div></div><div id="model-model-post" class="action post"><h4><div class="name">Learn a Model</div><a href="#model-model-post" class="method post">POST</a><code class="uri">/model/{model_id}</code></h4><p>Create a new classifier.</p>
+<div class="title"><strong>Parameters</strong><div class="collapse-button show"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><dl class="inner"><dt>model_id</dt><dd><code>alphanumeric</code>&nbsp;<span>(optional)</span>&nbsp;<span class="text-muted example"><strong>Example:&nbsp;</strong><span>&quot;20150507&quot;</span></span><p>ID of the model in form of an alphanumeric string</p>
+</dd></dl></div><div class="title"><strong>Request</strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{
+  "<span class="hljs-attribute">lion_name</span>": <span class="hljs-value"><span class="hljs-string">"api-test-model"</span></span>,
+  "<span class="hljs-attribute">lions</span>": <span class="hljs-value">[]
+</span>}</code></pre><div style="height: 1px;"></div></div></div><div class="title"><strong>Response&nbsp;&nbsp;<code>201</code></strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{
+  "<span class="hljs-attribute">model_id</span>": <span class="hljs-value"><span class="hljs-string">"20150507-092034-8ceb"</span></span>,
+  "<span class="hljs-attribute">model_name</span>": <span class="hljs-value"><span class="hljs-string">"api-test-model"</span></span>,
+  "<span class="hljs-attribute">status</span>": <span class="hljs-value"><span class="hljs-string">"processing"</span>
+</span>}</code></pre><div style="height: 1px;"></div></div></div></div><div id="model-model-delete" class="action delete"><h4><div class="name">Delete a Model</div><a href="#model-model-delete" class="method delete">DELETE</a><code class="uri">/model/{model_id}</code></h4><div class="title"><strong>Parameters</strong><div class="collapse-button show"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><dl class="inner"><dt>model_id</dt><dd><code>alphanumeric</code>&nbsp;<span>(optional)</span>&nbsp;<span class="text-muted example"><strong>Example:&nbsp;</strong><span>&quot;20150507&quot;</span></span><p>ID of the model in form of an alphanumeric string</p>
+</dd></dl></div><div class="title"><strong>Response&nbsp;&nbsp;<code>200</code></strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{
+  "<span class="hljs-attribute">model_id</span>": <span class="hljs-value"><span class="hljs-string">"20150507-092034-8ceb"</span></span>,
+  "<span class="hljs-attribute">model_name</span>": <span class="hljs-value"><span class="hljs-string">"ovarian-ultrasound"</span></span>,
+  "<span class="hljs-attribute">status</span>": <span class="hljs-value"><span class="hljs-string">"deleted"</span>
+</span>}</code></pre><div style="height: 1px;"></div></div></div></div></div><div id="model-recognition" class="resource"><h3>Recognition<a href="#model-recognition" class="permalink">&para;</a></h3><p>Classify a set of image and return the predicted labels and associated confidence.</p>
+<div id="model-recognition-post" class="action post"><h4><div class="name">Recognition</div><a href="#model-recognition-post" class="method post">POST</a><code class="uri">/identifications</code></h4><div class="title"><strong>Request</strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{
+  "<span class="hljs-attribute">identification</span>": <span class="hljs-value">{
+    "<span class="hljs-attribute">images</span>": <span class="hljs-value">[
+      {
+        "<span class="hljs-attribute">id</span>": <span class="hljs-value"><span class="hljs-string">"3"</span></span>,
+        "<span class="hljs-attribute">type</span>": <span class="hljs-value"><span class="hljs-string">"markings"</span></span>,
+        "<span class="hljs-attribute">url</span>": <span class="hljs-value"><span class="hljs-string">"https://lg-201-created-development.s3.amazonaws.com/uploads%2F7d89e575-29b0-4012-85b0-280ae741e620%2FLion_waiting_in_Namibia.jpg"</span>
+      </span>}
+    ]</span>,
+    "<span class="hljs-attribute">gender</span>": <span class="hljs-value"><span class="hljs-string">"male"</span></span>,
+    "<span class="hljs-attribute">age</span>": <span class="hljs-value"><span class="hljs-string">"14"</span></span>,
+    "<span class="hljs-attribute">lions</span>": <span class="hljs-value">[
+      {
+        "<span class="hljs-attribute">id</span>": <span class="hljs-value"><span class="hljs-string">"2"</span></span>,
+        "<span class="hljs-attribute">url</span>": <span class="hljs-value"><span class="hljs-string">"http://localhost:3000/lions/2"</span></span>,
+        "<span class="hljs-attribute">updated_at</span>": <span class="hljs-value"><span class="hljs-string">"2015-02-19 16:12:04 UTC"</span>
+      </span>}
+    ]
+  </span>}
+</span>}</code></pre><div style="height: 1px;"></div></div></div><div class="title"><strong>Response&nbsp;&nbsp;<code>200</code></strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{
+  "<span class="hljs-attribute">identification</span>": <span class="hljs-value">{
+    "<span class="hljs-attribute">id</span>": <span class="hljs-value"><span class="hljs-string">"1234-5678-9012"</span></span>,
+    "<span class="hljs-attribute">status</span>": <span class="hljs-value"><span class="hljs-string">"queued"</span></span>,
+    "<span class="hljs-attribute">lions</span>": <span class="hljs-value">[]
+  </span>}
+</span>}</code></pre><div style="height: 1px;"></div></div></div></div></div><div id="model-status" class="resource"><h3>Status<a href="#model-status" class="permalink">&para;</a></h3><p>Get status of identification task. The valid values of “status” are TBD but will likely be “queued”, “processing”, “finished”, and “error”.</p>
+<div id="model-status-get" class="action get"><h4><div class="name">Status</div><a href="#model-status-get" class="method get">GET</a><code class="uri">/results/&lt;job_id&gt;</code></h4><div class="title"><strong>Parameters</strong><div class="collapse-button show"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><dl class="inner"><dt>job_id</dt><dd><code>string</code>&nbsp;<span class="required">(required)</span>&nbsp;<span class="text-muted example"><strong>Example:&nbsp;</strong><span>&quot;e3464fc5</span></span><p>54d5-48db-bc05-761cad999cd8&quot; (required, alphanumeric) - ID of the recognition job in form of an alphanumeric string</p>
+</dd></dl></div><div class="title"><strong>Response&nbsp;&nbsp;<code>200</code></strong><div class="collapse-button"><span class="close">Hide</span><span class="open">Show</span></div></div><div class="collapse-content"><div class="inner"><h5>Headers</h5><pre><code><span class="hljs-attribute">Content-Type</span>: <span class="hljs-string">application/json</span></code></pre><div style="height: 1px;"></div><h5>Body</h5><pre><code>{
+  identification: {
+    id: <span class="hljs-string">"e3464fc5-54d5-48db-bc05-761cad999cd8"</span>,
+    status: <span class="hljs-string">"finished"</span>,
+    lions: [                           #  Each lion object <span class="hljs-keyword">in</span> the array will include an id and confidence 
+                                                 # (<span class="hljs-keyword">in</span> the range <span class="hljs-number">0</span>-<span class="hljs-number">1.0</span>)
+      {id: <span class="hljs-number">35</span>, confidence: <span class="hljs-number">0.8</span>},
+      {id: <span class="hljs-number">23</span>, confidence: <span class="hljs-number">0.6</span>}
+    ]
+  }
+}</code></pre><div style="height: 1px;"></div></div></div></div></div></section><section id="terms-of-use" class="resource-group"><h2 class="group-heading">Terms of Use<a href="#terms-of-use" class="permalink">&para;</a></h2><p>By using our API you are agreeing to our terms of use. You can read it here.</p>
+</section></div></div></div><p style="text-align: center;" class="text-muted">Generated by&nbsp;<a href="https://github.com/danielgtaylor/aglio" class="aglio">aglio</a>&nbsp;on 12 Aug 2015</p><script>/* eslint-env browser */
+/* eslint quotes: [2, "single"] */
+'use strict';
+
+/*
+  Determine if a string ends with another string.
+*/
+function endsWith(str, suffix) {
+    return str.indexOf(suffix, str.length - suffix.length) !== -1;
+}
+
+/*
+  Get an array [width, height] of the window.
+*/
+function getWindowDimensions() {
+  var w = window,
+      d = document,
+      e = d.documentElement,
+      g = d.body,
+      x = w.innerWidth || e.clientWidth || g.clientWidth,
+      y = w.innerHeight || e.clientHeight || g.clientHeight;
+
+  return [x, y];
+}
+
+/*
+  Collapse or show a request/response example.
+*/
+function toggleCollapseButton(event) {
+    var button = event.target.parentNode;
+    var content = button.parentNode.nextSibling;
+    var inner = content.children[0];
+
+    if (button.className.indexOf('collapse-button') === -1) {
+      // Clicked without hitting the right element?
+      return;
+    }
+
+    if (content.style.maxHeight && content.style.maxHeight !== '0px') {
+        // Currently showing, so let's hide it
+        button.className = 'collapse-button';
+        content.style.maxHeight = '0px';
+    } else {
+        // Currently hidden, so let's show it
+        button.className = 'collapse-button show';
+        content.style.maxHeight = inner.offsetHeight + 12 + 'px';
+    }
+}
+
+/*
+  Collapse or show a navigation menu. It will not be hidden unless it
+  is currently selected or `force` has been passed.
+*/
+function toggleCollapseNav(event, force) {
+    var heading = event.target.parentNode;
+    var content = heading.nextSibling;
+    var inner = content.children[0];
+
+    if (heading.className.indexOf('heading') === -1) {
+      // Clicked without hitting the right element?
+      return;
+    }
+
+    if (content.style.maxHeight && content.style.maxHeight !== '0px') {
+      // Currently showing, so let's hide it, but only if this nav item
+      // is already selected. This prevents newly selected items from
+      // collapsing in an annoying fashion.
+      if (force || window.location.hash && endsWith(event.target.href, window.location.hash)) {
+        content.style.maxHeight = '0px';
+      }
+    } else {
+      // Currently hidden, so let's show it
+      content.style.maxHeight = inner.offsetHeight + 12 + 'px';
+    }
+}
+
+/*
+  Refresh the page after a live update from the server. This only
+  works in live preview mode (using the `--server` parameter).
+*/
+function refresh(body) {
+    document.querySelector('body').className = 'preload';
+    document.body.innerHTML = body;
+
+    // Re-initialize the page
+    init();
+    autoCollapse();
+
+    document.querySelector('body').className = '';
+}
+
+/*
+  Determine which navigation items should be auto-collapsed to show as many
+  as possible on the screen, based on the current window height. This also
+  collapses them.
+*/
+function autoCollapse() {
+  var windowHeight = getWindowDimensions()[1];
+  var itemsHeight = 64; /* Account for some padding */
+  var itemsArray = Array.prototype.slice.call(
+    document.querySelectorAll('nav .resource-group .heading'));
+
+  // Get the total height of the navigation items
+  itemsArray.forEach(function (item) {
+    itemsHeight += item.parentNode.offsetHeight;
+  });
+
+  // Should we auto-collapse any nav items? Try to find the smallest item
+  // that can be collapsed to show all items on the screen. If not possible,
+  // then collapse the largest item and do it again. First, sort the items
+  // by height from smallest to largest.
+  var sortedItems = itemsArray.sort(function (a, b) {
+    return a.parentNode.offsetHeight - b.parentNode.offsetHeight;
+  });
+
+  while (sortedItems.length && itemsHeight > windowHeight) {
+    for (var i = 0; i < sortedItems.length; i++) {
+      // Will collapsing this item help?
+      var itemHeight = sortedItems[i].nextSibling.offsetHeight;
+      if ((itemsHeight - itemHeight <= windowHeight) || i === sortedItems.length - 1) {
+        // It will, so let's collapse it, remove its content height from
+        // our total and then remove it from our list of candidates
+        // that can be collapsed.
+        itemsHeight -= itemHeight;
+        toggleCollapseNav({target: sortedItems[i].children[0]}, true);
+        sortedItems.splice(i, 1);
+        break;
+      }
+    }
+  }
+}
+
+/*
+  Initialize the interactive functionality of the page.
+*/
+function init() {
+    var i;
+
+    // Make collapse buttons clickable
+    var buttons = document.querySelectorAll('.collapse-button');
+    for (i = 0; i < buttons.length; i++) {
+        buttons[i].onclick = toggleCollapseButton;
+
+        // Show by default? Then toggle now.
+        if (buttons[i].className.indexOf('show') !== -1) {
+            toggleCollapseButton({target: buttons[i].children[0]});
+        }
+    }
+
+    // Make nav items clickable to collapse/expand their content.
+    var navItems = document.querySelectorAll('nav .resource-group .heading');
+    for (i = 0; i < navItems.length; i++) {
+        navItems[i].onclick = toggleCollapseNav;
+
+        // Show all by default
+        toggleCollapseNav({target: navItems[i].children[0]});
+    }
+}
+
+// Initial call to set up buttons
+init();
+
+window.onload = function () {
+    autoCollapse();
+    // Remove the `preload` class to enable animations
+    document.querySelector('body').className = '';
+};
+</script></body></html>

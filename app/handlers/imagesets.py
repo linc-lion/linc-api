@@ -213,7 +213,7 @@ class ImageSetsHandler(BaseHandler):
                     # lions : []{"id": 456, "url": "http://lg-api.com/lions/456", "updated_at": "timestamp"}]
                     body['identification']['images'] = limgs
                     body['identification'][self.settings['animals']] = lanimals
-                    #print('\n\n'+str(body))
+                    print('\n\n'+str(body))
                     http_client = AsyncHTTPClient()
                     url = self.settings['CVSERVER_URL_IDENTIFICATION']
                     request = HTTPRequest(**{
