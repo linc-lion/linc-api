@@ -44,7 +44,7 @@ class CVRequestsHandler(BaseHandler):
             else:
                 query = self.query_id(req_id,trashed)
                 print(query)
-                objs = yield req.objects.filter(**query).limit(1).find_all()
+                objs = yield CVRequest.objects.filter(**query).limit(1).find_all()
                 if len(objs) > 0:
                     objreq = objs[0].to_son()
                     objreq['id'] = objs[0].iid

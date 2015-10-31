@@ -6,7 +6,7 @@ import sys
 sys.path.append('../app/models')
 sys.path.append('../app/handlers')
 from os.path import realpath,dirname
-from json import loads
+from json import loads,dumps
 from tornado.web import asynchronous
 from tornado.gen import engine,coroutine
 #from monguo.connection import Connection as con
@@ -18,16 +18,17 @@ from handlers.base import BaseHandler
 # Import models
 from models.organization import Organization
 from models.user import User
-from models.animal import Animal, animal as specie
+from models.animal import Animal
 from models.imageset import ImageSet,Image
 from models.cv import CVRequest,CVResult
 
 jsonpath = realpath(dirname(__file__))+'/pg_exported2json/'
 
-files = ['organizations.json',
-         'users.json',
-         'admin_users.json',
-         'lions.json',
+files = ['images.json']
+"""
+         'organizations.json',
+         'users.json','admin_users.json',
+         ,'lions.json'
 
          'image_sets.json',
          'images.json',
@@ -37,6 +38,7 @@ files = ['organizations.json',
 
          'active_admin_comments.json',
          'schema_migrations.json']
+"""
 
 def readData(filename):
     # read data from json file
@@ -92,7 +94,9 @@ class ImportHandler(BaseHandler):
                     obj['created_at'] = datetime.strptime(obj['created_at'], '%Y-%m-%d %H:%M:%S.%f')
                     #try:
                     if True:
-                        newobj = yield Animal(**obj).save()
+                        Animals = Animal(**obj)
+                        Animals.set_collection(self.settings['animals'])
+                        newobj = yield Animals.save()
                     else:
                     #except:
                         print('Fail to import lions')
@@ -100,6 +104,7 @@ class ImportHandler(BaseHandler):
                 response['messages'].append('lions imported')
             elif fn in ['users.json','admin_users.json']:
                 for d in data:
+
                     obj = dict(d)
                     obj['iid'] = obj['id']
                     del obj['id']
@@ -110,6 +115,7 @@ class ImportHandler(BaseHandler):
                     obj['trashed'] = False
                     obj['reset_password_sent_at'] = datetime.now()
                     obj['authentication_token'] = '--'
+
                     if fn == 'admin_users.json':
                         obj['iid'] = obj['iid'] + 10
                         obj['email'] = 'admin-'+obj['email']
@@ -118,9 +124,15 @@ class ImportHandler(BaseHandler):
                         obj['organization_iid'] = obj['organization_id']
                         del obj['organization_id']
                     obj['admin'] = (fn == 'admin_users.json')
+                    obj['remember_created_at'] = datetime.now()
+                    if '_remember_created_at' in obj.keys():
+                        del obj['_remember_created_at']
+                    print('\n\n'+str(d))
                     if True:
                         newobj = yield User(**obj).save()
                     else:
+                        print('File: '+fn)
+                        print('Obj_id = '+str(obj['id']))
                         print('Fail to import users')
                         break
                 if fn == 'admin_users.json':
@@ -143,15 +155,37 @@ class ImportHandler(BaseHandler):
                     obj['owner_organization_iid'] = obj['owner_organization_id']
                     del obj['owner_organization_id']
 
+                    #is_primary
+                    #
+                    if 'is_verified' not in obj.keys():
+                        obj['is_verified'] = False
+
+                    lat = obj['latitude']
+                    lng = obj['longitude']
+                    obj['location'] = [[lat,lng]]
+                    del obj['latitude']
+                    del obj['longitude']
+                    if 'gender' not in obj.keys():
+                        obj['gender'] = None
+                    if 'is_primary' not in obj.keys():
+                        obj['is_primary'] = False
+
                     obj['updated_at'] = datetime.strptime(obj['updated_at'], '%Y-%m-%d %H:%M:%S.%f')
                     obj['created_at'] = datetime.strptime(obj['created_at'], '%Y-%m-%d %H:%M:%S.%f')
-                    if obj['photo_date']:
-                        obj['photo_date'] = datetime.strptime(obj['photo_date'], '%Y-%m-%d %H:%M:%S.%f')
+                    #if obj['photo_date']:
+                    #    obj['photo_date'] = datetime.strptime(obj['photo_date'], '%Y-%m-%d %H:%M:%S.%f')
                     if obj['date_of_birth']:
                         obj['date_of_birth'] = datetime.strptime(obj['date_of_birth'], '%Y-%m-%d %H:%M:%S.%f')
-                    if obj['date_stamp']:
-                        obj['date_stamp'] = datetime.strptime(obj['date_stamp'], '%Y-%m-%d')
-                    obj['tags'] = str(obj['tags'])
+                    if 'date_stamp' not in obj.keys():
+                        obj['date_stamp'] = '-'
+                    obj['tags'] = dumps(obj['tags'])
+                    if 'notes' not in obj.keys():
+                        obj['notes'] = ''
+                    obj['trashed'] = False
+
+                    del obj['decimal']
+                    del obj['photo_date']
+
                     #try:
                     if True:
                         newobj = yield ImageSet(**obj).save()
@@ -161,6 +195,7 @@ class ImportHandler(BaseHandler):
                         break
                 response['messages'].append('image sets imported')
             elif fn == 'images.json':
+                imgs = list()
                 for d in data:
                     obj = dict(d)
                     obj['iid'] = obj['id']
@@ -169,6 +204,19 @@ class ImportHandler(BaseHandler):
                     del obj['image_set_id']
                     obj['updated_at'] = datetime.strptime(obj['updated_at'], '%Y-%m-%d %H:%M:%S.%f')
                     obj['created_at'] = datetime.strptime(obj['created_at'], '%Y-%m-%d %H:%M:%S.%f')
+                    obj['trashed'] = obj['is_deleted']
+                    del obj['is_deleted']
+                    del obj['full_image_uid']
+                    del obj['main_image_uid']
+                    del obj['thumbnail_image_uid']
+                    url = obj['url']
+                    imgs.append({'iid':obj['iid'],'url':obj['url']})
+                    idx = url.index('.com/')
+                    pt1 = url[:idx+5]
+                    pt2 = url[idx+5:-4]
+                    print('\n\n'+str(pt1))
+                    print('\n\n'+str(pt2))
+                    obj['url'] = pt2
                     #try:
                     if True:
                         newobj = yield Image(**obj).save()
@@ -177,6 +225,12 @@ class ImportHandler(BaseHandler):
                         print('Fail to import images')
                         break
                 response['messages'].append('images imported')
+                f = open('images_url.json','w+')
+                f.write(dumps(imgs))
+                f.close()
+                for url in imgs:
+                    resp = yield self.settings['db'].urlimages.insert(url)
+
             elif fn == 'cv_requests.json':
                 for d in data:
                     obj = dict(d)
@@ -184,10 +238,11 @@ class ImportHandler(BaseHandler):
                     del obj['id']
                     obj['image_set_iid'] = obj['image_set_id']
                     del obj['image_set_id']
-                    obj['uploading_organization_iid'] = obj['uploading_organization_id']
+                    obj['requesting_organization_iid'] = obj['uploading_organization_id']
                     del obj['uploading_organization_id']
                     obj['updated_at'] = datetime.strptime(obj['updated_at'], '%Y-%m-%d %H:%M:%S.%f')
                     obj['created_at'] = datetime.strptime(obj['created_at'], '%Y-%m-%d %H:%M:%S.%f')
+                    obj['request_body'] = ''
                     #try:
                     if True:
                         newobj = yield CVRequest(**obj).save()
@@ -197,22 +252,30 @@ class ImportHandler(BaseHandler):
                         break
                 response['messages'].append('cv requests imported')
             elif fn == 'cv_results.json':
+                cvd = dict()
                 for d in data:
-                    obj = dict(d)
-                    print(str(obj))
-                    obj['iid'] = obj['id']
-                    del obj['id']
-                    obj['cv_request_iid'] = obj['cv_request_id']
-                    del obj['cv_request_id']
-                    obj['lion_iid'] = obj['lion_id']
-                    del obj['lion_id']
-                    obj['updated_at'] = datetime.strptime(obj['updated_at'], '%Y-%m-%d %H:%M:%S.%f')
-                    obj['created_at'] = datetime.strptime(obj['created_at'], '%Y-%m-%d %H:%M:%S.%f')
-                    #try:
-                    if True:
+                    if d['cv_request_id'] not in cvd.keys():
+                        cvd[d['cv_request_id']] = list()
+                    cvd[d['cv_request_id']].append(dict(d))
+                print(cvd)
+                nid = 1
+                for k,v in cvd.items():
+                    print(k)
+                    print(v)
+                    obj = dict()
+                    obj['iid'] = nid
+                    nid = nid + 1
+                    obj['cvrequest_iid'] = k
+                    obj['updated_at'] = datetime.strptime(v[0]['updated_at'], '%Y-%m-%d %H:%M:%S.%f')
+                    obj['created_at'] = datetime.strptime(v[0]['created_at'], '%Y-%m-%d %H:%M:%S.%f')
+
+                    m = list()
+                    for ml in v:
+                        m.append({'id':ml['lion_id'],'confidence':ml['match_probability']})
+                    obj['match_probability'] = dumps(m)
+                    try:
                         newobj = yield CVResult(**obj).save()
-                    else:
-                    #except:
+                    except:
                         print('Fail to import cv results')
                         break
                 response['messages'].append('cv results imported')
