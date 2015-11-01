@@ -31,7 +31,7 @@ class Image(Document):
     __collection__ = 'images'
     image_type = StringField(required=True)
     iid = IntField(required=True,unique=True)
-    image_set_iid = IntField(required=False,default=-1)
+    image_set_iid = IntField(required=True,default=None)
     is_public = BooleanField(required=True,default=False)
     url = StringField(required=True)
     created_at = DateTimeField(required=True,auto_now_on_insert=True)
