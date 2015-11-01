@@ -391,6 +391,10 @@ class ImageSetsHandler(BaseHandler):
     @engine
     def list(self,trashed,callback=None):
         objs_imgsets = yield self.settings['db'].imagesets.find({'trashed':trashed}).to_list(None)
+        animals = yield self.settings['db'][self.settings['animals']].find({'trashed':trashed}).to_list(None)
+        animals_names = dict()
+        for x in animals:
+            animals_names[x['iid']] = x['name']
         output = list()
         for obj in objs_imgsets:
             imgset_obj = dict()
@@ -398,24 +402,17 @@ class ImageSetsHandler(BaseHandler):
             imgset_obj['id'] = obj['iid']
 
             if obj['animal_iid']:
-                obja = yield self.settings['db'][self.settings['animals']].find_one({'iid':obj['animal_iid'],'trashed':trashed})
-                imgset_obj['name'] = obja['name']
+                imgset_obj['name'] = animals_names[obj['animal_iid']]
             else:
                 imgset_obj['name'] = '-'
 
             obji = yield self.settings['db'].images.find({'image_set_iid':obj['iid'],'image_type':'main-id','trashed':trashed}).to_list(None)
-            #obji = yield Image.objects.filter(image_set_iid=obj.iid,image_type='main-id').find_all()
             if len(obji) > 0:
-                #url = obji[0].url[:obji[0].url.index('.com/')+5]
-                imgset_obj['thumbnail'] = 'http://linc-production.s3.amazonaws.com/2015/06/16/01/25/53/633/uploads_2F2015_2F6_2F16_2F96e22dfc_9a1c_45d7_88d9_6f79bcfe695c_2Fc_PJB_9221.jpeg'
-                #url + obji[0].thumbnail_image_uid
+                imgset_obj['thumbnail'] = self.settings['S3_URL']+obji[0]['url']+'.jpg'
             else:
-                #obji = yield Image.objects.filter(image_set_iid=obj.iid).find_all()
                 obji = yield self.settings['db'].images.find({'image_set_iid':obj['iid'],'trashed':trashed}).to_list(None)
                 if len(obji) > 0:
-                    #url = obji[0].url[:obji[0].url.index('.com/')+5]
                     imgset_obj['thumbnail'] = 'http://linc-production.s3.amazonaws.com/2015/06/16/01/25/53/633/uploads_2F2015_2F6_2F16_2F96e22dfc_9a1c_45d7_88d9_6f79bcfe695c_2Fc_PJB_9221.jpeg'
-                    #url + obji[0].thumbnail_image_uid
                 else:
                     imgset_obj['thumbnail'] = ''
 
@@ -425,7 +422,6 @@ class ImageSetsHandler(BaseHandler):
                 imgset_obj['age'] = '-'
 
             if obj['owner_organization_iid']:
-                #objo = yield Organization.objects.filter(iid=obj.owner_organization_iid).find_all()
                 objo = yield self.settings['db'].organizations.find_one({'iid':obj['owner_organization_iid'],'trashed':trashed})
                 if objo:
                     imgset_obj['organization'] = objo['name']
@@ -436,8 +432,7 @@ class ImageSetsHandler(BaseHandler):
             imgset_obj['is_verified'] = obj['is_verified']
             imgset_obj['is_primary'] = obj['is_primary']
 
-            #objcvreq = yield CVRequest.objects.filter(image_set_iid=obj.iid).find_all()
-            objcvreq = yield self.settings['db'].cvrequests.find_one({'image_set_iid':obj['iid'],'trashed':trashed})
+            objcvreq = yield self.settings['db'].cvrequests.find_one({'image_set_iid':obj['iid']})
             if objcvreq:
                 imgset_obj['cvrequest'] = str(objcvreq['_id'])
             else:
@@ -445,9 +440,10 @@ class ImageSetsHandler(BaseHandler):
 
             imgset_obj['cvresults'] = None
             if objcvreq:
-                #objcvres = yield CVResult.objects.filter(cv_request_iid=objcvreq[0].iid).find_all()
-                objcvres = yield self.settings['db'].cvresults.find_one({'cv_request_iid':objcvreq['iid'],'trashed':trashed})
+                print(objcvreq)
+                objcvres = yield self.settings['db'].cvresults.find_one({'cvrequest_iid':objcvreq['iid']})
                 if objcvres:
+                    print('Tem result para o cvrequest_iid: '+str(objcvreq['iid']))
                     imgset_obj['cvresults'] = str(objcvres['_id'])
             output.append(imgset_obj)
         callback(output)
