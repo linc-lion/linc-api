@@ -77,6 +77,7 @@ sudo ln -s /usr/lib/x86_64-linux-gnu/libz.so /usr/lib > /dev/null
 
 # App Configuration
 msg "Starting provision for LINC-API app..."
+sudo apt-get -y install libcurl4-openssl-dev > /dev/null
 sudo rm -fr /home/vagrant/app/venv /home/vagrant/linc-api/venv 2> /dev/null
 virtualenv --python=python3 --prompt="LINC-API " /home/vagrant/linc-api/venv
 source /home/vagrant/linc-api/venv/bin/activate
