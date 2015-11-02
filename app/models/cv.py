@@ -20,7 +20,7 @@ class CVRequest(Document):
 
 class CVResult(Document):
     __collection__ = 'cvresults'
-    cvrequest_iid = IntField(required=False,default=None,unique=True)
+    cvrequest_iid = IntField(required=True,default=None,unique=True)
     iid = IntField(required=True,unique=True)
     match_probability = StringField(required=True,default='[]')
     created_at = DateTimeField(required=True,auto_now_on_insert=True)

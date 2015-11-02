@@ -8,6 +8,8 @@ from models.cv import CVResult
 from bson import ObjectId as ObjId
 from datetime import datetime
 from tornado.httpclient import AsyncHTTPClient,HTTPRequest,HTTPError
+from tornado.escape import json_decode
+from json import dumps,loads
 
 class CVResultsHandler(BaseHandler):
     """A class that handles requests about CV identificaiton results informartion
@@ -27,7 +29,7 @@ class CVResultsHandler(BaseHandler):
 
     @asynchronous
     @coroutine
-    def get(self, res_id=None):
+    def get(self, res_id=None, xlist=None):
         if res_id:
             if res_id == 'list':
                 objs = yield self.settings['db'].cvresults.find().to_list(None)
@@ -38,13 +40,31 @@ class CVResultsHandler(BaseHandler):
                 print(query)
                 objs = yield self.settings['db'].cvresults.find_one(query)
                 if objs:
-                    objres = objs[0].to_son()
-                    objres['id'] = objs[0].iid
-                    objres['obj_id'] = str(objs[0]._id)
-                    del objres['iid']
-
+                    if not xlist:
+                        objres = dict(objs)
+                        self.switch_iid(objres)
+                        objres['obj_id'] = str(objs['_id'])
+                        del objres['_id']
+                    else:
+                        # List data following the website form
+                        output = list()
+                        mp = loads(objs['match_probability'])
+                        print(mp)
+                        for i in mp:
+                            objres = dict()
+                            objres['id'] = int(i['id'])
+                            #
+                            objres['thumbnail'] = ''
+                            objres['name'] = 'Lion name'
+                            objres['age'] = 'age'
+                            objres['organization'] = 'org'
+                            objres['gender'] = ''
+                            objres['is_verified'] = False
+                            #
+                            objres['cv'] = i['confidence']
+                            output.append(objres)
                     self.set_status(200)
-                    self.finish(self.json_encode({'status':'success','data':objres}))
+                    self.finish(self.json_encode({'status':'success','data':output}))
                 else:
                     self.set_status(404)
                     self.finish(self.json_encode({'status':'error','message':'not found'}))
@@ -70,6 +90,7 @@ class CVResultsHandler(BaseHandler):
             self.dropError(400,'you must provide a cvrequest_id')
             return
         else:
+            cvrequest_id = self.input_data['cvrequest_id']
             if cvrequest_id == 'all':
                 # create cvresults for all cvrequest that still doesn't have one
                 pass
@@ -96,21 +117,42 @@ class CVResultsHandler(BaseHandler):
                     newobj['updated_at'] = dt
                     # Check the result in the Server
                     results = yield Task(self.checkresult,cvreq['server_uuid'])
+                    """
+                    # {'code': 200, 'status': 'finished', 'id': '188855dc-2a0c-43fd-964b-d13cd2d328e8',
+                    # 'lions': [{'confidence': 0.0, 'id': '14'}, {'confidence': 0.0006, 'id': '18'},
+                    # {'confidence': 0.0, 'id': '27'}, {'confidence': 0.0029, 'id': '3'}, {'confidence': 0.0109, 'id': '17'},
+                    # {'confidence': 0.0, 'id': '20'}, {'confidence': 0.0, 'id': '28'}, {'confidence': 0.49079999999999996, 'id': '15'},
+                    # {'confidence': 0.0087, 'id': '19'}, {'confidence': 0.3345, 'id': '7'}, {'confidence': 0.1605, 'id': '12'},
+                    #  {'confidence': 0.0, 'id': '29'}, {'confidence': 0.0003, 'id': '6'}, {'confidence': 0.0005, 'id': '2'},
+                    #  {'confidence': 0.0036, 'id': '4'}, {'confidence': 0.0014000000000000002, 'id': '5'},
+                    #   {'confidence': 0.8551000000000001, 'id': '24'}, {'confidence': 0.0003, 'id': '13'},
+                    #    {'confidence': 0.0042, 'id': '23'}, {'confidence': 0.3856, 'id': '8'}, {'confidence': 0.0, 'id': '21'},
+                    #    {'confidence': 0.0023, 'id': '26'}, {'confidence': 0.0106, 'id': '30'}], 'reason': 'OK'}
+                    """
                     newobj['match_probability'] = '[]'
                     rcode_to_cvrequest = 'fail'
                     if results:
                         if results['code'] == 200:
-                            newobj['match_probability'] = dumps(results['identification']['lions'])
-                            rcode_to_cvrequest = results['identification']['status']
+                            newobj['match_probability'] = dumps(results['lions'])
+                            rcode_to_cvrequest = results['code']
                     """
                     CV Server status responses: "queued", "processing", "finished", and "error".
                     API have: "fail" that means the communication with cv server fail
                     """
                     # save the new cvresult in the database
-                    try:
+                    #try:
+                    if True:
+                        print(newobj)
+                        """
+                        {'updated_at': datetime.datetime(2015, 11, 2, 4, 16, 49, 709690),
+                        'match_probability': '[{"id": "14", "confidence": 0.0}, {"id": "18", "confidence": 0.0006}, {"id": "27", "confidence": 0.0}, {"id": "3", "confidence": 0.0029}, {"id": "17", "confidence": 0.0109}, {"id": "20", "confidence": 0.0}, {"id": "28", "confidence": 0.0}, {"id": "15", "confidence": 0.49079999999999996}, {"id": "19", "confidence": 0.0087}, {"id": "7", "confidence": 0.3345}, {"id": "12", "confidence": 0.1605}, {"id": "29", "confidence": 0.0}, {"id": "6", "confidence": 0.0003}, {"id": "2", "confidence": 0.0005}, {"id": "4", "confidence": 0.0036}, {"id": "5", "confidence": 0.0014000000000000002}, {"id": "24", "confidence": 0.8551000000000001}, {"id": "13", "confidence": 0.0003}, {"id": "23", "confidence": 0.0042}, {"id": "8", "confidence": 0.3856}, {"id": "21", "confidence": 0.0}, {"id": "26", "confidence": 0.0023}, {"id": "30", "confidence": 0.0106}]',
+                        'created_at': datetime.datetime(2015, 11, 2, 4, 16, 49, 709690),
+                        'iid': 15, 'cvrequest_iid': 37}
+                        """
                         newres = CVResult(**newobj)
                         if newres.validate():
-                            try:
+                            #try:
+                            if True:
                                 # updating the cvrequest with the status
                                 cvrequ = self.settings['db'].cvrequests.update({'_id':cvreq['_id']},{'$set':{'status':rcode_to_cvrequest,'updated_at':datetime.now()}})
                                 newsaved = yield newres.save()
@@ -120,10 +162,12 @@ class CVResultsHandler(BaseHandler):
                                 output['cvrequest_id'] = output['cvrequest_iid']
                                 del output['cvrequest_iid']
                                 self.finish(self.json_encode({'status':'success','message':'new cv results saved','data':output}))
-                            except:
+                            #except:
+                            else:
                                 # duplicated index error
                                 self.dropError(409,'an error check for indexing violation. the cv results was not created.')
-                    except:
+                    #except:
+                    else:
                         # received data is invalid in some way
                         self.dropError(500,'fail to save the new cvresult')
 
@@ -209,28 +253,30 @@ class CVResultsHandler(BaseHandler):
         """
         output = list()
         for x in objs:
-            obj = dict()
-            obj['id'] = x['iid']
+            obj = dict(x)
+            self.switch_iid(obj)
+            obj['obj_id'] = str(obj['_id'])
+            del obj['_id']
             output.append(obj)
         return output
 
     @asynchronous
     @engine
     def checkresult(self,jobid,callback=None):
+        AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient")
         http_client = AsyncHTTPClient()
         url = self.settings['CVSERVER_URL_RESULTS']
         request = HTTPRequest(**{
             'url' : url+jobid,
             'method' : 'GET',
             'auth_username' : self.settings['CV_USERNAME'],
-            'auth_password' : self.settings['CV_PASSWORD'],
-            'body' : dumps(body)
+            'auth_password' : self.settings['CV_PASSWORD']
         })
         try:
             response = yield http_client.fetch(request)
             rbody = json_decode(response.body)
             rbody['code'] = response.code
-            rbody['reason'] = responde.reason
+            rbody['reason'] = response.reason
         except:
             rbody = {}
         callback(rbody)

@@ -45,6 +45,7 @@ def url_patterns(animals='lions'):
         (r"/cvrequests/(\w+$)", CVRequestsHandler),
 
         (r"/cvresults/?$", CVResultsHandler),
-        (r"/cvresults/(\w+$)", CVResultsHandler)
+        (r"/cvresults/(\w+$)", CVResultsHandler),
+        (r"/cvresults/(\w+)/(list)$", CVResultsHandler)
     ]
     return routes
