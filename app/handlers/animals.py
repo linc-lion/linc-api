@@ -46,7 +46,8 @@ class AnimalsHandler(BaseHandler):
                 for org in orgs:
                     orgnames[org['iid']] = org['name']
                 self.set_status(200)
-                self.finish(self.json_encode({'status':'success','data':self.list(objs,orgnames)}))
+                output = yield Task(self.list,objs,orgnames,trashed)
+                self.finish(self.json_encode({'status':'success','data':output}))
             else:
                 # return a specific animal accepting as id the integer id, hash and name
                 query = self.query_id(animal_id,trashed)
@@ -255,7 +256,9 @@ class AnimalsHandler(BaseHandler):
         else:
             self.dropError(400,'Remove requests (DELETE) must have a resource ID.')
 
-    def list(self,objs,orgnames):
+    @asynchronous
+    @engine
+    def list(self,objs,orgnames,trashed=False,callback=None):
         """ Implements the list output used for UI in the website
         """
         output = list()
@@ -267,8 +270,24 @@ class AnimalsHandler(BaseHandler):
                 obj['organization'] = orgnames[x['organization_iid']]
             else:
                 obj['organization'] = '-'
+            obj['age'] = None
+            obj['gender'] = None
+            obj['is_verified'] = False
+            obj['thumbnail'] = ''
+            if x['primary_image_set_iid'] > 0:
+                imgset = yield self.settings['db'].imagesets.find_one({'iid':x['primary_image_set_iid']})
+                if imgset:
+                    obj['age'] = self.age(imgset['date_of_birth'])
+                    obj['gender'] = imgset['gender']
+                    obj['is_verified'] = imgset['is_verified']
+                    img = yield self.settings['db'].images.find_one({'image_set_iid':imgset['iid'],'image_type':'main-id','trashed':trashed})
+                    if img:
+                        imgurl = yield self.settings['db'].urlimages.find_one({'iid':img['iid']})
+                        obj['thumbnail'] = imgurl['url']
+
+
             output.append(obj)
-        return output
+        callback(output)
 
     @asynchronous
     @engine
@@ -316,9 +335,16 @@ class AnimalsHandler(BaseHandler):
                     obji['id'] = image['iid']
                     obji['image_type'] = image['image_type']
                     obji['is_public'] = image['is_public']
+                    # This will be recoded
                     obji['thumbnail_url'] = ''
                     obji['main_url'] = ''
                     obji['url'] = ''
+                    img = yield self.settings['db'].urlimages.find_one({'iid':image['iid']})
+                    if img:
+                        obji['thumbnail_url'] = img['url']
+                        obji['main_url'] = img['url']
+                        obji['url'] = img['url']
+
                     # This will be updated
                     #"thumbnail_url":"http://lion-guardians-production.s3.amazonaws.com/2015/05/31/16/17/59/133/uploads_2Fe3f10f18_d176_41a7_84b9_0b2c5fef81e7_2F38yrs_Sikiria_300x300.jpg",
                     #"main_url":"http://lion-guardians-production.s3.amazonaws.com/2015/05/31/16/18/00/752/uploads_2Fe3f10f18_d176_41a7_84b9_0b2c5fef81e7_2F38yrs_Sikiria_300x300.jpg",

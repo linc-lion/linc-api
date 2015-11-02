@@ -12,43 +12,33 @@ class CVRequestsHandler(BaseHandler):
     """A class that handles requests about CV indentification informartion
     """
 
-    def query_id(self,req_id,trashed=False):
+    def query_id(self,req_id):
         """This method configures the query that will find an object"""
         try:
             query = { 'iid' : int(req_id) }
         except:
             try:
-                query = { 'id' : ObjId(req_id) }
+                query = { '_id' : ObjId(req_id) }
             except:
                 self.dropError(400,'invalid id key')
                 return
-        query['trashed'] = trashed
-        print(query)
         return query
 
     @asynchronous
     @coroutine
     def get(self, req_id=None):
-        trashed = self.get_argument('trashed',False)
-        if trashed:
-            if trashed.lower() == 'true':
-                trashed = True
-            else:
-                trashed = False
-        print(req_id)
         if req_id:
             if req_id == 'list':
-                objs = yield self.settings['db'].cvrequests.find({'trashed':trashed}).to_list(None)
+                objs = yield self.settings['db'].cvrequests.find().to_list(None)
                 self.set_status(200)
                 self.finish(self.json_encode({'status':'success','data':self.list(objs)}))
             else:
-                query = self.query_id(req_id,trashed)
-                print(query)
-                objs = yield CVRequest.objects.filter(**query).limit(1).find_all()
-                if len(objs) > 0:
-                    objreq = objs[0].to_son()
-                    objreq['id'] = objs[0].iid
-                    objreq['obj_id'] = str(objs[0]._id)
+                query = self.query_id(req_id)
+                obj = yield self.settings['db'].cvrequests.find_one(query)
+                if obj:
+                    objreq = obj
+                    objreq['id'] = obj['iid']
+                    objreq['obj_id'] = str(obj['_id'])
                     del objreq['iid']
 
                     self.set_status(200)
@@ -57,7 +47,7 @@ class CVRequestsHandler(BaseHandler):
                     self.set_status(404)
                     self.finish(self.json_encode({'status':'error','message':'not found'}))
         else:
-            objs = yield self.settings['db'].cvrequests.find({'trashed':trashed}).to_list(None)
+            objs = yield self.settings['db'].cvrequests.find().to_list(None)
             output = list()
             for x in objs:
                 obj = dict(x)
@@ -130,7 +120,7 @@ class CVRequestsHandler(BaseHandler):
         # parse data recept by PUT and get only fields of the object
         update_data = self.parseInput(CVRequest)
         fields_allowed_to_be_update = ['requesting_organization_id','iid','image_set_id','status',
-        'server_uuid','request_body','trashed']
+        'server_uuid','request_body']
         if 'image_set_id' in self.input_data.keys():
             imgiid = self.input_data['image_set_id']
             imgset = yield self.settings['db'].imagesets.find_one({'iid':imgiid,'trashed':False})
@@ -155,8 +145,6 @@ class CVRequestsHandler(BaseHandler):
                 break
         if req_id and update_ok:
             query = self.query_id(req_id)
-            if 'trashed' in update_data.keys():
-                del query['trashed']
             updobj = yield CVRequest.objects.filter(**query).limit(1).find_all()
             if len(updobj) > 0:
                 updobj = updobj[0]
