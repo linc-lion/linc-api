@@ -198,8 +198,9 @@ class ImageSetsHandler(BaseHandler):
                     imgs = yield self.settings['db'].images.find(query_images).to_list(None)
                     limgs = list()
                     for img in imgs:
-                        url = 'http://linc-production.s3.amazonaws.com/2015/06/16/01/25/53/633/uploads_2F2015_2F6_2F16_2F96e22dfc_9a1c_45d7_88d9_6f79bcfe695c_2Fc_PJB_9221.jpeg'
-                        limgs.append({'id':img['iid'],'type':img['image_type'],'url':url})
+                        #url = 'http://linc-production.s3.amazonaws.com/2015/06/16/01/25/53/633/uploads_2F2015_2F6_2F16_2F96e22dfc_9a1c_45d7_88d9_6f79bcfe695c_2Fc_PJB_9221.jpeg'
+                        url = yield self.settings['db'].urlimages.find_one({'iid':img['iid']})
+                        limgs.append({'id':img['iid'],'type':img['image_type'],'url':url['url']})
                     animals = self.input_data[self.settings['animals']]
                     animalscheck = yield self.settings['db'][self.settings['animals']].find({'iid' : { '$in' : animals }}).to_list(None)
                     if not animalscheck:
@@ -406,13 +407,20 @@ class ImageSetsHandler(BaseHandler):
             else:
                 imgset_obj['name'] = '-'
 
-            obji = yield self.settings['db'].images.find({'image_set_iid':obj['iid'],'image_type':'main-id','trashed':trashed}).to_list(None)
-            if len(obji) > 0:
-                imgset_obj['thumbnail'] = self.settings['S3_URL']+obji[0]['url']+'.jpg'
+            obji = yield self.settings['db'].images.find_one({'image_set_iid':obj['iid'],'image_type':'main-id','trashed':trashed})
+            if obji:
+                url = yield self.settings['db'].urlimages.find_one({'iid':obji['iid']})
+                if url:
+                    imgset_obj['thumbnail'] = url['url']
+                else:
+                    imgset_obj['thumbnail'] = ''
+                #self.settings['S3_URL']+obji[0]['url']+'.jpg'
             else:
                 obji = yield self.settings['db'].images.find({'image_set_iid':obj['iid'],'trashed':trashed}).to_list(None)
                 if len(obji) > 0:
-                    imgset_obj['thumbnail'] = 'http://linc-production.s3.amazonaws.com/2015/06/16/01/25/53/633/uploads_2F2015_2F6_2F16_2F96e22dfc_9a1c_45d7_88d9_6f79bcfe695c_2Fc_PJB_9221.jpeg'
+                    url = yield self.settings['db'].urlimages.find_one({'iid':obji[0]['iid']})
+                    imgset_obj['thumbnail'] = url['url']
+                    #'http://linc-production.s3.amazonaws.com/2015/06/16/01/25/53/633/uploads_2F2015_2F6_2F16_2F96e22dfc_9a1c_45d7_88d9_6f79bcfe695c_2Fc_PJB_9221.jpeg'
                 else:
                     imgset_obj['thumbnail'] = ''
 
@@ -440,10 +448,8 @@ class ImageSetsHandler(BaseHandler):
 
             imgset_obj['cvresults'] = None
             if objcvreq:
-                print(objcvreq)
                 objcvres = yield self.settings['db'].cvresults.find_one({'cvrequest_iid':objcvreq['iid']})
                 if objcvres:
-                    print('Tem result para o cvrequest_iid: '+str(objcvreq['iid']))
                     imgset_obj['cvresults'] = str(objcvres['_id'])
             output.append(imgset_obj)
         callback(output)
