@@ -53,8 +53,6 @@ tornado.options.parse_command_line()
 # import hashlib
 # hashlib.sha256('sample').hexdigest()
 
-io_loop = IOLoop.instance()
-db = connect("linc-api-lions", host="localhost", port=27017, io_loop=io_loop)
 
 # API settings
 api = {}
@@ -65,11 +63,15 @@ api['app_path'] = os.path.dirname(os.path.realpath(__file__))
 api['default_handler_class'] = ErrorHandler
 api['default_handler_args'] = dict(status_code=404)
 api['version'] = 'api version 0.1'
-api['db'] = db
 
 # Setting about deploy and CV Server
 api['animal'] = 'lion'
 api['animals'] = 'lions'
+
+# MongoDB Connection
+io_loop = IOLoop.instance()
+db = connect("linc-api-"+api['animals'], host="localhost", port=27017, io_loop=io_loop)
+api['db'] = db
 
 api['CVSERVER_URL_IDENTIFICATION'] = 'https://linc.semantic.md/identifications'
 api['CVSERVER_URL_RESULTS'] = 'https://linc.semantic.md/results/'

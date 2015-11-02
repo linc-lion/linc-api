@@ -208,37 +208,45 @@ class ImageSetsHandler(BaseHandler):
                         return
                     lanimals = list()
                     for animal in animalscheck:
-                        url = 'http://localhost:5000/'+self.settings['animals']+'/'
+                        url = 'http://lion-guardians-api.herokuapp.com/'+self.settings['animals']+'/'
                         lanimals.append({'id':animal['iid'],'url':url+str(animal['iid'])})
                     # images : [{"id": 123, "type": "whisker", "url": "https://s3.amazonaws.com/semanticmd-api-testing/api/cbc90b5705d51e9e218b0a7e518aa6d3506c190c"}]
                     # lions : []{"id": 456, "url": "http://lg-api.com/lions/456", "updated_at": "timestamp"}]
                     body['identification']['images'] = limgs
                     body['identification'][self.settings['animals']] = lanimals
-                    print('\n\n'+str(body))
+                    sbody = dumps(body)
+                    print(sbody)
+                    AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient")
                     http_client = AsyncHTTPClient()
                     url = self.settings['CVSERVER_URL_IDENTIFICATION']
                     request = HTTPRequest(**{
-                        'url' : self.settings['CVSERVER_URL_IDENTIFICATION'],
+                        'url' : url,
                         'method' : 'POST',
                         'auth_username' : self.settings['CV_USERNAME'],
                         'auth_password' : self.settings['CV_PASSWORD'],
-                        'body' : dumps(body)
+                        'body' : sbody,
+                        'validate_cert' : False
                     })
+
                     try:
                         response = yield http_client.fetch(request)
                         rbody = json_decode(response.body)
+                        # response example
+                        #{'status': 'queued', 'id': '82bcd768-ebae-41ac-ad84-2ee3a95dbe00', 'lions': []}
+
                         # Create a cvrequest for this ImageSet
                         newobj = dict()
                         newobj['iid'] = yield Task(self.new_iid,CVRequest.__collection__)
                         newobj['image_set_iid'] = imageset_id
-                        newobj['status'] = rbody['data']['status']
-                        newobj['server_uuid'] = rbody['data']['id']
-                        newobj['request_body'] = body
+                        newobj['status'] = rbody['status']
+                        newobj['server_uuid'] = rbody['id']
+                        newobj['request_body'] = sbody
                         newsaved = yield CVRequest(**newobj).save()
-                        print(newsaved.to_son())
+                        output = newsaved.to_son()
+                        del output['request_body']
 
                         self.set_status(response.code)
-                        self.finish(self.json_encode({'status':'success','message':response.reason,'data':rbody}))
+                        self.finish(self.json_encode({'status':'success','message':response.reason,'data':output}))
                     except:
                         self.set_status(500)
                         self.finish({'status':'error','message':'fail to execute the request for identification'})
