@@ -40,6 +40,7 @@ class CVRequestsHandler(BaseHandler):
                     objreq['id'] = obj['iid']
                     objreq['obj_id'] = str(obj['_id'])
                     del objreq['iid']
+                    del objreq['_id']
 
                     self.set_status(200)
                     self.finish(self.json_encode({'status':'success','data':objreq}))
@@ -217,7 +218,9 @@ class CVRequestsHandler(BaseHandler):
         """
         output = list()
         for x in objs:
-            obj = dict()
-            obj['id'] = x['iid']
+            obj = dict(x)
+            self.switch_iid(obj)
+            obj['obj_id'] = str(obj['_id'])
+            del obj['_id']
             output.append(obj)
         return output

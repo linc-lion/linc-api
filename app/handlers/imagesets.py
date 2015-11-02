@@ -237,12 +237,16 @@ class ImageSetsHandler(BaseHandler):
                         # Create a cvrequest for this ImageSet
                         newobj = dict()
                         newobj['iid'] = yield Task(self.new_iid,CVRequest.__collection__)
+                        # This will be get from the user that do the request
+                        newobj['requesting_organization_id'] = None
                         newobj['image_set_iid'] = imageset_id
                         newobj['status'] = rbody['status']
                         newobj['server_uuid'] = rbody['id']
                         newobj['request_body'] = sbody
                         newsaved = yield CVRequest(**newobj).save()
                         output = newsaved.to_son()
+                        output['obj_id'] = str(newsaved._id)
+                        self.switch_iid(output)
                         del output['request_body']
 
                         self.set_status(response.code)
