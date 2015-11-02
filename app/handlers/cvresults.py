@@ -45,6 +45,7 @@ class CVResultsHandler(BaseHandler):
                         self.switch_iid(objres)
                         objres['obj_id'] = str(objs['_id'])
                         del objres['_id']
+                        output = objres
                     else:
                         # List data following the website form
                         output = list()
