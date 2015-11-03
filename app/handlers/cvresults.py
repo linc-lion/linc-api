@@ -68,6 +68,13 @@ class CVResultsHandler(BaseHandler):
                                     url = yield self.settings['db'].urlimages.find_one({'iid':img['iid']})
                                     if url:
                                         objres['thumbnail'] = url['url']
+                                else:
+                                    img = yield self.settings['db'].images.find({'image_set_iid':aobj['primary_image_set_iid'],'trashed':False}).to_list(length=1)
+                                    if img:
+                                        url = yield self.settings['db'].urlimages.find_one({'iid':img[0]['iid']})
+                                        if url:
+                                            objres['thumbnail'] = url['url']
+
                                 if aobj:
                                     objres['name'] = aobj['name']
                                 imgss = yield self.settings['db'].imagesets.find_one({'iid':aobj['primary_image_set_iid'],'trashed':False})
