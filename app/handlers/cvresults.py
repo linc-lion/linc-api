@@ -37,7 +37,6 @@ class CVResultsHandler(BaseHandler):
                 self.finish(self.json_encode({'status':'success','data':self.list(objs)}))
             else:
                 query = self.query_id(res_id)
-                print(query)
                 objs = yield self.settings['db'].cvresults.find_one(query)
                 if objs:
                     if not xlist:
@@ -50,18 +49,36 @@ class CVResultsHandler(BaseHandler):
                         # List data following the website form
                         output = list()
                         mp = loads(objs['match_probability'])
-                        print(mp)
                         for i in mp:
                             objres = dict()
                             objres['id'] = int(i['id'])
-                            #
+                            objres['name'] = '-'
                             objres['thumbnail'] = ''
-                            objres['name'] = 'Lion name'
-                            objres['age'] = 'age'
-                            objres['organization'] = 'org'
+                            objres['age'] = '-'
                             objres['gender'] = ''
                             objres['is_verified'] = False
-                            #
+                            objres['organization'] = ''
+                            # get the animal
+                            aobj = yield self.settings['db'][self.settings['animals']].find_one({'iid':objres['id'],'trashed':False})
+                            if aobj:
+                                #cvreq = yield self.settings['db'].cvrequests.find_one({'iid':objs['cvrequest_iid']})
+                                # here
+                                img = yield self.settings['db'].images.find_one({'image_set_iid':aobj['primary_image_set_iid'],'image_type':'main-id','trashed':False})
+                                if img:
+                                    url = yield self.settings['db'].urlimages.find_one({'iid':img['iid']})
+                                    if url:
+                                        objres['thumbnail'] = url['url']
+                                if aobj:
+                                    objres['name'] = aobj['name']
+                                imgss = yield self.settings['db'].imagesets.find_one({'iid':aobj['primary_image_set_iid'],'trashed':False})
+                                if imgss:
+                                    objres['age'] = self.age(imgss['date_of_birth'])
+                                    objres['gender'] = imgss['gender']
+                                    objres['is_verified'] = imgss['is_verified']
+                                if aobj:
+                                    org = yield self.settings['db'].organizations.find_one({'iid':aobj['organization_iid'],'trashed':False})
+                                    if org:
+                                        objres['organization'] = org['name']
                             objres['cv'] = i['confidence']
                             output.append(objres)
                     self.set_status(200)
