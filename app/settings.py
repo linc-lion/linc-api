@@ -14,7 +14,7 @@ from motorengine.connection import connect
 # Adjusting path for the app
 
 # make filepaths relative to settings.
-ROOT = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(os.path.realpath(__file__))
 path = lambda *a: os.path.join(ROOT, *a)
 
 # save original Python path
@@ -22,6 +22,9 @@ old_sys_path = list(sys.path)
 
 # add local packages directories to Python's site-packages path
 site.addsitedir(path('handlers'))  # Request handlers
+site.addsitedir(ROOT)
+site.addsitedir(ROOT+'/models')
+site.addsitedir(ROOT+'/handlers')
 
 # add local dependencies
 if os.path.exists(path('lib')):
@@ -31,7 +34,7 @@ if os.path.exists(path('lib')):
             site.addsitedir(full_path)
 
 # move the new items to the front of sys.path
-new_sys_path = []
+new_sys_path = [ROOT,ROOT+'/handlers',ROOT+'/models']
 for item in list(sys.path):
     if item not in old_sys_path:
         new_sys_path.append(item)
