@@ -23,5 +23,6 @@ class CVResult(Document):
     cvrequest_iid = IntField(required=True,default=None,unique=True)
     iid = IntField(required=True,unique=True)
     match_probability = StringField(required=True,default='[]')
+    status = StringField(required=False,default='queued')
     created_at = DateTimeField(required=True,auto_now_on_insert=True)
     updated_at = DateTimeField(required=True,auto_now_on_insert=True)

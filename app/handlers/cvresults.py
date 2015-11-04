@@ -160,6 +160,7 @@ class CVResultsHandler(BaseHandler):
                         if results['code'] == 200:
                             newobj['match_probability'] = dumps(results['lions'])
                             rcode_to_cvrequest = results['code']
+                            newobj['status'] = results['status']
                     """
                     CV Server status responses: "queued", "processing", "finished", and "error".
                     API have: "fail" that means the communication with cv server fail
