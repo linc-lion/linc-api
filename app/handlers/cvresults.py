@@ -130,7 +130,7 @@ class CVResultsHandler(BaseHandler):
                 cvres = yield self.settings['db'].cvresults.find_one({'cvrequest_iid':cvrequest_id})
                 if cvres:
                     # exists, so tray to update if the status is uncompleted
-                    self.setSuccess(400,'a result for the cvrequest_id '+cvrequest_id+' already exists and the cvrequest has status = '+cvreq['status']+'. To update it send a PUT request in the /cvresults')
+                    self.setSuccess(400,'a result for the cvrequest_id '+str(cvrequest_id)+' already exists and the cvrequest has status = '+cvreq['status']+'. To update it send a PUT request in the /cvresults')
                     return
                 else:
                     # create a cvresult
