@@ -77,8 +77,11 @@ URI = os.environ.get("MONGOLAB_URI","local")
 if URI == "local":
     db = connect("linc-api-"+api['animals'], host="localhost", port=27017, io_loop=io_loop)
 else:
-    #dbname = URI.split("://")[1].split(":")[0]
-    db = connect(URI,io_loop=io_loop)
+    dbname = URI.split("://")[1].split(":")[0]
+    server = URI.split("://")[1].split(":")[1].split('@')[1]
+    port = URI.split("://")[1].split(":")[2].split('/')[0]
+    password = URI.split("://")[1].split(":")[1].split('@')[0]
+    db = connect(dbname,host=server,port=port,username=dbname,password=password,io_loop=io_loop)
 api['db'] = db
 
 api['CVSERVER_URL_IDENTIFICATION'] = 'https://linc.semantic.md/identifications'
