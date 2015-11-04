@@ -9,7 +9,8 @@ import tornado.template
 from tornado.options import define, options
 from handlers.error import ErrorHandler
 from tornado.ioloop import IOLoop
-from motorengine.connection import connect
+#from motorengine.connection import connect
+from motor import MotorClient as connect
 
 # Adjusting path for the app
 
@@ -72,13 +73,16 @@ api['animal'] = 'lion'
 api['animals'] = 'lions'
 
 # MongoDB Connection
-io_loop = IOLoop.instance()
+
 URI = os.environ.get("MONGOLAB_URI","local")
 if URI == "local":
-    db = connect("linc-api-"+api['animals'], host="localhost", port=27017,io_loop=io_loop)
+    conn = connect("mongodb://localhost:27017")
+    db = conn['linc-api-'+api['animals']]
 else:
     dbname = URI.split("://")[1].split(":")[0]
-    db = connect(db=dbname,alias=URI,io_loop=io_loop)
+    conn = connect(URI)
+    db = conn[dbname]
+    #connect(db=dbname,alias=URI,io_loop=io_loop)
 api['db'] = db
 
 api['CVSERVER_URL_IDENTIFICATION'] = 'https://linc.semantic.md/identifications'
