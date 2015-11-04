@@ -75,7 +75,7 @@ api['animals'] = 'lions'
 io_loop = IOLoop.instance()
 URI = os.environ.get("MONGOLAB_URI","local")
 if URI == "local":
-    db = connect("linc-api-"+api['animals'], host="localhost", port=27017, io_loop=io_loop)
+    db = connect("linc-api-"+api['animals'], host="localhost", port=27017,io_loop=io_loop)
 else:
     dbname = URI.split("://")[1].split(":")[0]
     db = connect(db=dbname,alias=URI,io_loop=io_loop)
