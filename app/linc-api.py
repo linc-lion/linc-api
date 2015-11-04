@@ -14,6 +14,7 @@ import logging
 from sys import stdout
 from settings import api as settings
 from routes import url_patterns
+import os
 
 logging.basicConfig(
     stream=stdout,
@@ -36,7 +37,8 @@ def main():
     for h in url_routes:
         print(h)
     httpserver = tornado.httpserver.HTTPServer(app)
-    httpserver.listen(options.port)
+    #httpserver.listen(options.port)
+    httpserver.listen(os.environ.get("PORT",5000))
     tornado.ioloop.IOLoop.instance().start()
 
 if __name__ == "__main__":
