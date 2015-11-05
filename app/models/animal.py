@@ -1,21 +1,29 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from motorengine.fields import StringField,DateTimeField,\
-    ReferenceField,BooleanField,IntField
-from motorengine.document import Document
+from schematics.models import Model
+from schematics.types import StringType,IntType,DateTimeType,BooleanType
 from datetime import datetime
 
-class Animal(Document):
-    name = StringField(required=True,unique=True)
-    iid = IntField(required=True,unique=True)
-    organization_iid = IntField(required=False,default=-1)
-    created_at = DateTimeField(required=True,default=datetime.now())
-    updated_at = DateTimeField(required=True,default=datetime.now())
-    primary_image_set_iid = IntField(required=False,default=-1)
-    trashed = BooleanField(required=True,default=False)
+class Animal(Model):
+    name = StringType(required=True)
+    iid = IntType(required=True)
+    organization_iid = IntType(required=True)
+    created_at = DateTimeType(required=True,default=datetime.now())
+    updated_at = DateTimeType(required=True,default=datetime.now())
+    primary_image_set_iid = IntType(required=False,default=-1)
+    trashed = BooleanType(required=True,default=False)
 
     @classmethod
-    def set_collection(cls,collname):
-        """ Changes the default collection name for a object in MongoDB """
-        cls.__collection__ = collname
+    def collection(self,name=None):
+        if not name:
+            self.__collection__ = 'animals'
+        else:
+            self.__collection__ = name
+        return self.__collection__
+
+    """
+    Indexes:
+        db.['animals'].createIndex( { "name": 1 }, { unique: true } )
+        db.['animals'].createIndex( { "iid": 1 }, { unique: true } )
+    """

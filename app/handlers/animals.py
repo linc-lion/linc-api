@@ -18,7 +18,7 @@ class AnimalsHandler(BaseHandler):
             query = { 'iid' : int(animal_id) }
         except:
             try:
-                query = { 'id' : ObjId(animal_id) }
+                query = { '_id' : ObjId(animal_id) }
             except:
                 query = { 'name' : animal_id}
         query['trashed'] = trashed
@@ -51,11 +51,9 @@ class AnimalsHandler(BaseHandler):
             else:
                 # return a specific animal accepting as id the integer id, hash and name
                 query = self.query_id(animal_id,trashed)
-                Animals = Animal()
-                Animals.set_collection(self.settings['animals'])
-                objs = yield Animals.objects.filter(**query).limit(1).find_all()
-                if len(objs) > 0:
-                    objanimal = yield Task(self.prepareOutput,objs[0].to_son(),trashed,noimages)
+                objs = yield self.settings['db'][self.settings['animals']].find_one(query)
+                if objs:
+                    objanimal = yield Task(self.prepareOutput,objs,trashed,noimages)
                     self.set_status(200)
                     self.finish(self.json_encode(objanimal))
                 else:
@@ -137,23 +135,23 @@ class AnimalsHandler(BaseHandler):
         else:
             self.dropError(400,'You must define name, organization_id and primary_image_set_id for the new lion.')
         try:
-            newanimal = Animal(**newobj)
-            newanimal.set_collection(self.settings['animals'])
-            if newanimal.validate():
-                # the new object is valid, so try to save
-                try:
-                    newsaved = yield newanimal.save()
-                    output = newsaved.to_son()
-                    output['obj_id'] = str(newsaved._id)
-                    self.switch_iid(output)
-                    output['organization_id'] = output['organization_iid']
-                    del output['organization_iid']
-                    output['primary_image_set_id'] = output['primary_image_set_iid']
-                    del output['primary_image_set_iid']
-                    self.finish(self.json_encode({'status':'success','message':'new '+self.settings['animal']+' saved','data':output}))
-                except:
-                    # duplicated index error
-                    self.dropError(409,'Key violation. Check if you are using a name from a lion that already exists in the database.')
+            newanimal = Animal(newobj)
+            newanimal.collection(self.settings['animals'])
+            newanimal.validate()
+            # the new object is valid, so try to save
+            try:
+                newsaved = yield self.settings['db'][self.settings['animals']].insert(newanimal.to_primitive())
+                output = newanimal.to_primitive()
+                output['obj_id'] = str(newsaved)
+                self.switch_iid(output)
+                output['organization_id'] = output['organization_iid']
+                del output['organization_iid']
+                output['primary_image_set_id'] = output['primary_image_set_iid']
+                del output['primary_image_set_iid']
+                self.finish(self.json_encode({'status':'success','message':'new '+self.settings['animal']+' saved','data':output}))
+            except:
+                # duplicated index error
+                self.dropError(409,'Key violation. Check if you are using a name from a lion that already exists in the database.')
         except:
             # received data is invalid in some way
             self.dropError(400,'Invalid input data.')
@@ -189,38 +187,42 @@ class AnimalsHandler(BaseHandler):
             query = self.query_id(animal_id)
             if 'trashed' in update_data.keys():
                 del query['trashed']
-            Animals = Animal()
-            Animals.set_collection(self.settings['animals'])
-            updobj = yield Animals.objects.filter(**query).limit(1).find_all()
-            if len(updobj) > 0:
-                updobj = updobj[0]
+            updobj = yield self.settings['db'][self.settings['animals']].find_one(query)
+            if updobj:
                 for field in fields_allowed_to_be_update:
                     if field in update_data.keys():
-                        cmd = "updobj."+field+" = "
                         if isinstance(update_data[field],str):
-                            cmd = cmd + "'" + str(update_data[field]) + "'"
+                            updobj[field] = "'" + str(update_data[field]) + "'"
                         else:
-                            cmd = cmd + str(update_data[field])
-                        exec(cmd)
-                updobj.updated_at = datetime.now()
-                try:
-                    if updobj.validate():
-                        # the object is valid, so try to save
-                        try:
-                            saved = yield updobj.save()
-                            output = saved.to_son()
-                            output['obj_id'] = str(saved._id)
-                            # Change iid to id in the output
-                            self.switch_iid(output)
-                            output['organization_id'] = output['organization_iid']
-                            del output['organization_iid']
-                            output['primary_image_set_id'] = output['primary_image_set_iid']
-                            del output['primary_image_set_iid']
-                            self.finish(self.json_encode({'status':'success','message':self.settings['animal']+' updated','data':output}))
-                        except:
-                            # duplicated index error
-                            self.dropError(409,'duplicated name for '+self.settings['animal'])
-                except:
+                            updobj[field] = str(update_data[field])
+                updobj['updated_at'] = datetime.now()
+                #try:
+                if True:
+                    updid = ObjId(updobj['_id'])
+                    del updobj['_id']
+                    Animals = Animal(updobj)
+                    Animals.collection(self.settings['animals'])
+                    Animals.validate()
+                    # the object is valid, so try to save
+                    #try:
+                    if True:
+                        updated = yield self.settings['db'][self.settings['animals']].update({'_id':updid},Animals.to_native())
+                        print(updated)
+                        output = updobj
+                        output['obj_id'] = str(updid)
+                        # Change iid to id in the output
+                        self.switch_iid(output)
+                        output['organization_id'] = output['organization_iid']
+                        del output['organization_iid']
+                        output['primary_image_set_id'] = output['primary_image_set_iid']
+                        del output['primary_image_set_iid']
+                        self.finish(self.json_encode({'status':'success','message':self.settings['animal']+' updated','data':output}))
+                    #except:
+                    else:
+                        # duplicated index error
+                        self.dropError(409,'duplicated name for '+self.settings['animal'])
+                #except:
+                else:
                     # received data is invalid in some way
                     self.dropError(400,'Invalid input data.')
             else:

@@ -167,16 +167,13 @@ class CVRequestsHandler(BaseHandler):
                         else:
                             updobj[field] = str(update_data[field])
                 updobj['updated_at'] = datetime.now()
-                #try:
-                if True:
+                try:
                     objid = ObjId(str(updobj['_id']))
                     del updobj['_id']
                     updreq = CVRequest(updobj)
                     updreq.validate()
-                    #try:
-                    if True:
+                    try:
                         updated = yield self.settings['db'][CVRequest.collection()].update({'_id':objid},updreq.to_native())
-                        print(updated)
                         output = updreq.to_native()
                         output['obj_id'] = str(objid)
                         # Change iid to id in the output
@@ -186,12 +183,10 @@ class CVRequestsHandler(BaseHandler):
                         output['requesting_organization_id'] = output['requesting_organization_iid']
                         del output['requesting_organization_iid']
                         self.finish(self.json_encode({'status':'success','message':'image updated','data':output}))
-                    #except:
-                    else:
+                    except:
                         # duplicated index error
                         self.dropError(409,'key violation')
-                #except:
-                else:
+                except:
                     # received data is invalid in some way
                     self.dropError(400,'Invalid input data.')
             else:
