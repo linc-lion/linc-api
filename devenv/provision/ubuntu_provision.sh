@@ -79,10 +79,11 @@ sudo ln -s /usr/lib/x86_64-linux-gnu/libz.so /usr/lib > /dev/null
 msg "Starting provision for LINC-API app..."
 sudo apt-get -y install libcurl4-openssl-dev > /dev/null
 sudo rm -fr /home/vagrant/app/venv /home/vagrant/linc-api/venv 2> /dev/null
-virtualenv --python=python3 --prompt="LINC-API " /home/vagrant/linc-api/venv
+virtualenv --python=python2.7 --prompt="LINC-API " /home/vagrant/linc-api/venv
 source /home/vagrant/linc-api/venv/bin/activate
 msg "Install Python Dependencies"
-pip install pip setuptools --upgrade
+pip install pip --upgrade
+pip install setuptools --upgrade
 pip install -r /home/vagrant/linc-api/requirements.txt --upgrade
 pip install -I Pillow
 

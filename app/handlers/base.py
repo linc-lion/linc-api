@@ -14,7 +14,9 @@ class BaseHandler(RequestHandler):
     inherit this one.
     """
 
+    """
     def prepare(self):
+        #self.auth_check()
         self.input_data = dict()
         if self.request.headers["Content-Type"].startswith("application/json"):
             try:
@@ -26,12 +28,28 @@ class BaseHandler(RequestHandler):
                 self.input_data = recursive_unicode(self.input_data)
             except ValueError:
                 self.send_error(400, reason='Invalid input data.')
+    """
+
+
+    def prepare(self):
+        #self.auth_check()
+        self.input_data = dict()
+        if self.request.method in ['POST','PUT'] and \
+           self.request.headers["Content-Type"].startswith("application/json"):
+            try:
+                if self.request.body:
+                    self.input_data = loads(self.request.body.decode("utf-8"))
+                for k,v in self.request.arguments.items():
+                    if str(k) != str(self.request.body.decode("utf-8")):
+                        self.input_data[k] = v[0].decode("utf-8")
+            except ValueError:
+                self.dropError(400,'Fail to parse input data.')
 
     @asynchronous
     @engine
     def new_iid(self,collection,callback=None):
         iid = yield self.settings['db'].counters.find_and_modify(query={'_id':collection}, update={'$inc' : {'next':1}}, new=True, upsert=True)
-        callback(iid['next'])
+        callback(int(iid['next']))
 
     def parseInput(self,objmodel):
         valid_fields = objmodel._fields.keys()
@@ -66,17 +84,7 @@ class BaseHandler(RequestHandler):
         #if key != self.settings['auth_key']:
         #    self.authfail()
 
-    def prepare(self):
-        self.auth_check()
-        self.input_data = dict()
-        try:
-            if self.request.body:
-                self.input_data = loads(self.request.body.decode("utf-8"))
-            for k,v in self.request.arguments.items():
-                if str(k) != str(self.request.body.decode("utf-8")):
-                    self.input_data[k] = v[0].decode("utf-8")
-        except ValueError:
-            self.dropError(400,'Failure parsing input data.')
+
 
     def set_default_headers(self):
         self.set_header('Content-Type', 'application/json; charset=UTF-8')

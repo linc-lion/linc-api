@@ -7,6 +7,7 @@ from handlers.base import BaseHandler
 from models.cv import CVRequest
 from bson import ObjectId as ObjId
 from datetime import datetime
+from schematics.exceptions import ValidationError
 
 class CVRequestsHandler(BaseHandler):
     """A class that handles requests about CV indentification informartion
@@ -41,7 +42,10 @@ class CVRequestsHandler(BaseHandler):
                     objreq['obj_id'] = str(obj['_id'])
                     del objreq['iid']
                     del objreq['_id']
-
+                    objreq['image_set_id'] = objreq['image_set_iid']
+                    del objreq['image_set_iid']
+                    objreq['requesting_organization_id'] = objreq['requesting_organization_iid']
+                    del objreq['requesting_organization_iid']
                     self.set_status(200)
                     self.finish(self.json_encode({'status':'success','data':objreq}))
                 else:
@@ -55,23 +59,27 @@ class CVRequestsHandler(BaseHandler):
                 obj['obj_id'] = str(x['_id'])
                 del obj['_id']
                 self.switch_iid(obj)
+                obj['image_set_id'] = obj['image_set_iid']
+                del obj['image_set_iid']
+                obj['requesting_organization_id'] = obj['requesting_organization_iid']
+                del obj['requesting_organization_iid']
                 output.append(obj)
             self.set_status(200)
             self.finish(self.json_encode({'status':'success','data':output}))
 
     @asynchronous
     @engine
-    def post(self):
+    def post(self,*kwargs):
         # create a new req
         # parse data recept by POST and get only fields of the object
         newobj = self.parseInput(CVRequest)
         # getting new integer id
-        newobj['iid'] = yield Task(self.new_iid,CVRequest.__collection__)
+        newobj['iid'] = yield Task(self.new_iid,CVRequest.collection())
         # prepare new obj
         dt = datetime.now()
         newobj['created_at'] = dt
         newobj['updated_at'] = dt
-        fields_needed = ['requesting_organization_id','iid','image_set_id','status',
+        fields_needed = ['requesting_organization_id','image_set_id','status',
         'server_uuid','request_body']
         for field in fields_needed:
             if field not in self.input_data.keys():
@@ -79,7 +87,6 @@ class CVRequestsHandler(BaseHandler):
                 return
             else:
                 newobj[field] = self.input_data[field]
-        print(newobj)
         imgsetid = self.input_data['image_set_id']
         isexists = yield self.settings['db'].imagesets.find_one({'iid':imgsetid,'trashed':False})
         if isexists:
@@ -98,21 +105,25 @@ class CVRequestsHandler(BaseHandler):
             return
 
         try:
-            newreq = CVRequest(**newobj)
-            if newreq.validate():
-                # the new object is valid, so try to save
-                try:
-                    newsaved = yield newreq.save()
-                    output = newsaved.to_son()
-                    output['obj_id'] = str(newsaved._id)
-                    self.switch_iid(output)
-                    self.finish(self.json_encode({'status':'success','message':'new cv request saved','data':output}))
-                except:
-                    # duplicated index error
-                    self.dropError(409,'key violation')
-        except:
+            newreq = CVRequest(newobj)
+            newreq.validate()
+            try:
+                newsaved = yield self.settings['db'][CVRequest.collection()].insert(newreq.to_native())
+                output = newreq.to_native()
+                output['obj_id'] = str(newsaved)
+                output['image_set_id'] = newreq['image_set_iid']
+                del output['image_set_iid']
+                output['requesting_organization_id'] = newreq['requesting_organization_iid']
+                del output['requesting_organization_iid']
+                self.switch_iid(output)
+                self.finish(self.json_encode({'status':'success','message':'new cv request saved','data':output}))
+            except:
+                # duplicated index error
+                self.dropError(409,'key violation')
+        except ValidationError, e:
             # received data is invalid in some way
-            self.dropError(400,'Invalid input data.')
+            self.dropError(400,'Invalid input data. Impossible to validate the new cv request.'+e.messages)
+            return
 
     @asynchronous
     @coroutine
@@ -120,7 +131,7 @@ class CVRequestsHandler(BaseHandler):
         # update an req
         # parse data recept by PUT and get only fields of the object
         update_data = self.parseInput(CVRequest)
-        fields_allowed_to_be_update = ['requesting_organization_id','iid','image_set_id','status',
+        fields_allowed_to_be_update = ['requesting_organization_id','image_set_id','status',
         'server_uuid','request_body']
         if 'image_set_id' in self.input_data.keys():
             imgiid = self.input_data['image_set_id']
@@ -146,34 +157,41 @@ class CVRequestsHandler(BaseHandler):
                 break
         if req_id and update_ok:
             query = self.query_id(req_id)
-            updobj = yield CVRequest.objects.filter(**query).limit(1).find_all()
-            if len(updobj) > 0:
-                updobj = updobj[0]
+            updobj = yield self.settings['db'].cvrequests.find_one(query)
+            if updobj:
                 for field in fields_allowed_to_be_update:
                     if field in update_data.keys():
-                        cmd = "updobj."+field+" = "
+                        #cmd = "updobj."+field+" = "
                         if isinstance(update_data[field],str):
-                            cmd = cmd + "'" + str(update_data[field]) + "'"
+                            updobj[field] = "'" + str(update_data[field]) + "'"
                         else:
-                            cmd = cmd + str(update_data[field])
-                        exec(cmd)
-                updobj.updated_at = datetime.now()
-                try:
-                    if updobj.validate():
-                        # the object is valid, so try to save
-                        try:
-                            saved = yield updobj.save()
-                            output = saved.to_son()
-                            output['obj_id'] = str(saved._id)
-                            # Change iid to id in the output
-                            self.switch_iid(output)
-                            output['image_set_id'] = output['image_set_iid']
-                            del output['image_set_iid']
-                            self.finish(self.json_encode({'status':'success','message':'image updated','data':output}))
-                        except:
-                            # duplicated index error
-                            self.dropError(409,'key violation')
-                except:
+                            updobj[field] = str(update_data[field])
+                updobj['updated_at'] = datetime.now()
+                #try:
+                if True:
+                    objid = ObjId(str(updobj['_id']))
+                    del updobj['_id']
+                    updreq = CVRequest(updobj)
+                    updreq.validate()
+                    #try:
+                    if True:
+                        updated = yield self.settings['db'][CVRequest.collection()].update({'_id':objid},updreq.to_native())
+                        print(updated)
+                        output = updreq.to_native()
+                        output['obj_id'] = str(objid)
+                        # Change iid to id in the output
+                        self.switch_iid(output)
+                        output['image_set_id'] = output['image_set_iid']
+                        del output['image_set_iid']
+                        output['requesting_organization_id'] = output['requesting_organization_iid']
+                        del output['requesting_organization_iid']
+                        self.finish(self.json_encode({'status':'success','message':'image updated','data':output}))
+                    #except:
+                    else:
+                        # duplicated index error
+                        self.dropError(409,'key violation')
+                #except:
+                else:
                     # received data is invalid in some way
                     self.dropError(400,'Invalid input data.')
             else:
@@ -184,7 +202,7 @@ class CVRequestsHandler(BaseHandler):
     @asynchronous
     @coroutine
     def delete(self, req_id=None):
-        # delete an req
+        # delete a req
         if req_id:
             query = self.query_id(req_id)
             updobj = yield self.settings['db'].cvrequests.find_one(query)
@@ -196,14 +214,15 @@ class CVRequestsHandler(BaseHandler):
                     # get cvresult if it exists
                     cvres = yield self.settings['db'].cvresults.find_one({'cv_request_iid':req_id})
                     if cvres:
+                        print(cvres)
                         idcvres = ObjId(str(cvres['_id']))
                         del cvres['_id']
+                        print(cvres)
                         newhres = yield self.settings['db'].cvresults_history.insert(cvres)
                         cvres = yield self.settings['db'].cvresults.remove({'_id':idcvres})
-                    idcvreq = ObjId(str(updobj))
                     del updobj['_id']
                     newhreq = yield self.settings['db'].cvrequests_history.insert(updobj)
-                    cvreq = yield self.settings['db'].cvrequests.remove({'_id':idcvreq})
+                    cvreq = yield self.settings['db'].cvrequests.remove(query)
                     self.setSuccess(200,'cvrequest successfully deleted')
                 #except:
                 else:
@@ -222,5 +241,9 @@ class CVRequestsHandler(BaseHandler):
             self.switch_iid(obj)
             obj['obj_id'] = str(obj['_id'])
             del obj['_id']
+            obj['image_set_id'] = obj['image_set_iid']
+            del obj['image_set_iid']
+            obj['requesting_organization_id'] = obj['requesting_organization_iid']
+            del obj['requesting_organization_iid']
             output.append(obj)
         return output
