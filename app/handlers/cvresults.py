@@ -135,7 +135,7 @@ class CVResultsHandler(BaseHandler):
                 else:
                     # create a cvresult
                     newobj = dict()
-                    newobj['iid'] = yield Task(self.new_iid,CVResult.__collection__)
+                    newobj['iid'] = yield Task(self.new_iid,CVResult.collection())
                     newobj['cvrequest_iid'] = cvrequest_id
                     dt = datetime.now()
                     newobj['created_at'] = dt
@@ -175,23 +175,26 @@ class CVResultsHandler(BaseHandler):
                         'created_at': datetime.datetime(2015, 11, 2, 4, 16, 49, 709690),
                         'iid': 15, 'cvrequest_iid': 37}
                         """
-                        newres = CVResult(**newobj)
-                        if newres.validate():
-                            #try:
-                            if True:
-                                # updating the cvrequest with the status
-                                cvrequ = self.settings['db'].cvrequests.update({'_id':cvreq['_id']},{'$set':{'status':rcode_to_cvrequest,'updated_at':datetime.now()}})
-                                newsaved = yield newres.save()
-                                output = newsaved.to_son()
-                                output['obj_id'] = str(newsaved._id)
-                                self.switch_iid(output)
-                                output['cvrequest_id'] = output['cvrequest_iid']
-                                del output['cvrequest_iid']
-                                self.finish(self.json_encode({'status':'success','message':'new cv results saved','data':output}))
-                            #except:
-                            else:
-                                # duplicated index error
-                                self.dropError(409,'an error check for indexing violation. the cv results was not created.')
+                        newres = CVResult(newobj)
+                        newres.validate()
+
+                        #try:
+                        if True:
+                            # updating the cvrequest with the status
+                            cvrequ = self.settings['db'].cvrequests.update({'_id':cvreq['_id']},{'$set':{'status':rcode_to_cvrequest,'updated_at':datetime.now()}})
+                            # save the new cvresults
+                            newsaved = yield self.settings['db'].cvresults.insert(newres.to_native())
+                            #newres.save()
+                            output = newres.to_native()
+                            output['obj_id'] = str(newsaved)
+                            self.switch_iid(output)
+                            output['cvrequest_id'] = output['cvrequest_iid']
+                            del output['cvrequest_iid']
+                            self.finish(self.json_encode({'status':'success','message':'new cv results saved','data':output}))
+                        #except:
+                        else:
+                            # duplicated index error
+                            self.dropError(409,'an error check for indexing violation. the cv results was not created.')
                     #except:
                     else:
                         # received data is invalid in some way
@@ -202,48 +205,46 @@ class CVResultsHandler(BaseHandler):
     def put(self, res_id=None):
         """ This method implements the update for a cvresult that already exists """
         # update an res
-        # parse data recept by PUT and get only fields of the object
-        update_data = self.parseInput(CVResult)
-        fields_allowed_to_be_update = ['match_probability']
-        # validate the input for update
-        update_ok = False
-        for k in fields_allowed_to_be_update:
-            if k in update_data.keys():
-                update_ok = True
-                break
-        if res_id and update_ok:
+        if res_id:
             query = self.query_id(res_id)
             updobj = yield self.settings['db'].cvresults.find_one(query)
-
             if updobj:
-                updobj = updobj[0]
-                for field in fields_allowed_to_be_update:
-                    if field in update_data.keys():
-                        cmd = "updobj."+field+" = "
-                        if isinstance(update_data[field],str):
-                            cmd = cmd + "'" + str(update_data[field]) + "'"
-                        else:
-                            cmd = cmd + str(update_data[field])
-                        exec(cmd)
-                updobj.updated_at = datetime.now()
+                # get the cvrequest
+                cvreq = yield self.settings['db'].cvrequests.find_one({'iid':updobj['cvrequest_iid']})
+                # Check the result in the Server
+                results = yield Task(self.checkresult,cvreq['server_uuid'])
+                upddict = dict()
+                if results:
+                    if results['code'] == 200:
+                        upddict['match_probability'] = dumps(results['lions'])
+                        rcode_to_cvrequest = results['code']
+                        upddict['status'] = results['status']
+                        upddict['updated_at'] = datetime.now()
+                """
+                CV Server status responses: "queued", "processing", "finished", and "error".
+                API have: "fail" that means the communication with cv server fail
+                """
+                # save the cvresult updated in the database
                 try:
-                    if updobj.validate():
-                        # the object is valid, so try to save
-                        try:
-                            saved = yield updobj.save()
-                            output = saved.to_son()
-                            output['obj_id'] = str(saved._id)
-                            # Change iid to id in the output
-                            self.switch_iid(output)
-                            output['image_set_id'] = output['image_set_iid']
-                            del output['image_set_iid']
-                            self.finish(self.json_encode({'status':'success','message':'image updated','data':output}))
-                        except:
-                            # duplicated index error
-                            self.dropError(409,'key violation')
+                    if upddict:
+                        # updating the cvrequest with the status
+                        cvrequ = self.settings['db'].cvrequests.update({'_id':cvreq['_id']},{'$set':{'status':rcode_to_cvrequest,'updated_at':datetime.now()}})
+                        # save the update cvresults
+                        newsaved = yield self.settings['db'].cvresults.update({'_id':updobj['_id']},{'$set':upddict})
+                        output = updobj
+                        output['obj_id'] = str(updobj['_id'])
+                        del output['_id']
+                        self.switch_iid(output)
+                        output['cvrequest_id'] = output['cvrequest_iid']
+                        del output['cvrequest_iid']
+                        output['match_probability'] = upddict['match_probability']
+                        output['status'] = upddict['status']
+                        output['updated_at'] = upddict['updated_at']
+                        self.finish(self.json_encode({'status':'success','message':'new cv results saved','data':output}))
+                    else:
+                        self.dropError(500,'the cv server fails to respond the results.')
                 except:
-                    # received data is invalid in some way
-                    self.dropError(400,'Invalid input data.')
+                    self.dropError(500,'fail to update the cvresult')
             else:
                 self.dropError(404,'cv result not found')
         else:
@@ -261,7 +262,7 @@ class CVResultsHandler(BaseHandler):
                 # a history collection
                 #try:
                 if True:
-                    idcvres = ObjId(str(updobj))
+                    idcvres = ObjId(updobj['_id'])
                     del updobj['_id']
                     newhres = yield self.settings['db'].cvresults_history.insert(updobj)
                     cvres = yield self.settings['db'].cvresults.remove({'_id':idcvres})
