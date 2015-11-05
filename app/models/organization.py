@@ -2,13 +2,27 @@
 # -*- coding: utf-8 -*-
 
 import sys; sys.path.append('../')
-from motorengine.fields import StringField,DateTimeField,IntField,BooleanField
-from motorengine.document import Document
+from schematics.models import Model
+from schematics.types import StringType,IntType,DateTimeType,BooleanType
+from datetime import datetime
 
-class Organization(Document):
-    __collection__ = "organizations"
-    name = StringField(required=True,unique=True)
-    iid = IntField(required=True,unique=True)
-    created_at = DateTimeField(required=True,auto_now_on_insert=True)
-    updated_at = DateTimeField(required=True,auto_now_on_insert=True)
-    trashed = BooleanField(required=True,default=False)
+class Organization(Model):
+    name = StringType(required=True)
+    iid = IntType(required=True)
+    created_at = DateTimeType(required=True,default=datetime.now())
+    updated_at = DateTimeType(required=True,default=datetime.now())
+    trashed = BooleanType(required=True,default=False)
+
+    @classmethod
+    def collection(self,name=None):
+        if not name:
+            self.__collection__ = 'organizations'
+        else:
+            self.__collection__ = name
+        return self.__collection__
+
+    """
+    Indexes:
+        db.organizations.createIndex( { "iid": 1 }, { unique: true } )
+        db.organizations.createIndex( { "name": 1 }, { unique: true } )
+    """
