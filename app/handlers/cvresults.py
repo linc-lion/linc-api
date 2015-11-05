@@ -98,8 +98,9 @@ class CVResultsHandler(BaseHandler):
                                     lname = yield self.settings['db'][self.settings['animals']].find_one({'iid':imgset['animal_iid']})
                                     if lname:
                                         assoc['name'] = lname['name']
+                        output = { 'table':output,'associated':assoc }
                     self.set_status(200)
-                    self.finish(self.json_encode({'status':'success','data':{ 'table':output,'associated':assoc }}))
+                    self.finish(self.json_encode({'status':'success','data':output}))
                 else:
                     self.set_status(404)
                     self.finish(self.json_encode({'status':'error','message':'not found'}))
