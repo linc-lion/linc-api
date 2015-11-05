@@ -166,9 +166,7 @@ class CVResultsHandler(BaseHandler):
                     API have: "fail" that means the communication with cv server fail
                     """
                     # save the new cvresult in the database
-                    #try:
-                    if True:
-                        print(newobj)
+                    try:
                         """
                         {'updated_at': datetime.datetime(2015, 11, 2, 4, 16, 49, 709690),
                         'match_probability': '[{"id": "14", "confidence": 0.0}, {"id": "18", "confidence": 0.0006}, {"id": "27", "confidence": 0.0}, {"id": "3", "confidence": 0.0029}, {"id": "17", "confidence": 0.0109}, {"id": "20", "confidence": 0.0}, {"id": "28", "confidence": 0.0}, {"id": "15", "confidence": 0.49079999999999996}, {"id": "19", "confidence": 0.0087}, {"id": "7", "confidence": 0.3345}, {"id": "12", "confidence": 0.1605}, {"id": "29", "confidence": 0.0}, {"id": "6", "confidence": 0.0003}, {"id": "2", "confidence": 0.0005}, {"id": "4", "confidence": 0.0036}, {"id": "5", "confidence": 0.0014000000000000002}, {"id": "24", "confidence": 0.8551000000000001}, {"id": "13", "confidence": 0.0003}, {"id": "23", "confidence": 0.0042}, {"id": "8", "confidence": 0.3856}, {"id": "21", "confidence": 0.0}, {"id": "26", "confidence": 0.0023}, {"id": "30", "confidence": 0.0106}]',
@@ -178,8 +176,7 @@ class CVResultsHandler(BaseHandler):
                         newres = CVResult(newobj)
                         newres.validate()
 
-                        #try:
-                        if True:
+                        try:
                             # updating the cvrequest with the status
                             cvrequ = self.settings['db'].cvrequests.update({'_id':cvreq['_id']},{'$set':{'status':rcode_to_cvrequest,'updated_at':datetime.now()}})
                             # save the new cvresults
@@ -191,12 +188,10 @@ class CVResultsHandler(BaseHandler):
                             output['cvrequest_id'] = output['cvrequest_iid']
                             del output['cvrequest_iid']
                             self.finish(self.json_encode({'status':'success','message':'new cv results saved','data':output}))
-                        #except:
-                        else:
+                        except:
                             # duplicated index error
                             self.dropError(409,'an error check for indexing violation. the cv results was not created.')
-                    #except:
-                    else:
+                    except:
                         # received data is invalid in some way
                         self.dropError(500,'fail to save the new cvresult')
 
@@ -260,15 +255,13 @@ class CVResultsHandler(BaseHandler):
             if updobj:
                 # removing cvrequest and cvresult related and they will be added in
                 # a history collection
-                #try:
-                if True:
+                try:
                     idcvres = ObjId(updobj['_id'])
                     del updobj['_id']
                     newhres = yield self.settings['db'].cvresults_history.insert(updobj)
                     cvres = yield self.settings['db'].cvresults.remove({'_id':idcvres})
                     self.setSuccess(200,'cvresult successfully deleted')
-                #except:
-                else:
+                except:
                     self.dropError(500,'fail to delete cvresult')
             else:
                 self.dropError(404,'cvresult not found')
