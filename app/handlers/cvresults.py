@@ -88,8 +88,18 @@ class CVResultsHandler(BaseHandler):
                                         objres['organization'] = org['name']
                             objres['cv'] = i['confidence']
                             output.append(objres)
+                        cvreq = yield self.settings['db'].cvrequests.find_one({'iid':objs['cvrequest_iid']})
+                        assoc = {'id': None,'name':None }
+                        if cvreq:
+                            imgset = yield self.settings['db'].imagesets.find_one({'iid':cvreq['image_set_iid']})
+                            if imgset:
+                                assoc['id'] = imgset['animal_iid']
+                                if imgset['animal_iid']:
+                                    lname = yield self.settings['db'][self.settings['animals']].find_one({'iid':imgset['animal_iid']})
+                                    if lname:
+                                        assoc['name'] = lname['name']
                     self.set_status(200)
-                    self.finish(self.json_encode({'status':'success','data':output}))
+                    self.finish(self.json_encode({'status':'success','data':{ 'table':output,'associated':assoc }}))
                 else:
                     self.set_status(404)
                     self.finish(self.json_encode({'status':'error','message':'not found'}))
