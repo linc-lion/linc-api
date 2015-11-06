@@ -50,12 +50,6 @@ class ImageSetsHandler(BaseHandler):
             output = yield Task(self.list,trashed)
             self.setSuccess(200,'imagesets list',output)
         else:
-            # return a specific imageset or all
-            # try:
-            #     str(imageset_id).index('?')
-            #     imageset_id = None
-            # except:
-            #     pass
             if imageset_id:
                 query = self.query_id(imageset_id,trashed)
                 objimgsets = yield self.settings['db'].imagesets.find(query).to_list(None)

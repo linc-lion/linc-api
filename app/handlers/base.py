@@ -13,24 +13,6 @@ class BaseHandler(RequestHandler):
     """A class to collect common handler methods - all other handlers should
     inherit this one.
     """
-
-    """
-    def prepare(self):
-        #self.auth_check()
-        self.input_data = dict()
-        if self.request.headers["Content-Type"].startswith("application/json"):
-            try:
-                if self.request.body:
-                    self.input_data = json_decode(self.request.body.decode("utf-8"))
-                for k,v in self.request.arguments.items():
-                    if str(k) != str(self.request.body.decode("utf-8")):
-                        self.input_data[k] = v[0].decode("utf-8")
-                self.input_data = recursive_unicode(self.input_data)
-            except ValueError:
-                self.send_error(400, reason='Invalid input data.')
-    """
-
-
     def prepare(self):
         #self.auth_check()
         self.input_data = dict()
