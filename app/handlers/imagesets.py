@@ -51,12 +51,16 @@ class ImageSetsHandler(BaseHandler):
             self.setSuccess(200,'imagesets list',output)
         else:
             # return a specific imageset or all
-            if not imageset_id:
-                objimgsets = yield self.settings['db'].imagesets.find().to_list(None)
-            else:
+            # try:
+            #     str(imageset_id).index('?')
+            #     imageset_id = None
+            # except:
+            #     pass
+            if imageset_id:
                 query = self.query_id(imageset_id,trashed)
-                print(query)
                 objimgsets = yield self.settings['db'].imagesets.find(query).to_list(None)
+            else:
+                objimgsets = yield self.settings['db'].imagesets.find({'trashed':trashed}).to_list(None)
             if len(objimgsets) > 0:
                 loutput = list()
                 for objimgset in objimgsets:
@@ -182,7 +186,7 @@ class ImageSetsHandler(BaseHandler):
                     self.dropError(400,'a request for indentification of this imageset already exists in the database')
                     return
                 if not self.settings['animals'] in self.input_data.keys():
-                    self.dropError(400,'the cvrequest needs a list of '+self.settings['animals']+' id like: { '+self.settings['animals']+' : [id,...] }')
+                    self.dropError(400,'the cvrequest needs a list of '+self.settings['animals']+' id like: { "'+self.settings['animals']+'" : [<id>,...] }')
                     return
                 if cvrequest:
                     # Send a request for identification in the CV Server
@@ -277,15 +281,15 @@ class ImageSetsHandler(BaseHandler):
             # getting the object
             query = self.query_id(imageset_id)
             del query['trashed']
-            objimgset = yield ImageSet.objects.filter(**query).limit(1).find_all()
-            if len(objimgset) > 0:
-                objimgset = objimgset[0]
+            objimgset = yield self.settings['db'].imagesets.find_one(query)
+            #ImageSet.objects.filter(**query).limit(1).find_all()
+            if objimgset:
                 dt = datetime.now()
-                objimgset.updated_at = dt
+                objimgset['updated_at'] = dt
                 # validate the input
                 fields_allowed = ['uploading_user_id','uploading_organization_id','owner_organization_id',
                                  'is_verified','latitude','longitude','gender','is_primary','date_of_birth',
-                                 'tags','date_stamp','notes','lion_id','main_image_id','trashed']
+                                 'tags','date_stamp','notes',self.settings['animal']+'_id','main_image_id','trashed']
                 update_data = dict()
                 for k,v in self.input_data.items():
                     if k in fields_allowed:
@@ -293,10 +297,10 @@ class ImageSetsHandler(BaseHandler):
                 for field in fields_allowed:
                     if field in update_data.keys():
                         if field in ['uploading_user_id','uploading_organization_id','owner_organization_id',\
-                                    'lion_id','main_image_id']:
+                                    self.settings['animal']+'_id','main_image_id']:
                             vkey = field.index('_id')
                             vkey = field[:vkey]+'_iid'
-                            cmd = "objimgset."+vkey+" = "+str(update_data[field])
+                            cmd = "objimgset['"+vkey+"'] = "+str(update_data[field])
                             exec(cmd)
                             del update_data[field]
                             continue
@@ -306,25 +310,25 @@ class ImageSetsHandler(BaseHandler):
                                 dts = datetime.strptime(update_data[field], "%Y-%m-%d")
                                 print(dts)
                                 if field == 'date_stamp':
-                                    objimgset.date_stamp = str(dts.date())
+                                    objimgset['date_stamp'] = str(dts.date())
                                     continue
                                 else:
-                                    objimgset.date_of_birth = dts
+                                    objimgset['date_of_birth'] = dts
                                     continue
                             except:
                                 self.dropError(400,'invalid '+field)
                                 return
                         elif field == 'latitude':
-                            objimgset.location[0][0] = update_data[field]
+                            objimgset['location'][0][0] = update_data[field]
                             del update_data[field]
                             continue
                         elif field == 'longitude':
-                            objimgset.location[0][1] = update_data[field]
+                            objimgset['location'][0][1] = update_data[field]
                             del update_data[field]
                             continue
                         elif field == 'trashed':
-                            objimgset.trashed = update_data[field]
-                        cmd = "objimgset."+field+" = "
+                            objimgset['trashed'] = update_data[field]
+                        cmd = "objimgset['"+field+"'] = "
                         if isinstance(update_data[field],str):
                             cmd = cmd + "'" + str(update_data[field]) + "'"
                         else:
@@ -332,45 +336,50 @@ class ImageSetsHandler(BaseHandler):
                         exec(cmd)
 
                 # check if user exists
-                useriid = objimgset.uploading_user_iid
+                useriid = objimgset['uploading_user_iid']
                 userexists = yield self.settings['db'].users.find_one({'iid':useriid,'trashed':False})
                 if not userexists:
                     self.dropError(409,"uploading user id referenced doesn't exist")
                     return
                 # check if organizations exists
-                orgiid = objimgset.uploading_organization_iid
+                orgiid = objimgset['uploading_organization_iid']
                 orgexists = yield self.settings['db'].organizations.find_one({'iid':orgiid,'trashed':False})
                 if not orgexists:
                     self.dropError(409,"uploading organization id referenced doesn't exist")
                     return
-                oorgiid = objimgset.owner_organization_iid
+                oorgiid = objimgset['owner_organization_iid']
                 oorgexists = yield self.settings['db'].organizations.find_one({'iid':oorgiid,'trashed':False})
                 if oorgexists['iid'] != orgiid:
                     self.dropError(409,"owner organization id referenced doesn't exist")
                     return
-                #try:
-                if True:
-                    if objimgset.validate():
-                        updnobj = yield objimgset.save()
-                        output = updnobj.to_son()
-                        self.switch_iid(output)
-                        output['obj_id'] = str(updnobj._id)
-                        output['owner_organization_id'] = output['owner_organization_iid']
-                        del output['owner_organization_iid']
-                        output['uploading_organization_id'] = output['uploading_organization_iid']
-                        del output['uploading_organization_iid']
-                        output['uploading_user_id'] = output['uploading_user_iid']
-                        del output['uploading_user_iid']
-                        output['main_image_id'] = output['main_image_iid']
-                        del output['main_image_iid']
-                        output['animal_id'] = output['animal_iid']
-                        del output['animal_iid']
+                try:
+                    imgid = ObjId(objimgset['_id'])
+                    del objimgset['_id']
 
-                        self.set_status(200)
-                        self.finish(self.json_encode({'status':'success','message':'image set updated','data':output}))
-                #except:
-                else:
-                    self.dropError(400,"invalid input data")
+                    objimgset = ImageSet(objimgset)
+                    objimgset.validate()
+                    objimgset = objimgset.to_native()
+                    #objimgset['_id'] = imgid
+                    updnobj = yield self.settings['db'].imagesets.update({'_id':imgid},{'$set' : objimgset},upsert=True)
+                    print(updnobj)
+                    output = objimgset
+                    self.switch_iid(output)
+                    output['obj_id'] = str(imgid)
+                    output['owner_organization_id'] = output['owner_organization_iid']
+                    del output['owner_organization_iid']
+                    output['uploading_organization_id'] = output['uploading_organization_iid']
+                    del output['uploading_organization_iid']
+                    output['uploading_user_id'] = output['uploading_user_iid']
+                    del output['uploading_user_iid']
+                    output['main_image_id'] = output['main_image_iid']
+                    del output['main_image_iid']
+                    output[self.settings['animal']+'_id'] = output['animal_iid']
+                    del output['animal_iid']
+
+                    self.set_status(200)
+                    self.finish(self.json_encode({'status':'success','message':'image set updated','data':output}))
+                except ValidationError, e:
+                    self.dropError(400,"Invalid input data. Error: "+str(e))
                     return
             else:
                 self.dropError(404,'imageset id not found')
