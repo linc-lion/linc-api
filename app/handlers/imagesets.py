@@ -13,7 +13,7 @@ from datetime import datetime
 from tornado.httpclient import AsyncHTTPClient,HTTPRequest,HTTPError
 from json import dumps
 from tornado.escape import json_decode
-
+from schematics.exceptions import ValidationError
 
 class ImageSetsHandler(BaseHandler):
     """A class that handles requests about image sets informartion
@@ -55,8 +55,8 @@ class ImageSetsHandler(BaseHandler):
                 objimgsets = yield self.settings['db'].imagesets.find().to_list(None)
             else:
                 query = self.query_id(imageset_id,trashed)
-                objimgset = yield self.settings['db'].imagesets.find_one(query)
-                objimgsets = [objimgset]
+                print(query)
+                objimgsets = yield self.settings['db'].imagesets.find(query).to_list(None)
             if len(objimgsets) > 0:
                 loutput = list()
                 for objimgset in objimgsets:
@@ -78,7 +78,7 @@ class ImageSetsHandler(BaseHandler):
                     del output['location']
                     output['obj_id'] = str(objimgset['_id'])
                     del output['_id']
-                    output['animal_id'] = objimgset['animal_iid']
+                    output[self.settings['animal']+'_id'] = objimgset['animal_iid']
                     del output['animal_iid']
                     output['main_image_id'] = objimgset['main_image_iid']
                     del output['main_image_iid']
@@ -96,7 +96,7 @@ class ImageSetsHandler(BaseHandler):
             # parse data recept by POST and get only fields of the object
             newobj = self.parseInput(ImageSet)
             # getting new integer id
-            newobj['iid'] = yield Task(self.new_iid,ImageSet.__collection__)
+            newobj['iid'] = yield Task(self.new_iid,ImageSet.collection())
             dt = datetime.now()
             newobj['created_at'] = dt
             newobj['updated_at'] = dt
@@ -104,7 +104,7 @@ class ImageSetsHandler(BaseHandler):
             # validate the input
             fields_needed = ['uploading_user_id','uploading_organization_id','owner_organization_id',
                              'is_verified','latitude','longitude','gender','is_primary','date_of_birth',
-                             'tags','date_stamp','notes','animal_id','main_image_id']
+                             'tags','date_stamp','notes',self.settings['animal']+'_id','main_image_id']
             keys = list(self.input_data.keys())
             for field in fields_needed:
                 if field not in keys:
@@ -148,27 +148,30 @@ class ImageSetsHandler(BaseHandler):
                 return
             newobj['location'] = [[self.input_data['latitude'],self.input_data['longitude']]]
             try:
-                newimgset = ImageSet(**newobj)
-                if newimgset.validate():
-                    newobj = yield newimgset.save()
-                    output = newobj.to_son()
-                    self.switch_iid(output)
-                    output['obj_id'] = str(newobj._id)
-                    output['owner_organization_id'] = output['owner_organization_iid']
-                    del output['owner_organization_iid']
-                    output['uploading_organization_id'] = output['uploading_organization_iid']
-                    del output['uploading_organization_iid']
-                    output['uploading_user_id'] = output['uploading_user_iid']
-                    del output['uploading_user_iid']
-                    output['main_image_id'] = output['main_image_iid']
-                    del output['main_image_iid']
-                    output['animal_id'] = output['animal_iid']
-                    del output['animal_iid']
+                newobj['aninal_id'] = newobj[self.settings['animal']+'_id']
+                del newobj[self.settings['animal']+'_id']
+                newimgset = ImageSet(newobj)
+                newimgset.validate()
 
-                    self.set_status(200)
-                    self.finish(self.json_encode({'status':'success','message':'new image set added','data':output}))
-            except:
-                self.dropError(400,"invalid input data")
+                newobj = yield self.settings['db'].imagesets.insert(newimgset.to_native())
+                output = newimgset.to_native()
+                self.switch_iid(output)
+                output['obj_id'] = str(newobj)
+                output['owner_organization_id'] = output['owner_organization_iid']
+                del output['owner_organization_iid']
+                output['uploading_organization_id'] = output['uploading_organization_iid']
+                del output['uploading_organization_iid']
+                output['uploading_user_id'] = output['uploading_user_iid']
+                del output['uploading_user_iid']
+                output['main_image_id'] = output['main_image_iid']
+                del output['main_image_iid']
+                output[self.settings['animal']+'_id'] = output['animal_iid']
+                del output['animal_iid']
+
+                self.set_status(200)
+                self.finish(self.json_encode({'status':'success','message':'new image set added','data':output}))
+            except ValidationError, e:
+                self.dropError(400,"Invalid input data. Error: "+str(e))
                 return
         else:
             query = self.query_id(imageset_id)
@@ -236,24 +239,31 @@ class ImageSetsHandler(BaseHandler):
 
                         # Create a cvrequest for this ImageSet
                         newobj = dict()
-                        newobj['iid'] = yield Task(self.new_iid,CVRequest.__collection__)
+                        newobj['iid'] = yield Task(self.new_iid,CVRequest.collection())
                         # This will be get from the user that do the request
-                        newobj['requesting_organization_id'] = None
+                        newobj['requesting_organization_iid'] = 2
                         newobj['image_set_iid'] = imageset_id
                         newobj['status'] = rbody['status']
                         newobj['server_uuid'] = rbody['id']
                         newobj['request_body'] = sbody
-                        newsaved = yield CVRequest(**newobj).save()
-                        output = newsaved.to_son()
-                        output['obj_id'] = str(newsaved._id)
+                        newsaved = CVRequest(newobj)
+                        newsaved.validate()
+                        newreqadd = yield self.settings['db'].cvrequests.insert(newsaved.to_native())
+                        output = newsaved.to_native()
+                        output['obj_id'] = str(newreqadd)
                         self.switch_iid(output)
                         del output['request_body']
+                        output['requesting_organization_id'] = output['requesting_organization_iid']
+                        del output['requesting_organization_iid']
+                        output['image_set_id'] = output['image_set_iid']
+                        del output['image_set_iid']
+
 
                         self.set_status(response.code)
                         self.finish(self.json_encode({'status':'success','message':response.reason,'data':output}))
-                    except:
+                    except ValidationError, e:
                         self.set_status(500)
-                        self.finish({'status':'error','message':'fail to execute the request for identification'})
+                        self.finish({'status':'error','message':'Fail to execute the request for identification. Errors: '+str(e)})
                 else:
                     self.dropError(400,'bad request')
             else:
@@ -275,7 +285,7 @@ class ImageSetsHandler(BaseHandler):
                 # validate the input
                 fields_allowed = ['uploading_user_id','uploading_organization_id','owner_organization_id',
                                  'is_verified','latitude','longitude','gender','is_primary','date_of_birth',
-                                 'tags','date_stamp','notes','animal_id','main_image_id','trashed']
+                                 'tags','date_stamp','notes','lion_id','main_image_id','trashed']
                 update_data = dict()
                 for k,v in self.input_data.items():
                     if k in fields_allowed:
@@ -283,7 +293,7 @@ class ImageSetsHandler(BaseHandler):
                 for field in fields_allowed:
                     if field in update_data.keys():
                         if field in ['uploading_user_id','uploading_organization_id','owner_organization_id',\
-                                    'animal_id','main_image_id']:
+                                    'lion_id','main_image_id']:
                             vkey = field.index('_id')
                             vkey = field[:vkey]+'_iid'
                             cmd = "objimgset."+vkey+" = "+str(update_data[field])
