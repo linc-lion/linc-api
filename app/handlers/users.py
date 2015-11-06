@@ -7,6 +7,8 @@ from handlers.base import BaseHandler
 from models.user import User
 from bson import ObjectId as ObjId
 from datetime import datetime
+from schematics.exceptions import ValidationError
+
 
 class UsersHandler(BaseHandler):
     """A class that handles requests about users informartion
@@ -18,7 +20,7 @@ class UsersHandler(BaseHandler):
             query = { 'iid' : int(user_id) }
         except:
             try:
-                query = { 'id' : ObjId(user_id) }
+                query = { '_id' : ObjId(user_id) }
             except:
                 query = { 'email' : user_id}
         query['trashed'] = trashed
@@ -47,12 +49,13 @@ class UsersHandler(BaseHandler):
             else:
                 # return a specific user accepting as id the integer id, hash and name
                 query = self.query_id(user_id,trashed)
-                objs = yield User.objects.filter(**query).limit(1).find_all()
-                if len(objs) > 0:
-                    objuser = objs[0].to_son()
-                    objuser['id'] = objs[0].iid
-                    objuser['obj_id'] = str(objs[0]._id)
-                    del objuser['iid']
+                objs = yield self.settings['db'].users.find_one(query)
+                #yield User.objects.filter(**query).limit(1).find_all()
+                if objs:
+                    objuser = objs
+                    objuser['obj_id'] = str(objs['_id'])
+                    self.switch_iid(objuser)
+                    del objuser['_id']
                     objuser['organization_id'] = objuser['organization_iid']
                     del objuser['organization_iid']
                     del objuser['encrypted_password']
@@ -86,7 +89,7 @@ class UsersHandler(BaseHandler):
         # parse data recept by POST and get only fields of the object
         newobj = self.parseInput(User)
         # getting new integer id
-        newobj['iid'] = yield Task(self.new_iid,User.__collection__)
+        newobj['iid'] = yield Task(self.new_iid,User.collection())
         # encrypt password
         newobj['encrypted_password'] = self.encryptPassword(self.input_data['password'])
         orgiid = self.input_data['organization_id']
@@ -97,22 +100,22 @@ class UsersHandler(BaseHandler):
             self.dropError(409,"organization referenced doesn't exist")
             return
         try:
-            newuser = User(**newobj)
-            if newuser.validate():
-                # the new object is valid, so try to save
-                try:
-                    newsaved = yield newuser.save()
-                    output = newsaved.to_son()
-                    output['obj_id'] = str(newsaved._id)
-                    self.switch_iid(output)
-                    del output['encrypted_password']
-                    self.finish(self.json_encode({'status':'success','message':'new user saved','data':output}))
-                except:
-                    # duplicated index error
-                    self.dropError(409,'key violation')
-        except:
+            newuser = User(newobj)
+            newuser.validate()
+            # the new object is valid, so try to save
+            try:
+                newsaved = yield self.settings['db'].users.insert(newuser.to_native())
+                output = newuser.to_native()
+                output['obj_id'] = str(newsaved)
+                self.switch_iid(output)
+                del output['encrypted_password']
+                self.finish(self.json_encode({'status':'success','message':'new user saved','data':output}))
+            except:
+                # duplicated index error
+                self.dropError(409,'key violation')
+        except ValidationError, e:
             # received data is invalid in some way
-            self.dropError(400,'Invalid input data.')
+            self.dropError(400,'Invalid input data. Errors: '+str(e))
 
     @asynchronous
     @coroutine
@@ -139,37 +142,38 @@ class UsersHandler(BaseHandler):
             query = self.query_id(user_id)
             if 'trashed' in update_data.keys():
                 del query['trashed']
-            updobj = yield User.objects.filter(**query).limit(1).find_all()
-            if len(updobj) > 0:
-                updobj = updobj[0]
+            updobj = yield self.settings['db'].users.find_one(query)
+            #User.objects.filter(**query).limit(1).find_all()
+            if updobj:
                 for field in fields_allowed_to_be_update:
                     if field in update_data.keys():
-                        cmd = "updobj."+field+" = "
-                        if isinstance(update_data[field],str):
-                            cmd = cmd + "'" + str(update_data[field]) + "'"
-                        else:
-                            cmd = cmd + str(update_data[field])
-                        exec(cmd)
-                updobj.updated_at = datetime.now()
+                        updobj[field] = update_data[field]
+                updobj['updated_at'] = datetime.now()
+                updid = ObjId(updobj['_id'])
+                del updobj['_id']
                 try:
-                    if updobj.validate():
-                        # the object is valid, so try to save
-                        try:
-                            saved = yield updobj.save()
-                            output = saved.to_son()
-                            output['obj_id'] = str(saved._id)
-                            # Change iid to id in the output
-                            self.switch_iid(output)
-                            del output['encrypted_password']
-                            output['organization_id'] = output['organization_iid']
-                            del output['organization_iid']
-                            self.finish(self.json_encode({'status':'success','message':'user updated','data':output}))
-                        except:
-                            # duplicated index error
-                            self.dropError(409,'duplicated email for an user')
-                except:
+                    updobj = User(updobj)
+                    updobj.validate()
+                    # the object is valid, so try to save
+                    try:
+                        updobj = updobj.to_native()
+                        updobj['_id'] = updid
+                        saved = yield self.settings['db'].users.update({'_id':updid},updobj)
+                        output = updobj
+                        output['obj_id'] = str(updid)
+                        del output['_id']
+                        # Change iid to id in the output
+                        self.switch_iid(output)
+                        del output['encrypted_password']
+                        output['organization_id'] = output['organization_iid']
+                        del output['organization_iid']
+                        self.finish(self.json_encode({'status':'success','message':'user updated','data':output}))
+                    except:
+                        # duplicated index error
+                        self.dropError(409,'invalid data for update')
+                except ValidationError, e:
                     # received data is invalid in some way
-                    self.dropError(400,'Invalid input data.')
+                    self.dropError(400,'Invalid input data. Errors: '+str(e))
             else:
                 self.dropError(404,'user not found')
         else:
