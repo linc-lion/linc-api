@@ -13,8 +13,8 @@ db = conn['linc-api-lions']
 
 import tinys3
 # Creating a simple connection
-S3_ACCESS_KEY = 'AKIAJLWIXAYAEIRLYYFA'
-S3_SECRET_KEY = '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'
+S3_ACCESS_KEY =
+S3_SECRET_KEY = 
 S3_BUCKET = 'linc-test'
 
 conns3 = tinys3.Connection(S3_ACCESS_KEY,S3_SECRET_KEY,default_bucket=S3_BUCKET)
