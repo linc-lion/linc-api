@@ -95,10 +95,22 @@ class ImageSetsHandler(BaseHandler):
                 else:
                     output['image'] = ''
 
-
                 output['latitude'] = output['location'][0][0]
                 output['longitude'] = output['location'][0][1]
                 del output['location']
+
+                # Getting cvrequest for this imageset
+                cvreq = yield self.settings['db'].cvrequets.find_one({'image_set_iid':output['id']})
+                if cvreq:
+                    output['cvrequest'] = str(cvreq['_id'])
+                    cvres = yield self.settings['db'].cvresults.find_one({'cvrequest_iid':cvreq['iid']})
+                    if cvres:
+                        output['cvresult'] = str(cvres['_id'])
+                    else:
+                        output['cvresult'] = None
+                else:
+                    output['cvrequest'] = None
+                    output['cvresult'] = None
 
                 self.setSuccess(200,'imageset found',output)
                 return
