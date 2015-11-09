@@ -26,8 +26,9 @@ def url_patterns(animals='lions'):
         #(r"/import", ImportHandler),
 
         (r"/"+animals+"/?$", AnimalsHandler),
+        (r"/"+animals+"/(\w+)/?$", AnimalsHandler),
         (r"/"+animals+"/(\w+)/(profile)$", AnimalsHandler),
-        (r"/"+animals+"/(.*)$/?", AnimalsHandler),
+        (r"/"+animals+"/(\w+)/(locations)$", AnimalsHandler),
 
         (r"/organizations/?$", OrganizationsHandler),
         (r"/organizations/(.*)$", OrganizationsHandler),
