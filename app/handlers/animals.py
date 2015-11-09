@@ -26,7 +26,7 @@ class AnimalsHandler(BaseHandler):
 
     @asynchronous
     @coroutine
-    def get(self, animal_id=None):
+    def get(self, animal_id=None, profile=None):
         trashed = self.get_argument('trashed',False)
         if trashed:
             if trashed.lower() == 'true':
@@ -48,6 +48,62 @@ class AnimalsHandler(BaseHandler):
                 self.set_status(200)
                 output = yield Task(self.list,objs,orgnames,trashed)
                 self.finish(self.json_encode({'status':'success','data':output}))
+            elif animal_id and profile:
+                # show profile page data for the website
+                query = self.query_id(animal_id,trashed)
+                objanimal = yield self.settings['db'][self.settings['animals']].find_one(query)
+                if objanimal:
+                    output = objanimal
+                    output['obj_id'] = str(objanimal['_id'])
+                    del output['_id']
+                    self.switch_iid(output)
+                    output['organization_id'] = output['organization_iid']
+                    del output['organization_iid']
+                    output['primary_image_set_id'] = output['primary_image_set_iid']
+                    del output['primary_image_set_iid']
+
+                    # Get organization name
+                    org = yield self.settings['db'].organizations.find_one({'iid':output['organization_id']})
+                    if org:
+                        output['organization'] = org['name']
+                    else:
+                        output['organization'] = '-'
+
+                    # get data from the primary image set
+                    objimgset = yield self.settings['db'].imagesets.find_one({'iid':objanimal['primary_image_set_id']})
+                    exclude = ['_id','iid','animal_iid']
+                    for k,v in objimgset.iteritems():
+                        if k not in exclude:
+                            output[k] = v
+                    if 'date_of_birth' in output.keys():
+                        output['age'] = str(self.age(output['date_of_birth']))
+                    else:
+                        output['age'] = '-'
+                    output['uploading_organization_id'] = output['uploading_user_iid']
+                    del output['uploading_user_iid']
+                    output['uploading_organization_id'] = output['uploading_organization_iid']
+                    del output['uploading_organization_iid']
+                    output['owner_organization_id'] = output['owner_organization_iid']
+                    del output['owner_organization_iid']
+                    output['main_image_id'] = output['main_image_iid']
+                    del output['main_image_iid']
+
+                    # Get image
+                    img = yield self.settings['db'].urlimages.find_one({'iid':output['main_image_id']})
+                    if img:
+                        output['image'] = img['url']
+                    else:
+                        output['image'] = ''
+
+                    # Location
+                    output['latitude'] = output['location'][0][0]
+                    output['longitude'] = output['location'][0][1]
+                    del output['location']
+
+                    self.setSuccess(200,self.settings['animal']+' found',output)
+                else:
+                    self.dropError(404,'No '+self.settings['animal']+' can be found with the id = '+animal_id)
+                    return
             else:
                 # return a specific animal accepting as id the integer id, hash and name
                 query = self.query_id(animal_id,trashed)

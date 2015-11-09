@@ -48,7 +48,7 @@ class BaseHandler(RequestHandler):
     def setSuccess(self,code=200,message="",data=None):
         output_response = {'status':'success','message':message}
         if data:
-            output_response['data'] = data
+            output_response['data'] = loads(self.json_encode(data))
         self.set_status(code)
         self.finish(output_response)
 
