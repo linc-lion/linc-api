@@ -39,8 +39,9 @@ def url_patterns(animals='lions'):
         (r"/images/(\w+$)", ImagesHandler),
 
         (r"/imagesets/?$", ImageSetsHandler),
-        (r"/imagesets/(\w+$)", ImageSetsHandler),
+        (r"/imagesets/(\w+)/?$", ImageSetsHandler),
         (r"/imagesets/(\w+)/(cvrequest)$", ImageSetsHandler),
+        (r"/imagesets/(\w+)/(profile)$", ImageSetsHandler),
 
         (r"/cvrequests/?$", CVRequestsHandler),
         (r"/cvrequests/(\w+$)", CVRequestsHandler),
