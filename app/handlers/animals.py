@@ -75,7 +75,7 @@ class AnimalsHandler(BaseHandler):
                     for k,v in objimgset.iteritems():
                         if k not in exclude:
                             output[k] = v
-                    if 'date_of_birth' in output.keys():
+                    if 'date_of_birth' in output.keys() and output['date_of_birth']:
                         output['age'] = str(self.age(output['date_of_birth']))
                     else:
                         output['age'] = '-'
@@ -101,6 +101,7 @@ class AnimalsHandler(BaseHandler):
                     del output['location']
 
                     self.setSuccess(200,self.settings['animal']+' found',output)
+                    return
                 else:
                     self.dropError(404,'No '+self.settings['animal']+' can be found with the id = '+animal_id)
                     return

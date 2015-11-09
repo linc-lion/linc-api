@@ -34,9 +34,9 @@ class ImageSetsHandler(BaseHandler):
 
     @asynchronous
     @coroutine
-    def get(self, imageset_id=None, cvrequest=None):
-        if cvrequest:
-            self.dropError(400,'to request cv identification you must use POST method')
+    def get(self, imageset_id=None, param=None):
+        if param == 'cvrequest':
+            self.dropError(400,+'to request cv identification you must use POST method')
             return
         trashed = self.get_argument('trashed',False)
         if trashed:
@@ -49,6 +49,62 @@ class ImageSetsHandler(BaseHandler):
             # Get imagesets from the DB
             output = yield Task(self.list,trashed)
             self.setSuccess(200,'imagesets list',output)
+        elif imageset_id and param == 'profile':
+            query = self.query_id(imageset_id,trashed)
+            imgset = yield self.settings['db'].imagesets.find_one(query)
+            if imgset:
+                output = imgset
+                output['obj_id'] = str(imgset['_id'])
+                del output['_id']
+                self.switch_iid(output)
+
+                # Get organization name
+                org = yield self.settings['db'].organizations.find_one({'iid':output['owner_organization_iid']})
+                if org:
+                    output['organization'] = org['name']
+                else:
+                    output['organization'] = '-'
+
+                # Check animal
+                animalobj = yield self.settings['db'][self.settings['animals']].find_one({'iid':output['animal_iid']})
+                if animalobj:
+                    output['name'] = animalobj['name']
+                else:
+                    output['name'] = '-'
+
+                if 'date_of_birth' in output.keys() and output['date_of_birth']:
+                    output['age'] = str(self.age(output['date_of_birth']))
+                else:
+                    output['age'] = '-'
+
+                #output['organization_id'] = output['organization_iid']
+                #del output['organization_iid']
+                output['uploading_organization_id'] = output['uploading_user_iid']
+                del output['uploading_user_iid']
+                output['uploading_organization_id'] = output['uploading_organization_iid']
+                del output['uploading_organization_iid']
+                output['owner_organization_id'] = output['owner_organization_iid']
+                del output['owner_organization_iid']
+                output['main_image_id'] = output['main_image_iid']
+                del output['main_image_iid']
+
+                # Get image
+                img = yield self.settings['db'].urlimages.find_one({'iid':output['main_image_id']})
+                if img:
+                    output['image'] = img['url']
+                else:
+                    output['image'] = ''
+
+
+                output['latitude'] = output['location'][0][0]
+                output['longitude'] = output['location'][0][1]
+                del output['location']
+
+                self.setSuccess(200,'imageset found',output)
+                return
+            else:
+                self.dropError(404,'imageset not found')
+                return
         else:
             if imageset_id:
                 query = self.query_id(imageset_id,trashed)
