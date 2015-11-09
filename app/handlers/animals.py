@@ -7,6 +7,7 @@ from handlers.base import BaseHandler
 from models.animal import Animal
 from datetime import datetime,time
 from bson import ObjectId as ObjId
+from pymongo import DESCENDING
 
 class AnimalsHandler(BaseHandler):
     """A class that handles requests about animals informartion
@@ -26,7 +27,7 @@ class AnimalsHandler(BaseHandler):
 
     @asynchronous
     @coroutine
-    def get(self, animal_id=None, profile=None):
+    def get(self, animal_id=None, xurl=None):
         trashed = self.get_argument('trashed',False)
         if trashed:
             if trashed.lower() == 'true':
@@ -48,7 +49,7 @@ class AnimalsHandler(BaseHandler):
                 self.set_status(200)
                 output = yield Task(self.list,objs,orgnames,trashed)
                 self.finish(self.json_encode({'status':'success','data':output}))
-            elif animal_id and profile:
+            elif animal_id and xurl == 'profile':
                 # show profile page data for the website
                 query = self.query_id(animal_id,trashed)
                 objanimal = yield self.settings['db'][self.settings['animals']].find_one(query)
@@ -105,6 +106,22 @@ class AnimalsHandler(BaseHandler):
                 else:
                     self.dropError(404,'No '+self.settings['animal']+' can be found with the id = '+animal_id)
                     return
+            elif animal_id and xurl == 'locations':
+                try:
+                    iid = int(animal_id)
+                except:
+                    self.dropError(400,'requests about locations only accept integer id for the '+self.settings['animals'])
+                    return
+                cursor = self.settings['db'].imagesets.find({'animal_iid':iid},{'iid':1,'location':1,'updated_at':1})
+                cursor.sort('updated_at',DESCENDING)
+                imgsets = yield cursor.to_list(None)
+                locations = list()
+                litems = len(imgsets)
+                if imgsets:
+                    for i in imgsets:
+                        locations.append({'id':i['iid'],'label':'Image Set '+str(i['iid']),'latitude':i['location'][0][0],'longitude':i['location'][0][1],'updated_at':i['updated_at'].date().isoformat()})
+                self.setSuccess(200,'location list',{'count':litems,'locations':locations})
+                return
             else:
                 # return a specific animal accepting as id the integer id, hash and name
                 query = self.query_id(animal_id,trashed)

@@ -62,8 +62,10 @@ class ImageSetsHandler(BaseHandler):
                 org = yield self.settings['db'].organizations.find_one({'iid':output['owner_organization_iid']})
                 if org:
                     output['organization'] = org['name']
+                    output['organization_id'] = org['iid']
                 else:
                     output['organization'] = '-'
+                    output['organization_id'] = '-'
 
                 # Check animal
                 animalobj = yield self.settings['db'][self.settings['animals']].find_one({'iid':output['animal_iid']})
@@ -100,7 +102,9 @@ class ImageSetsHandler(BaseHandler):
                 del output['location']
 
                 # Getting cvrequest for this imageset
-                cvreq = yield self.settings['db'].cvrequets.find_one({'image_set_iid':output['id']})
+                print(output['id'])
+                cvreq = yield self.settings['db'].cvrequests.find_one({'image_set_iid':output['id']})
+                print(cvreq)
                 if cvreq:
                     output['cvrequest'] = str(cvreq['_id'])
                     cvres = yield self.settings['db'].cvresults.find_one({'cvrequest_iid':cvreq['iid']})
@@ -111,6 +115,9 @@ class ImageSetsHandler(BaseHandler):
                 else:
                     output['cvrequest'] = None
                     output['cvresult'] = None
+
+                output[self.settings['animal']+'_id'] = output['animal_iid']
+                del output['animal_iid']
 
                 self.setSuccess(200,'imageset found',output)
                 return
