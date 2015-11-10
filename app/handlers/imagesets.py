@@ -109,12 +109,12 @@ class ImageSetsHandler(BaseHandler):
                     output['cvrequest'] = str(cvreq['_id'])
                     cvres = yield self.settings['db'].cvresults.find_one({'cvrequest_iid':cvreq['iid']})
                     if cvres:
-                        output['cvresult'] = str(cvres['_id'])
+                        output['cvresults'] = str(cvres['_id'])
                     else:
-                        output['cvresult'] = None
+                        output['cvresults'] = None
                 else:
                     output['cvrequest'] = None
-                    output['cvresult'] = None
+                    output['cvresults'] = None
 
                 output[self.settings['animal']+'_id'] = output['animal_iid']
                 del output['animal_iid']
