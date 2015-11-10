@@ -421,6 +421,13 @@ class ImageSetsHandler(BaseHandler):
                 if oorgexists['iid'] != orgiid:
                     self.dropError(409,"owner organization id referenced doesn't exist")
                     return
+                objimgset['animal_iid'] = objimgset[self.settings['animal']+'_iid']
+                del objimgset[self.settings['animal']+'_iid']
+                if objimgset['animal_iid']:
+                    aniexists = yield self.settings['db'][self.settings['animals']].find_one({'iid':objimgset['animal_iid'],'trashed':False})
+                    if aniexists['iid'] != objimgset['animal_iid']:
+                        self.dropError(409,'the '+self.settings['animal']+" id sent doesn't exist")
+                        return
                 try:
                     imgid = ObjId(objimgset['_id'])
                     del objimgset['_id']
