@@ -3,6 +3,9 @@ from PIL import Image
 from os import remove
 from os.path import realpath,dirname
 
+# To execute this script you need a ported version from the
+# PostgreSQL database in MongoDB
+
 # Connection to Mongo DB
 try:
     conn=pm.MongoClient()
@@ -14,7 +17,7 @@ db = conn['linc-api-lions']
 import tinys3
 # Creating a simple connection
 S3_ACCESS_KEY =
-S3_SECRET_KEY = 
+S3_SECRET_KEY =
 S3_BUCKET = 'linc-test'
 
 conns3 = tinys3.Connection(S3_ACCESS_KEY,S3_SECRET_KEY,default_bucket=S3_BUCKET)
@@ -54,6 +57,7 @@ def generate_images(fn):
     im = Image.open(fn)
     w,h = im.size
     newsize = 600
+    msize = newsize,newsize
     if w < h:
         # h is the reference
         r = newsize/h
@@ -65,7 +69,7 @@ def generate_images(fn):
         newh = h*r
         msize = newsize,newh
 
-    if msize[1] == 0 or msize[1] == 0:
+    if msize[0] == 0 or msize[1] == 0:
         msize = newsize,newsize
     print(msize)
     im.thumbnail(msize)
@@ -85,22 +89,41 @@ t = timedelta(days=1)
 # Getting info about the folder
 imgset = db.imagesets.find()
 apidir = 'linc-api-lions/'
-for i in imgset:
-    folder_name = 'imageset_'+str(i['iid'])+'_'+str(i['_id'])
+for iset in imgset:
+    print('Processing Image Set: '+str(iset['iid']))
+    folder_name = 'imageset_'+str(iset['iid'])+'_'+str(iset['_id'])
     #print('Folder name:' + folder_name)
-    imgs = db.images.find({'image_set_iid':i['iid']})
+    nupd = db.uploaded.find()
+    lnupd = [x['iid'] for x in nupd ]
+    imgs = db.images.find({'image_set_iid':iset['iid'],'iid': {'$nin':lnupd}})
     for img in imgs:
-        iurl = db.urlimages.find_one({'iid':i['iid']})
+        print('Processing Image: '+str(img['iid']))
+        iurl = db.urlimages.find_one({'iid':img['iid']})
         imgurl = iurl['url']
-        print(imgurl)
-        imgname = str(img['created_at'].date().isoformat()) + '_image_' + str(img['iid']) + '_' + str(img['image_type']) + '_' + str(img['_id']) + ".img"
-        print(imgname)
+        imgname = str(img['created_at'].date().isoformat()) + '_image_' + str(img['iid']) + '_' + str(img['_id']) + ".img"
+        print('Getting image: '+imgurl)
         urllib.urlretrieve(imgurl, imgname)
+
 
         generate_images(imgname)
         for suf in ['_full.jpg','_icon.jpg','_medium.jpg','_thumbnail.jpg']:
-            keynames3 = apidir + folder_name + '/' + str(img['created_at'].date().isoformat()) + '_image_' + str(img['iid']) + '_' + str(img['image_type']) + '_' + str(img['_id']) + suf
+            keynames3 = apidir + folder_name + '/' + str(img['created_at'].date().isoformat()) + '_image_' + str(img['iid']) + '_' + str(img['_id']) + suf
             f = open(imgname[:-4]+suf,'rb')
             conns3.upload(keynames3,f,expires=t,content_type='image/jpeg',public=True)
             f.close()
             remove(imgname[:-4]+suf)
+        upl = db.uploaded.insert({'iid':img['iid']})
+"""
+print("Checking images that was not uploaded")
+d = db.uploaded.find({},{'_id':0,'iid':1})
+upds = [e['iid'] for e in d]
+stnupd = db.urlimages.find({'iid': { '$nin' : upds}})
+for o in stnupd:
+    # Get the image object
+    img = db.images.find_one({'iid':o['iid']})
+    # Get the imageset object
+    imst = db.imagesets.find_one({'iid':img['image_set_iid']})
+    print(img)
+    print(imst)
+    break
+"""
