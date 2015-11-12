@@ -66,8 +66,6 @@ class BaseHandler(RequestHandler):
         #if key != self.settings['auth_key']:
         #    self.authfail()
 
-
-
     def set_default_headers(self):
         self.set_header('Content-Type', 'application/json; charset=UTF-8')
 
@@ -78,6 +76,19 @@ class BaseHandler(RequestHandler):
     def encryptPassword(self,pattern):
         return hashlib.sha256(utf8(pattern)).hexdigest()
 
+    def imgurl(self,urlpath,imgtype='thumbnail'):
+        # type can be: full,medium,thumbnail and icon
+        url = self.settings['S3_URL'] + urlpath
+        if imgtype == 'thumbnail':
+            url = url + '_thumbnail.jpg'
+        elif imgtype == 'full':
+            url = url + '_full.jpg'
+        elif imgtype == 'icon':
+            url = url + '_icon.jpg'
+        else:
+        #imgtype == 'medium':
+            url = url + '_medium.jpg'
+        return url
 
 
     def sanitizestr(self,strs):
