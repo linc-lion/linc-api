@@ -3,3 +3,4 @@ Pillow
 motor
 pycurl
 schematics
+tinys3

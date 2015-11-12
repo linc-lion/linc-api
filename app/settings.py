@@ -90,4 +90,9 @@ api['CVSERVER_URL_RESULTS'] = 'https://linc.semantic.md/results/'
 api['CV_USERNAME'] = 'c0a5531d33b987dc76af6298c3f6765a34793ba5'
 api['CV_PASSWORD'] = 'cbfdac6008f9cab4083784cbd1874f76618d2a97'
 
-api['S3_URL'] = 'http://linc-production.s3.amazonaws.com/'
+api['S3_BUCKET'] = 'linc-test'
+api['S3_FOLDER'] = 'linc-api-'+api['animals']
+api['S3_URL'] = 'http://linc-test.s3.amazonaws.com/'+api['S3_FOLDER']+'/'
+
+api['S3_ACCESS_KEY'] = os.environ.get('S3_ACCESS_KEY','')
+api['S3_SECRET_KEY'] = os.environ.get('S3_SECRET_KEY','')
