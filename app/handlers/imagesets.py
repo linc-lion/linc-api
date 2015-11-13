@@ -535,11 +535,11 @@ class ImageSetsHandler(BaseHandler):
 
             obji = yield self.settings['db'].images.find_one({'image_set_iid':obj['iid'],'image_type':'main-id','trashed':trashed})
             if obji:
-                imgset_obj['thumbnail'] = self.settings['S3_URL']+obji['url']+'_thumbnail.jpg'
+                imgset_obj['thumbnail'] = self.settings['S3_URL']+obji['url']+'_icon.jpg'
             else:
                 obji = yield self.settings['db'].images.find({'image_set_iid':obj['iid'],'trashed':trashed}).to_list(None)
                 if len(obji) > 0:
-                    imgset_obj['thumbnail'] = self.settings['S3_URL']+obji[0]['url']+'_thumbnail.jpg'
+                    imgset_obj['thumbnail'] = self.settings['S3_URL']+obji[0]['url']+'_icon.jpg'
                 else:
                     imgset_obj['thumbnail'] = ''
 
