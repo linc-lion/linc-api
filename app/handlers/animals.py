@@ -90,9 +90,9 @@ class AnimalsHandler(BaseHandler):
                     del output['main_image_iid']
 
                     # Get image
-                    img = yield self.settings['db'].urlimages.find_one({'iid':output['main_image_id']})
+                    img = yield self.settings['db'].images.find_one({'iid':output['main_image_id']})
                     if img:
-                        output['image'] = img['url']
+                        output['image'] = self.settings['S3_URL'] + img['url'] + '_thumbnail.jpg'
                     else:
                         output['image'] = ''
 
@@ -358,8 +358,7 @@ class AnimalsHandler(BaseHandler):
                     obj['is_verified'] = imgset['is_verified']
                     img = yield self.settings['db'].images.find_one({'image_set_iid':imgset['iid'],'image_type':'main-id','trashed':trashed})
                     if img:
-                        imgurl = yield self.settings['db'].urlimages.find_one({'iid':img['iid']})
-                        obj['thumbnail'] = imgurl['url']
+                        obj['thumbnail'] = self.settings['S3_URL']+img['url']+'_icon.jpg'
 
 
             output.append(obj)
@@ -415,11 +414,11 @@ class AnimalsHandler(BaseHandler):
                     obji['thumbnail_url'] = ''
                     obji['main_url'] = ''
                     obji['url'] = ''
-                    img = yield self.settings['db'].urlimages.find_one({'iid':image['iid']})
+                    img = yield self.settings['db'].images.find_one({'iid':image['iid']})
                     if img:
-                        obji['thumbnail_url'] = img['url']
-                        obji['main_url'] = img['url']
-                        obji['url'] = img['url']
+                        obji['thumbnail_url'] = self.settings['S3_URL']+img['url']+'_thumbnail.jpg'
+                        obji['main_url'] = self.settings['S3_URL']+img['url']+'_full.jpg'
+                        obji['url'] = self.settings['S3_URL']+img['url']+'_full.jpg'
 
                     # This will be updated
                     #"thumbnail_url":"http://lion-guardians-production.s3.amazonaws.com/2015/05/31/16/17/59/133/uploads_2Fe3f10f18_d176_41a7_84b9_0b2c5fef81e7_2F38yrs_Sikiria_300x300.jpg",

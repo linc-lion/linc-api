@@ -96,3 +96,5 @@ api['S3_URL'] = 'http://linc-test.s3.amazonaws.com/'+api['S3_FOLDER']+'/'
 
 api['S3_ACCESS_KEY'] = os.environ.get('S3_ACCESS_KEY','')
 api['S3_SECRET_KEY'] = os.environ.get('S3_SECRET_KEY','')
+
+api['url'] = 'https://linc-api.herokuapp.com/'
