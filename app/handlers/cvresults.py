@@ -65,15 +65,13 @@ class CVResultsHandler(BaseHandler):
                                 # here
                                 img = yield self.settings['db'].images.find_one({'image_set_iid':aobj['primary_image_set_iid'],'image_type':'main-id','trashed':False})
                                 if img:
-                                    url = yield self.settings['db'].urlimages.find_one({'iid':img['iid']})
-                                    if url:
-                                        objres['thumbnail'] = url['url']
+                                    objres['thumbnail'] = self.settings['S3_URL']+img['url']+'_icon.jpg'
                                 else:
                                     img = yield self.settings['db'].images.find({'image_set_iid':aobj['primary_image_set_iid'],'trashed':False}).to_list(length=1)
-                                    if img:
-                                        url = yield self.settings['db'].urlimages.find_one({'iid':img[0]['iid']})
-                                        if url:
-                                            objres['thumbnail'] = url['url']
+                                    if len(img) > 0:
+                                        objres['thumbnail'] = self.settings['S3_URL']+img[0]['url']+'_icon.jpg'
+                                    else:
+                                        objres['thumbnail'] = ''
 
                                 if aobj:
                                     objres['name'] = aobj['name']

@@ -36,7 +36,7 @@ class ImageSetsHandler(BaseHandler):
     @coroutine
     def get(self, imageset_id=None, param=None):
         if param == 'cvrequest':
-            self.dropError(400,+'to request cv identification you must use POST method')
+            self.dropError(400,'to request cv identification you must use POST method')
             return
         trashed = self.get_argument('trashed',False)
         if trashed:
@@ -91,9 +91,9 @@ class ImageSetsHandler(BaseHandler):
                 del output['main_image_iid']
 
                 # Get image
-                img = yield self.settings['db'].urlimages.find_one({'iid':output['main_image_id']})
+                img = yield self.settings['db'].images.find_one({'iid':output['main_image_id']})
                 if img:
-                    output['image'] = img['url']
+                    output['image'] = self.settings['S3_URL'] + img['url'] + '_thumbnail.jpg'
                 else:
                     output['image'] = ''
 
@@ -294,8 +294,8 @@ class ImageSetsHandler(BaseHandler):
                     limgs = list()
                     for img in imgs:
                         #url = 'http://linc-production.s3.amazonaws.com/2015/06/16/01/25/53/633/uploads_2F2015_2F6_2F16_2F96e22dfc_9a1c_45d7_88d9_6f79bcfe695c_2Fc_PJB_9221.jpeg'
-                        url = yield self.settings['db'].urlimages.find_one({'iid':img['iid']})
-                        limgs.append({'id':img['iid'],'type':img['image_type'],'url':url['url']})
+                        #url = yield self.settings['db'].images.find_one({'iid':img['iid']})
+                        limgs.append({'id':img['iid'],'type':img['image_type'],'url':self.settings['S3_URL']+img['url']+'_full.jpg'})
                     animals = self.input_data[self.settings['animals']]
                     animalscheck = yield self.settings['db'][self.settings['animals']].find({'iid' : { '$in' : animals }}).to_list(None)
                     if not animalscheck:
@@ -303,7 +303,7 @@ class ImageSetsHandler(BaseHandler):
                         return
                     lanimals = list()
                     for animal in animalscheck:
-                        url = 'http://lion-guardians-api.herokuapp.com/'+self.settings['animals']+'/'
+                        url = self.settings['url']+self.settings['animals']+'/'
                         lanimals.append({'id':animal['iid'],'url':url+str(animal['iid'])})
                     # images : [{"id": 123, "type": "whisker", "url": "https://s3.amazonaws.com/semanticmd-api-testing/api/cbc90b5705d51e9e218b0a7e518aa6d3506c190c"}]
                     # lions : []{"id": 456, "url": "http://lg-api.com/lions/456", "updated_at": "timestamp"}]
@@ -535,18 +535,11 @@ class ImageSetsHandler(BaseHandler):
 
             obji = yield self.settings['db'].images.find_one({'image_set_iid':obj['iid'],'image_type':'main-id','trashed':trashed})
             if obji:
-                url = yield self.settings['db'].urlimages.find_one({'iid':obji['iid']})
-                if url:
-                    imgset_obj['thumbnail'] = url['url']
-                else:
-                    imgset_obj['thumbnail'] = ''
-                #self.settings['S3_URL']+obji[0]['url']+'.jpg'
+                imgset_obj['thumbnail'] = self.settings['S3_URL']+obji['url']+'_thumbnail.jpg'
             else:
                 obji = yield self.settings['db'].images.find({'image_set_iid':obj['iid'],'trashed':trashed}).to_list(None)
                 if len(obji) > 0:
-                    url = yield self.settings['db'].urlimages.find_one({'iid':obji[0]['iid']})
-                    imgset_obj['thumbnail'] = url['url']
-                    #'http://linc-production.s3.amazonaws.com/2015/06/16/01/25/53/633/uploads_2F2015_2F6_2F16_2F96e22dfc_9a1c_45d7_88d9_6f79bcfe695c_2Fc_PJB_9221.jpeg'
+                    imgset_obj['thumbnail'] = self.settings['S3_URL']+obji[0]['url']+'_thumbnail.jpg'
                 else:
                     imgset_obj['thumbnail'] = ''
 
