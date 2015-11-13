@@ -176,6 +176,8 @@ class ImageSetsHandler(BaseHandler):
                     del output['main_image_iid']
                     loutput.append(output)
                 self.set_status(200)
+                if imageset_id:
+                    loutput = loutput[0]
                 self.finish(self.json_encode({'status':'success','data':loutput}))
             else:
                 self.dropError(404,'imageset id not found')
