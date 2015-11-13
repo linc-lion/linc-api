@@ -390,6 +390,9 @@ class ImageSetsHandler(BaseHandler):
                             vkey = field[:vkey]+'_iid'
                             cmd = "objimgset['"+vkey+"'] = "+str(update_data[field])
                             exec(cmd)
+                            if vkey == self.settings['animal']+'_iid':
+                                objimgset['animal_iid'] = update_data[self.settings['animal']+'_id']
+                                del objimgset[self.settings['animal']+'_iid']
                             del update_data[field]
                             continue
                         elif field in ['date_stamp','date_of_birth']:
@@ -452,6 +455,8 @@ class ImageSetsHandler(BaseHandler):
                 try:
                     imgid = ObjId(objimgset['_id'])
                     del objimgset['_id']
+
+                    print(objimgset)
 
                     objimgset = ImageSet(objimgset)
                     objimgset.validate()
