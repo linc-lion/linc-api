@@ -124,6 +124,25 @@ class ImageSetsHandler(BaseHandler):
             else:
                 self.dropError(404,'imageset not found')
                 return
+        elif imageset_id and param == 'gallery':
+            query = self.query_id(imageset_id,trashed)
+            objimgset = yield self.settings['db'].imagesets.find_one(query)
+            if objimgset:
+                images = yield self.settings['db'].images.find({'image_set_iid':objimgset['iid'],'trashed':trashed}).to_list(None)
+                output = dict()
+                output['id'] = imageset_id
+                cover = objimgset['main_image_iid']
+                output['images'] = list()
+                for img in images:
+                    imgout = {'id':img['iid'],'type':img['image_type'],'is_public':img['is_public']}
+                    for suf in ['_icon.jpg','_medium.jpg','_thumbnail.jpg']:
+                        imgout[suf[1:-4]] = self.settings['S3_URL'] + img['url'] + suf
+                    imgout['cover'] = (img['iid'] == cover)
+                    output['images'].append(imgout)
+                self.setSuccess(200,'gallery images for the image set '+str(imageset_id),output)
+            else:
+                self.dropError(404,'imageset not found')
+            return
         else:
             if imageset_id:
                 query = self.query_id(imageset_id,trashed)
