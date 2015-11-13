@@ -416,12 +416,16 @@ class ImageSetsHandler(BaseHandler):
                             continue
                         elif field == 'trashed':
                             objimgset['trashed'] = update_data[field]
-                        cmd = "objimgset['"+field+"'] = "
-                        if isinstance(update_data[field],str):
-                            cmd = cmd + "'" + str(update_data[field]) + "'"
-                        else:
-                            cmd = cmd + str(update_data[field])
-                        exec(cmd)
+                            continue
+                        objimgset[field] = update_data[field]
+                        #cmd = "objimgset['"+field+"'] = "
+                        #print(update_data)
+                        #if isinstance(update_data[field],str):
+                        #    cmd = cmd + "'" + str(update_data[field]) + "'"
+                        #else:
+                        #    cmd = cmd + str(update_data[field])
+                        #print(cmd)
+                        #exec(cmd)
 
                 # check if user exists
                 useriid = objimgset['uploading_user_iid']
@@ -440,8 +444,6 @@ class ImageSetsHandler(BaseHandler):
                 if oorgexists['iid'] != orgiid:
                     self.dropError(409,"owner organization id referenced doesn't exist")
                     return
-                objimgset['animal_iid'] = objimgset[self.settings['animal']+'_iid']
-                del objimgset[self.settings['animal']+'_iid']
                 if objimgset['animal_iid']:
                     aniexists = yield self.settings['db'][self.settings['animals']].find_one({'iid':objimgset['animal_iid'],'trashed':False})
                     if aniexists['iid'] != objimgset['animal_iid']:
