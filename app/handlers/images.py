@@ -139,6 +139,8 @@ class ImagesHandler(BaseHandler):
                 output = newimage.to_native()
                 # if upload file activated, generate files and upload to s3
                 if updopt:
+                    #print(self.settings['S3_ACCESS_KEY'])
+                    #print(self.settings['S3_SECRET_KEY'])
                     if 'image' in self.input_data.keys():
                         fupdname = dt.date().isoformat() + '_image_' + str(newobj['iid']) + '_' + str(newsaved)
                         imgname = fupdname + '.img'
@@ -166,9 +168,9 @@ class ImagesHandler(BaseHandler):
                 del output['image_set_iid']
                 self.switch_iid(output)
                 self.finish(self.json_encode({'status':'success','message':'new image saved','data':output}))
-            except:
+            except ValidationError,e:
                 # duplicated index error
-                self.dropError(409,'key violation')
+                self.dropError(409,'fail to save image. Error: '+str(e))
         except ValidationError, e:
             # received data is invalid in some way
             self.dropError(400,'Invalid input data. Error: '+str(e))
