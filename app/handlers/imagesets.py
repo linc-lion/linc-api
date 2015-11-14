@@ -542,7 +542,7 @@ class ImageSetsHandler(BaseHandler):
             else:
                 imgset_obj['name'] = '-'
 
-            obji = yield self.settings['db'].images.find_one({'image_set_iid':obj['iid'],'image_type':'main-id','trashed':trashed})
+            obji = yield self.settings['db'].images.find_one({'iid':obj['main_image_iid']})
             if obji:
                 imgset_obj['thumbnail'] = self.settings['S3_URL']+obji['url']+'_icon.jpg'
             else:
