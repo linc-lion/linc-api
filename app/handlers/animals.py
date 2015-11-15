@@ -389,7 +389,7 @@ class AnimalsHandler(BaseHandler):
             obj['main_image_id'] = oimgst['main_image_iid']
             obj['uploading_organization_id'] = oimgst['uploading_organization_iid']
             obj['notes'] = oimgst['notes']
-            obj['organization_id'] = oimgst['owner_organization_iid']
+            obj['owner_organization_id'] = oimgst['owner_organization_iid']
             obj['user_id'] = oimgst['uploading_user_iid']
             cvreq = yield self.settings['db'].cvrequests.find_one({'image_set_iid':oimgst['iid']})
             if cvreq:
