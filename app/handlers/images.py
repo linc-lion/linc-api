@@ -38,7 +38,6 @@ class ImagesHandler(BaseHandler):
                 self.dropError(400,'invalid id key')
                 return
         query['trashed'] = trashed
-        print(query)
         return query
 
     @asynchronous
@@ -167,7 +166,8 @@ class ImagesHandler(BaseHandler):
                 output['image_set_id'] = output['image_set_iid']
                 del output['image_set_iid']
                 self.switch_iid(output)
-                self.finish(self.json_encode({'status':'success','message':'new image saved','data':output}))
+                #self.finish(self.json_encode({'status':'success','message':'new image saved','data':output}))
+                self.setSuccess(201,'new image saved',output)
             except ValidationError,e:
                 # duplicated index error
                 self.dropError(409,'fail to save image. Error: '+str(e))
@@ -205,14 +205,12 @@ class ImagesHandler(BaseHandler):
             updurl = False
             if updobj:
                 for field in fields_allowed_to_be_update:
-                    if field == 'image_set_id':
+                    if field == 'image_set_id' and field in update_data.keys():
                         orig_imgset_id = updobj['image_set_iid']
                         updobj['image_set_iid'] = update_data['image_set_id']
                         updurl = True
                     elif field in update_data.keys():
                         updobj[field] = update_data[field]
-
-                print(updobj)
                 dt = datetime.now()
                 updobj['updated_at'] = dt
                 try:
@@ -241,6 +239,12 @@ class ImagesHandler(BaseHandler):
                         # Ok, data saved so operate s3
                         # Copy the image to the new imageset
                         # Copy the full for backup
+                        output = updobj
+                        output['obj_id'] = str(objupdid)
+                        del output['_id']
+                        # Change iid to id in the output
+                        self.switch_iid(output)
+
                         if 'image_set_id' in self.input_data.keys() \
                             and updobj['image_set_iid'] != imgiid:
                             # image set was changed
@@ -254,14 +258,11 @@ class ImagesHandler(BaseHandler):
                                 self.s3con.copy(srcurl+suf,self.settings['S3_BUCKET'],desurl+suf)
                                 # Delete the source file
                                 self.s3con.delete(srcurl+suf,self.settings['S3_BUCKET'])
-                            output = updobj
-                            output['obj_id'] = str(objupdid)
-                            # Change iid to id in the output
-                            self.switch_iid(output)
-                            output['image_set_id'] = output['image_set_iid']
-                            del output['image_set_iid']
-                            self.finish(self.json_encode({'status':'success','message':'image updated','data':output}))
-                        self.setSuccess(200,'image id '+str(output['id'])+ ' updated successfully.')
+                        output['image_set_id'] = output['image_set_iid']
+                        del output['image_set_iid']
+
+                        #self.finish(self.json_encode({'status':'success','message':'image updated','data':output}))
+                        self.setSuccess(200,'image id '+str(output['id'])+ ' updated successfully.',output)
                     except Exception, e:
                         # duplicated index error
                         self.dropError(409,'key violation. Errors: '+str(e))
