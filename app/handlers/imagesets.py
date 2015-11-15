@@ -446,7 +446,7 @@ class ImageSetsHandler(BaseHandler):
                     return
                 oorgiid = objimgset['owner_organization_iid']
                 oorgexists = yield self.settings['db'].organizations.find_one({'iid':oorgiid,'trashed':False})
-                if oorgexists['iid'] != orgiid:
+                if oorgexists['iid'] != oorgiid:
                     self.dropError(409,"owner organization id referenced doesn't exist")
                     return
                 if objimgset['animal_iid']:
