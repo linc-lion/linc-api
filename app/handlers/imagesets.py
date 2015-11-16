@@ -241,10 +241,8 @@ class ImageSetsHandler(BaseHandler):
                 self.dropError(409,"owner organization id referenced doesn't exist")
                 return
             newobj['location'] = [[self.input_data['latitude'],self.input_data['longitude']]]
-            newobj[self.settings['animal']+'_id'] = self.input_data[self.settings['animal']+'_id']
+            newobj['animal_iid'] = self.input_data[self.settings['animal']+'_id']
             try:
-                newobj['animal_iid'] = newobj[self.settings['animal']+'_id']
-                del newobj[self.settings['animal']+'_id']
                 newimgset = ImageSet(newobj)
                 newimgset.validate()
 
