@@ -244,8 +244,8 @@ class ImageSetsHandler(BaseHandler):
             else:
                 self.dropError(409,"owner organization id referenced doesn't exist")
                 return
-            if 'latitude' in self.input_data.keys() and \
-              'longitude' in self.input_data.keys():
+            if 'latitude' in self.input_data.keys() and self.input_data['latitude'] and \
+              'longitude' in self.input_data.keys() and self.input_data['longitude']:
               newobj['location'] = [[self.input_data['latitude'],self.input_data['longitude']]]
             newobj['animal_iid'] = self.input_data[self.settings['animal']+'_id']
             try:
