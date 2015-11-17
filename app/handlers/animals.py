@@ -97,8 +97,12 @@ class AnimalsHandler(BaseHandler):
                         output['image'] = ''
 
                     # Location
-                    output['latitude'] = output['location'][0][0]
-                    output['longitude'] = output['location'][0][1]
+                    if output['location']:
+                        output['latitude'] = output['location'][0][0]
+                        output['longitude'] = output['location'][0][1]
+                    else:
+                        output['latitude'] = None
+                        output['longitude'] = None
                     del output['location']
 
                     self.setSuccess(200,self.settings['animal']+' found',output)
