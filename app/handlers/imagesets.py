@@ -97,8 +97,12 @@ class ImageSetsHandler(BaseHandler):
                 else:
                     output['image'] = ''
 
-                output['latitude'] = output['location'][0][0]
-                output['longitude'] = output['location'][0][1]
+                if output['location']:
+                    output['latitude'] = output['location'][0][0]
+                    output['longitude'] = output['location'][0][1]
+                else:
+                    output['latitude'] = None
+                    output['longitude'] = None
                 del output['location']
 
                 # Getting cvrequest for this imageset
