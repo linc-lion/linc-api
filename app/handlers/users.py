@@ -194,7 +194,7 @@ class UsersHandler(BaseHandler):
                 imgsetrc = yield self.settings['db'].imagesets.find({'uploading_user_iid':iid,'trashed':False}).count()
                 refcount += imgsetrc
                 if refcount > 0:
-                    self.dropError(409,"the user can't be deleted because it has references in the database.")
+                    self.dropError(417,"the user can't be deleted because it has references in the database.")
                 else:
                     try:
                         updobj = yield self.settings['db'].users.update(query,{'$set':{'trashed':True,'updated_at':datetime.now()}})
