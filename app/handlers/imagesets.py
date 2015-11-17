@@ -197,7 +197,7 @@ class ImageSetsHandler(BaseHandler):
             newobj['trashed'] = False
             # validate the input
             fields_needed = ['uploading_user_id','uploading_organization_id','owner_organization_id',
-                             'is_verified','latitude','longitude','gender','is_primary','date_of_birth',
+                             'is_verified','gender','is_primary','date_of_birth',
                              'tags','date_stamp','notes',self.settings['animal']+'_id','main_image_id']
             keys = list(self.input_data.keys())
             for field in fields_needed:
@@ -240,7 +240,9 @@ class ImageSetsHandler(BaseHandler):
             else:
                 self.dropError(409,"owner organization id referenced doesn't exist")
                 return
-            newobj['location'] = [[self.input_data['latitude'],self.input_data['longitude']]]
+            if 'latitude' in self.input_data.keys() and \
+              'longitude' in self.input_data.keys():
+              newobj['location'] = [[self.input_data['latitude'],self.input_data['longitude']]]
             newobj['animal_iid'] = self.input_data[self.settings['animal']+'_id']
             try:
                 newimgset = ImageSet(newobj)
