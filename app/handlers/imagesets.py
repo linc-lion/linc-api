@@ -516,7 +516,7 @@ class ImageSetsHandler(BaseHandler):
                 imgsetic = yield self.settings['db'].images.find({'image_set_iid':iid,'trashed':False}).count()
                 refcount += imgsetic
                 if refcount > 0:
-                    self.dropError(409,"the image set can't be deleted because it has references in the database.")
+                    self.dropError(417,"the image set can't be deleted because it has references in the database.")
                 else:
                     try:
                         updobj = yield self.settings['db'].imagesets.update(query,{'$set':{'trashed':True,'updated_at':datetime.now()}})

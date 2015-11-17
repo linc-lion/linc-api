@@ -324,7 +324,7 @@ class AnimalsHandler(BaseHandler):
                 print(imgsetrc)
                 refcount += imgsetrc
                 if refcount > 0:
-                    self.dropError(409,"the "+self.settings['animal']+" can't be deleted because it has references in the database.")
+                    self.dropError(417,"the "+self.settings['animal']+" can't be deleted because it has references in the database.")
                 else:
                     try:
                         updobj = yield self.settings['db'][self.settings['animals']].update(query,{'$set':{'trashed':True,'updated_at':datetime.now()}})

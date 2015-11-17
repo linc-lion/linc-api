@@ -181,7 +181,7 @@ class OrganizationsHandler(BaseHandler):
                 cvreqrc = yield self.settings['db'].cvrequests.find({'uploading_organization_iid':iid,'trashed':False}).count()
                 refcount += cvreqrc
                 if refcount > 0:
-                    self.dropError(409,"organization can't be deleted because it has references in the database.")
+                    self.dropError(417,"organization can't be deleted because it has references in the database.")
                 else:
                     try:
                         updobj = yield self.settings['db'].organizations.update(query,{'$set':{'trashed':True,'updated_at':datetime.now()}})
