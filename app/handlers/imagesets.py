@@ -416,13 +416,17 @@ class ImageSetsHandler(BaseHandler):
                             except:
                                 self.dropError(400,'invalid '+field)
                                 return
-                        elif field == 'latitude':
-                            objimgset['location'][0][0] = update_data[field]
-                            del update_data[field]
-                            continue
-                        elif field == 'longitude':
-                            objimgset['location'][0][1] = update_data[field]
-                            del update_data[field]
+                        elif field in ['latitude','longitude']:
+                            if 'latitude' in update_data.keys() and update_data['latitude'] and \
+                               'longitude' in update_data.keys() and update_data['longitude']:
+                                print(update_data[field])
+                                objimgset['location'] = [[0,0]]
+                                objimgset['location'][0][0] = float(update_data['latitude'])
+                                objimgset['location'][0][1] = float(update_data['longitude'])
+                                del update_data['latitude']
+                                del update_data['longitude']
+                            else:
+                                objimgset['location'] = None
                             continue
                         elif field == 'trashed':
                             objimgset['trashed'] = update_data[field]
