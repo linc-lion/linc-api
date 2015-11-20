@@ -5,6 +5,7 @@ from tornado.web import asynchronous
 from tornado.gen import coroutine,engine,Task
 from handlers.base import BaseHandler
 from models.animal import Animal
+from models.imageset import ImageSet
 from datetime import datetime,time
 from bson import ObjectId as ObjId
 from pymongo import DESCENDING
@@ -72,6 +73,12 @@ class AnimalsHandler(BaseHandler):
 
                     # get data from the primary image set
                     objimgset = yield self.settings['db'].imagesets.find_one({'iid':objanimal['primary_image_set_id']})
+                    if not objimgset:
+                        objimgsets = yield self.settings['db'].imagesets.find({'animal_iid':objanimal['iid']})
+                        if len(objimgsets) > 0:
+                            objimgset = objimgsets[0]
+                        else:
+                            objimgset = ImageSet().to_native()
                     exclude = ['_id','iid','animal_iid']
                     for k,v in objimgset.iteritems():
                         if k not in exclude:
