@@ -43,54 +43,68 @@ class ImagesHandler(BaseHandler):
     @asynchronous
     @coroutine
     def get(self, image_id=None):
-        trashed = self.get_argument('trashed',False)
-        if trashed:
-            if trashed.lower() == 'true':
-                trashed = True
-            else:
-                trashed = False
-        print(image_id)
-        if image_id:
-            if image_id == 'list':
-                objs = yield self.settings['db'].images.find({'trashed':trashed}).to_list(None)
-                self.set_status(200)
-                self.finish(self.json_encode({'status':'success','data':self.list(objs)}))
-            else:
-                # return a specific image accepting as id the integer id, hash and name
-                query = self.query_id(image_id,trashed)
-                print(query)
-                objs = yield self.settings['db'].images.find_one(query)
-                if objs:
-                    objimage = objs
-                    self.switch_iid(objimage)
-                    #objimage['id'] = objs['iid']
-                    objimage['obj_id'] = str(objs['_id'])
-                    #del objimage['iid']
-                    del objimage['_id']
-                    objimage['image_set_id'] = objimage['image_set_iid']
-                    del objimage['image_set_iid']
-                    objimage['url'] = self.imgurl(objimage['url'],'medium')
-
-                    self.set_status(200)
-                    self.finish(self.json_encode({'status':'success','data':objimage}))
-                else:
-                    self.set_status(404)
-                    self.finish(self.json_encode({'status':'error','message':'not found'}))
-        else:
-            # return a list of images
-            objs = yield self.settings['db'].images.find({'trashed':trashed}).to_list(None)
-            output = list()
-            for x in objs:
-                obj = dict(x)
-                obj['obj_id'] = str(x['_id'])
-                del obj['_id']
-                self.switch_iid(obj)
-                obj['image_set_id'] = obj['image_set_iid']
-                del obj['image_set_iid']
-                obj['url'] = self.imgurl(obj['url'],'medium')
-                output.append(obj)
+        download = self.get_argument('download')
+        print (download)
+        if download:
+            #Temporário
+            dirfs= dirname(realpath(__file__))
+            filename = dirfs + '/arquivo.zip';
+            zipfile = open(filename,'rb')
+            #Temporáio até aqui
+            self.set_header('Content-Type', 'application/zip')
+            self.set_header("Content-Disposition", "attachment; filename=%s" % filename)
+            self.write(zipfile.read())
             self.set_status(200)
-            self.finish(self.json_encode({'status':'success','data':output}))
+            self.finish()
+        else:
+            trashed = self.get_argument('trashed',False)
+            if trashed:
+                if trashed.lower() == 'true':
+                    trashed = True
+                else:
+                    trashed = False
+            print(image_id)
+            if image_id:
+                if image_id == 'list':
+                    objs = yield self.settings['db'].images.find({'trashed':trashed}).to_list(None)
+                    self.set_status(200)
+                    self.finish(self.json_encode({'status':'success','data':self.list(objs)}))
+                else:
+                    # return a specific image accepting as id the integer id, hash and name
+                    query = self.query_id(image_id,trashed)
+                    print(query)
+                    objs = yield self.settings['db'].images.find_one(query)
+                    if objs:
+                        objimage = objs
+                        self.switch_iid(objimage)
+                        #objimage['id'] = objs['iid']
+                        objimage['obj_id'] = str(objs['_id'])
+                        #del objimage['iid']
+                        del objimage['_id']
+                        objimage['image_set_id'] = objimage['image_set_iid']
+                        del objimage['image_set_iid']
+                        objimage['url'] = self.imgurl(objimage['url'],'medium')
+
+                        self.set_status(200)
+                        self.finish(self.json_encode({'status':'success','data':objimage}))
+                    else:
+                        self.set_status(404)
+                        self.finish(self.json_encode({'status':'error','message':'not found'}))
+            else:
+                # return a list of images
+                objs = yield self.settings['db'].images.find({'trashed':trashed}).to_list(None)
+                output = list()
+                for x in objs:
+                    obj = dict(x)
+                    obj['obj_id'] = str(x['_id'])
+                    del obj['_id']
+                    self.switch_iid(obj)
+                    obj['image_set_id'] = obj['image_set_iid']
+                    del obj['image_set_iid']
+                    obj['url'] = self.imgurl(obj['url'],'medium')
+                    output.append(obj)
+                self.set_status(200)
+                self.finish(self.json_encode({'status':'success','data':output}))
 
     @asynchronous
     @engine
