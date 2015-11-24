@@ -22,7 +22,6 @@ class ImagesHandler(BaseHandler):
         S3_BUCKET = self.settings['S3_BUCKET']
         try:
             self.s3con = s3con(S3_ACCESS_KEY,S3_SECRET_KEY,default_bucket=S3_BUCKET)
-
         except:
             self.s3con = None
             print('\n\nFail to connect to S3')
@@ -43,19 +42,19 @@ class ImagesHandler(BaseHandler):
     @asynchronous
     @coroutine
     def get(self, image_id=None):
-        download = self.get_argument('download')
-        print (download)
+        download = self.get_argument('download',None)
         if download:
-            #Temporário
-            dirfs= dirname(realpath(__file__))
-            filename = dirfs + '/arquivo.zip';
-            zipfile = open(filename,'rb')
-            #Temporáio até aqui
-            self.set_header('Content-Type', 'application/zip')
-            self.set_header("Content-Disposition", "attachment; filename=%s" % filename)
-            self.write(zipfile.read())
-            self.set_status(200)
-            self.finish()
+            dimg = [int(x) for x in download.split(',')]
+            limgs = yield self.settings['db'].images.find({'iid' : {'$in' : dimg}}).to_list(None)
+            if len(limgs) > 0:
+                s3url = self.settings['S3_URL']
+                suf = '_full.jpg'
+                urls = [ s3url+x['url']+suf for x in limgs]
+                self.setSuccess(200,'links for the requested images with id='+download,urls)
+                return
+            else:
+                self.dropError(400,"you need to pass image's ids separated by commas")
+                return
         else:
             trashed = self.get_argument('trashed',False)
             if trashed:
