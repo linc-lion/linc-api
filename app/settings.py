@@ -57,6 +57,8 @@ api['app_path'] = os.path.dirname(os.path.realpath(__file__))
 api['default_handler_class'] = ErrorHandler
 api['default_handler_args'] = dict(status_code=404)
 api['version'] = 'api version 0.1'
+api['template_path'] = os.path.dirname(os.path.realpath(__file__))+"/templates"
+
 
 # Token security
 api['attempts'] = dict()

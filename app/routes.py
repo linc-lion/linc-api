@@ -2,7 +2,7 @@
 # coding: utf-8
 
 import sys
-from handlers.base import VersionHandler
+from handlers.base import VersionHandler,DocHandler
 from handlers.error import ErrorHandler
 from handlers.auth import LoginHandler,LogoutHandler
 from handlers.animals import AnimalsHandler
@@ -22,6 +22,8 @@ def url_patterns(animals='lions'):
         (r"/version/?", VersionHandler),
         (r"/auth/login/?", LoginHandler),
         (r"/auth/logout/?", LogoutHandler),
+        (r"/documentation.html", DocHandler),
+
         # The handler above will be used only for import
         # data from pg in development phase
         #(r"/import", ImportHandler),
