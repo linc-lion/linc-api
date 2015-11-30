@@ -4,3 +4,4 @@ motor
 pycurl
 schematics
 tinys3
+bcrypt
