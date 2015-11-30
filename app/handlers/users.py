@@ -107,6 +107,8 @@ class UsersHandler(BaseHandler):
                 newsaved = yield self.settings['db'].users.insert(newuser.to_native())
                 output = newuser.to_native()
                 output['obj_id'] = str(newsaved)
+                output['organization_id'] = output['organization_iid']
+                del output['organization_iid']
                 self.switch_iid(output)
                 del output['encrypted_password']
                 self.finish(self.json_encode({'status':'success','message':'new user saved','data':output}))

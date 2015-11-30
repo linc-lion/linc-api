@@ -109,6 +109,8 @@ class CVResultsHandler(BaseHandler):
                 obj = dict(x)
                 obj['obj_id'] = str(x['_id'])
                 del obj['_id']
+                obj['cvrequest_id'] = obj['cvrequest_iid']
+                del obj['cvrequest_iid']
                 self.switch_iid(obj)
                 output.append(obj)
             self.set_status(200)
