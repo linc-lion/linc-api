@@ -126,3 +126,8 @@ class BaseHandler(RequestHandler):
 class VersionHandler(BaseHandler):
     def get(self):
         self.setSuccess(200,self.settings['version']+' - animal defined: '+self.settings['animal'])
+
+class DocHandler(BaseHandler):
+    def get(self):
+        self.set_header('Content-Type','text/html; charset=UTF-8')
+        self.render('documentation.html')

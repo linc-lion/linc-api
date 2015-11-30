@@ -1,24 +1,71 @@
 FORMAT: 1A
 HOST: https://still.be.defined.com
 
-# LINC API
+# Group LINC API
 
 LINC is a simple API allowing conservationists to identify animals by photos applied in a computer vision classification service.
-The first implementation considering only lions, but this version was extended to support any kind of animal that should be defined in the deploy.
 
-# LINC API Resources
+The first implementation considering only lions, but this version was extended to support any kind of animal that should be defined in the configuration's file `<repo dir>/app/settings.py`.
+
+The API was implemented using Tornado Web Server, based in Python language.
+
+To support different animal deploy two setting's keys must be defined in the file mentioned above:
+
+```
+api['animal'] = 'lion'
+api['animals'] = 'lions'
+```
+
+So, the documentation presented below will use the terms `<animal>` and `<animals>` to refer the animal considered for the application.
+
+## LINC API Resources
 
 The resources available in linc-api are described below, and they are:
 
 * `/users` : handle requests related to user management;
 * `/organizations` : for requests about the conservationist organizations;
-* `/lions` : for handle data about the lions. This resource name depends of the deployment configuration;
-* `/imagesets` :
-* `/images` :
-* `/cvrequests` :
-* `/cvresults` :
+* `/<animals>` : for handle data about the animals. This resource name depends of the deployment configuration;
+* `/imagesets` : handles image sets objects that will group images and store metadata about the animals;
+* `/images` : manage image files uploaded to the API;
+* `/cvrequests` : manage requests made to the CV Server (Computer Vision Server);
+* `/cvresults` : manage results provided by the CV Server to a request made.
+
+## Database
+
+The API was completely rewrite to use MongoDB, since the first API and schema was based in PostgreSQL.
+
+To accomplish the goal of coding productivity and also database access,
+Motor was used to manage data between the API and MongoDB. Also, Schematics was used to define models that validates the
+
+## Data models
+
+## Folder Structure
 
 
+
+
+
+## EndPoints Concepts
+
+
+## Input and Output
+
+The LINC API is a JSON API, so all information sent and receipt should be have its content type as `application/json`. The development didn't follow any specific approach or standard proposed like [http://jsonapi.org/](http://jsonapi.org/).
+The decision was made to keep simple format in the input that is based in only mention keys that are included in the data model for the resource.
+An example is showed below.
+
+## organizations [/organizations]
+
+
++ BODY:
+```
+{
+  "name" : "Name for the new organization"
+}
+```
+### Create a new organization [POST]
+
++ Response 201 (application/json)
 
 
 ## Group Authentication
