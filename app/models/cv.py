@@ -11,10 +11,10 @@ class CVRequest(Model):
     iid = IntType(required=True)
     image_set_iid = IntType(required=True)
     status = StringType(required=True,default='registered')
-    created_at = DateTimeType(required=True,default=datetime.now())
-    updated_at = DateTimeType(required=True,default=datetime.now())
     server_uuid = StringType(required=True)
     request_body = StringType(required=True,default='')
+    created_at = DateTimeType(required=True,default=datetime.now())
+    updated_at = DateTimeType(required=True,default=datetime.now())
 
     @classmethod
     def collection(self,name=None):
@@ -38,7 +38,6 @@ class CVResult(Model):
     cvrequest_iid = IntType(required=True)
     iid = IntType(required=True)
     match_probability = StringType(required=True,default='[]')
-    status = StringType(required=True,default='queued')
     created_at = DateTimeType(required=True,default=datetime.now())
     updated_at = DateTimeType(required=True,default=datetime.now())
 

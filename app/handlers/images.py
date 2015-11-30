@@ -12,6 +12,8 @@ from tinys3 import Connection as s3con
 from os.path import realpath,dirname
 from lib.image_utils import generate_images
 from os import remove
+from lib.rolecheck import allowedRole, refusedRole, api_authenticated
+import logging
 
 class ImagesHandler(BaseHandler):
     """A class that handles requests about images informartion
@@ -41,6 +43,7 @@ class ImagesHandler(BaseHandler):
 
     @asynchronous
     @coroutine
+    @api_authenticated
     def get(self, image_id=None):
         download = self.get_argument('download',None)
         if download:
@@ -107,6 +110,7 @@ class ImagesHandler(BaseHandler):
 
     @asynchronous
     @engine
+    @api_authenticated
     def post(self,updopt=None):
         # create a new image
         # parse data recept by POST and get only fields of the object
@@ -190,6 +194,7 @@ class ImagesHandler(BaseHandler):
 
     @asynchronous
     @coroutine
+    @api_authenticated
     def put(self, image_id=None):
         # update an image
         # parse data recept by PUT and get only fields of the object
@@ -289,6 +294,7 @@ class ImagesHandler(BaseHandler):
 
     @asynchronous
     @coroutine
+    @api_authenticated
     def delete(self, image_id=None):
         # delete an image
         purge = self.get_argument('purge',None)

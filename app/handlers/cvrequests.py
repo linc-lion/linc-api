@@ -8,6 +8,7 @@ from models.cv import CVRequest
 from bson import ObjectId as ObjId
 from datetime import datetime
 from schematics.exceptions import ValidationError
+from lib.rolecheck import allowedRole, refusedRole, api_authenticated
 
 class CVRequestsHandler(BaseHandler):
     """A class that handles requests about CV indentification informartion
@@ -27,6 +28,7 @@ class CVRequestsHandler(BaseHandler):
 
     @asynchronous
     @coroutine
+    @api_authenticated
     def get(self, req_id=None):
         if req_id:
             if req_id == 'list':
@@ -69,6 +71,7 @@ class CVRequestsHandler(BaseHandler):
 
     @asynchronous
     @engine
+    @api_authenticated
     def post(self,*kwargs):
         # create a new req
         # parse data recept by POST and get only fields of the object
@@ -127,6 +130,7 @@ class CVRequestsHandler(BaseHandler):
 
     @asynchronous
     @coroutine
+    @api_authenticated
     def put(self, req_id=None):
         # update an req
         # parse data recept by PUT and get only fields of the object
@@ -196,6 +200,7 @@ class CVRequestsHandler(BaseHandler):
 
     @asynchronous
     @coroutine
+    @api_authenticated
     def delete(self, req_id=None):
         # delete a req
         if req_id:

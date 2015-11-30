@@ -14,6 +14,7 @@ from tornado.httpclient import AsyncHTTPClient,HTTPRequest,HTTPError
 from json import dumps
 from tornado.escape import json_decode
 from schematics.exceptions import ValidationError
+from lib.rolecheck import allowedRole, refusedRole, api_authenticated
 
 class ImageSetsHandler(BaseHandler):
     """A class that handles requests about image sets informartion
@@ -34,6 +35,7 @@ class ImageSetsHandler(BaseHandler):
 
     @asynchronous
     @coroutine
+    @api_authenticated
     def get(self, imageset_id=None, param=None):
         if param == 'cvrequest':
             self.dropError(400,'to request cv identification you must use POST method')
@@ -188,6 +190,7 @@ class ImageSetsHandler(BaseHandler):
 
     @asynchronous
     @coroutine
+    @api_authenticated
     def post(self, imageset_id=None, cvrequest=None):
         if not imageset_id:
             # create a new imageset or new cvrequest
@@ -201,7 +204,7 @@ class ImageSetsHandler(BaseHandler):
             newobj['trashed'] = False
             # validate the input
             fields_needed = ['uploading_user_id','uploading_organization_id','owner_organization_id',
-                             'is_verified','gender','is_primary','date_of_birth',
+                             'is_verified','gender','date_of_birth',
                              'tags','date_stamp','notes',self.settings['animal']+'_id','main_image_id']
             keys = list(self.input_data.keys())
             for field in fields_needed:
@@ -370,6 +373,7 @@ class ImageSetsHandler(BaseHandler):
 
     @asynchronous
     @coroutine
+    @api_authenticated
     def put(self, imageset_id=None):
         # update an imageset
         if imageset_id:
@@ -383,7 +387,7 @@ class ImageSetsHandler(BaseHandler):
                 objimgset['updated_at'] = dt
                 # validate the input
                 fields_allowed = ['uploading_user_id','uploading_organization_id','owner_organization_id',
-                                 'is_verified','latitude','longitude','gender','is_primary','date_of_birth',
+                                 'is_verified','latitude','longitude','gender','date_of_birth',
                                  'tags','date_stamp','notes',self.settings['animal']+'_id','main_image_id','trashed']
                 update_data = dict()
                 for k,v in self.input_data.items():
@@ -501,6 +505,7 @@ class ImageSetsHandler(BaseHandler):
 
     @asynchronous
     @coroutine
+    @api_authenticated
     def delete(self, imageset_id=None):
         # delete an imageset
         if imageset_id:
@@ -578,7 +583,6 @@ class ImageSetsHandler(BaseHandler):
 
             imgset_obj['gender'] = obj['gender']
             imgset_obj['is_verified'] = obj['is_verified']
-            imgset_obj['is_primary'] = obj['is_primary']
 
             objcvreq = yield self.settings['db'].cvrequests.find_one({'image_set_iid':obj['iid']})
             if objcvreq:

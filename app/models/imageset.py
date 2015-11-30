@@ -17,7 +17,6 @@ class ImageSet(Model):
     is_verified = BooleanType(required=True,default=False)
     location = ListType(ListType(FloatType()))
     gender = StringType(required=False,default=None)
-    is_primary = BooleanType(required=True,default=False)
     created_at = DateTimeType(required=True,default=datetime.now())
     updated_at = DateTimeType(required=True,default=datetime.now())
     date_of_birth = DateTimeType(required=False,default=None)

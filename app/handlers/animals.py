@@ -9,6 +9,7 @@ from models.imageset import ImageSet
 from datetime import datetime,time
 from bson import ObjectId as ObjId
 from pymongo import DESCENDING
+from lib.rolecheck import allowedRole, refusedRole, api_authenticated
 
 class AnimalsHandler(BaseHandler):
     """A class that handles requests about animals informartion
@@ -197,6 +198,7 @@ class AnimalsHandler(BaseHandler):
 
     @asynchronous
     @engine
+    @api_authenticated
     def post(self):
         # create a new animal
         # parse data recept by POST and get only fields of the object
@@ -243,6 +245,7 @@ class AnimalsHandler(BaseHandler):
 
     @asynchronous
     @coroutine
+    @api_authenticated
     def put(self, animal_id=None):
         # update an animal
         # parse data recept by PUT and get only fields of the object
@@ -319,6 +322,7 @@ class AnimalsHandler(BaseHandler):
 
     @asynchronous
     @coroutine
+    @api_authenticated
     def delete(self, animal_id=None):
         # delete an animal
         if animal_id:
