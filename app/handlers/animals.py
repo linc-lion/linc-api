@@ -391,8 +391,12 @@ class AnimalsHandler(BaseHandler):
             obj = dict()
             obj['id'] = oimgst['iid']
             obj['is_verified'] = oimgst['is_verified']
-            obj['latitude'] = oimgst['location'][0][0]
-            obj['longitude'] = oimgst['location'][0][1]
+            if 'location' in oimgst.keys() and oimgst['location']:
+                obj['latitude'] = oimgst['location'][0][0]
+                obj['longitude'] = oimgst['location'][0][1]
+            else:
+                obj['latitude'] = None
+                obj['longitude'] = None
             obj['gender'] = oimgst['gender']
             if oimgst['date_of_birth']:
                 obj['date_of_birth'] = oimgst['date_of_birth'].strftime('%Y-%m-%dT%H:%M:%S.%fZ')
