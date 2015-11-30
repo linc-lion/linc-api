@@ -10,6 +10,7 @@ from datetime import datetime
 from tornado.httpclient import AsyncHTTPClient,HTTPRequest,HTTPError
 from tornado.escape import json_decode
 from json import dumps,loads
+from lib.rolecheck import allowedRole, refusedRole, api_authenticated
 
 class CVResultsHandler(BaseHandler):
     """A class that handles requests about CV identificaiton results informartion
@@ -29,6 +30,7 @@ class CVResultsHandler(BaseHandler):
 
     @asynchronous
     @coroutine
+    @api_authenticated
     def get(self, res_id=None, xlist=None):
         if res_id:
             if res_id == 'list':
@@ -118,6 +120,7 @@ class CVResultsHandler(BaseHandler):
 
     @asynchronous
     @engine
+    @api_authenticated
     def post(self):
         """ This method only creates a cvresult if still doesn't exist """
         # create a new res
@@ -208,6 +211,7 @@ class CVResultsHandler(BaseHandler):
 
     @asynchronous
     @coroutine
+    @api_authenticated
     def put(self, res_id=None):
         """ This method implements the update for a cvresult that already exists """
         # update an res
@@ -258,6 +262,7 @@ class CVResultsHandler(BaseHandler):
 
     @asynchronous
     @coroutine
+    @api_authenticated
     def delete(self, res_id=None):
         # delete an res
         if res_id:

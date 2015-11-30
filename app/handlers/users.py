@@ -8,7 +8,7 @@ from models.user import User
 from bson import ObjectId as ObjId
 from datetime import datetime
 from schematics.exceptions import ValidationError
-
+from lib.rolecheck import allowedRole, refusedRole, api_authenticated
 
 class UsersHandler(BaseHandler):
     """A class that handles requests about users informartion
@@ -28,6 +28,7 @@ class UsersHandler(BaseHandler):
 
     @asynchronous
     @coroutine
+    @api_authenticated
     def get(self, user_id=None):
         trashed = self.get_argument('trashed',False)
         if trashed:
@@ -84,6 +85,8 @@ class UsersHandler(BaseHandler):
 
     @asynchronous
     @engine
+    @api_authenticated
+    @allowedRole('admin')
     def post(self):
         # create a new user
         # parse data recept by POST and get only fields of the object
@@ -121,6 +124,8 @@ class UsersHandler(BaseHandler):
 
     @asynchronous
     @coroutine
+    @api_authenticated
+    @allowedRole('admin')
     def put(self, user_id=None):
         # update an user
         # parse data recept by PUT and get only fields of the object
@@ -183,6 +188,8 @@ class UsersHandler(BaseHandler):
 
     @asynchronous
     @coroutine
+    @api_authenticated
+    @allowedRole('admin')
     def delete(self, user_id=None):
         # delete an user
         if user_id:

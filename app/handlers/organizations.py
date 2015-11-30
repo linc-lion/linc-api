@@ -9,6 +9,7 @@ from bson import ObjectId as ObjId
 from json import loads
 from tornado.escape import json_decode
 from datetime import datetime
+from lib.rolecheck import allowedRole, refusedRole, api_authenticated
 
 class OrganizationsHandler(BaseHandler):
     """A class that handles requests about organizations informartion"""
@@ -27,6 +28,7 @@ class OrganizationsHandler(BaseHandler):
 
     @asynchronous
     @coroutine
+    @api_authenticated
     def get(self, org_id=None):
         trashed = self.get_argument('trashed',False)
         if trashed:
@@ -73,6 +75,8 @@ class OrganizationsHandler(BaseHandler):
 
     @asynchronous
     @engine
+    @api_authenticated
+    @allowedRole('admin')
     def post(self):
         # create a new organization
         # parse data recept by POST and get only fields of the object
@@ -100,6 +104,8 @@ class OrganizationsHandler(BaseHandler):
 
     @asynchronous
     @coroutine
+    @api_authenticated
+    @allowedRole('admin')
     def put(self, org_id=None):
         # update an organization
         # parse data recept by PUT and get only fields of the object
@@ -159,6 +165,8 @@ class OrganizationsHandler(BaseHandler):
 
     @asynchronous
     @coroutine
+    @api_authenticated
+    @allowedRole('admin')
     def delete(self, org_id=None):
         # delete an organization
         if org_id:
