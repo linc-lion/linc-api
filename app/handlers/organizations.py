@@ -120,10 +120,11 @@ class OrganizationsHandler(BaseHandler):
                 updict = dict()
                 for field in fields_allowed_to_be_update:
                     if field in update_data.keys():
-                        if isinstance(update_data[field],str):
-                            updict[field] =  "'" + str(update_data[field]) + "'"
-                        else:
-                            updict[field] = str(update_data[field])
+                        #if isinstance(update_data[field],str):
+                        #    updict[field] =  "'" + str(update_data[field]) + "'"
+                        #else:
+                        #    updict[field] = str(update_data[field])
+                        updict[field] = update_data[field]
                 if True:
                 #try:
                     if updict:
