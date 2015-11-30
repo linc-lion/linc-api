@@ -4,7 +4,7 @@
 import sys
 from handlers.base import VersionHandler
 from handlers.error import ErrorHandler
-from handlers.auth import AuthHandler
+from handlers.auth import LoginHandler,LogoutHandler
 from handlers.animals import AnimalsHandler
 from handlers.organizations import OrganizationsHandler
 from handlers.users import UsersHandler
@@ -20,7 +20,8 @@ from handlers.cvresults import CVResultsHandler
 def url_patterns(animals='lions'):
     routes = [
         (r"/version/?", VersionHandler),
-
+        (r"/auth/login/?", LoginHandler),
+        (r"/auth/logout/?", LogoutHandler),
         # The handler above will be used only for import
         # data from pg in development phase
         #(r"/import", ImportHandler),

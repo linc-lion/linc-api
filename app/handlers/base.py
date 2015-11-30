@@ -1,13 +1,16 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from json import load,loads,dumps,dump
 from tornado.web import RequestHandler,asynchronous
 from tornado.gen import engine,coroutine
+from tornado import web
 from tornado.escape import utf8
 import string,os
 from datetime import date
-import hashlib
+import logging
+import bcrypt
+from json import load,loads,dumps,dump
+from lib.tokens import token_decode,gen_token
 
 class BaseHandler(RequestHandler):
     """A class to collect common handler methods - all other handlers should
@@ -26,6 +29,36 @@ class BaseHandler(RequestHandler):
                         self.input_data[k] = v[0].decode("utf-8")
             except ValueError:
                 self.dropError(400,'Fail to parse input data.')
+
+    def get_current_user(self):
+        max_days_valid=10
+        # check for https comunication
+        using_ssl = (self.request.headers.get('X-Scheme', 'http') == 'https')
+        if not using_ssl:
+            logging.info('Not using SSL')
+        else:
+            logging.info('Using SSL')
+        # get the token for authentication
+        token = self.request.headers.get("Linc-Api-AuthToken")
+        res = None
+        if token:
+            # Decode to test
+            try:
+                token = token_decode(token,self.settings['token_secret'])
+                # Check token and it will validate if it ir younger that 10 days
+                vtoken = web.decode_signed_value(self.settings["cookie_secret"],'authtoken',token,max_age_days=max_days_valid)
+            except:
+                vtoken = None
+            if vtoken:
+                dtoken = loads(vtoken)
+                # Check if the Tornado signed_value cookie functions
+                if dtoken['username'] in self.settings['tokens'].keys() and \
+                    self.settings['tokens'][dtoken['username']]['token'] == token:
+                    res = dtoken
+            else:
+                # Validation error
+                self.token_passed_but_invalid = True
+        return res
 
     @asynchronous
     @engine
@@ -59,13 +92,6 @@ class BaseHandler(RequestHandler):
     def json_encode(self,value):
         return dumps(value,default=str).replace("</", "<\\/")
 
-    def auth_check(self):
-        # This method depends of the authentication method defined for the project
-        pass
-        #key = self.get_argument('auth_key',None)
-        #if key != self.settings['auth_key']:
-        #    self.authfail()
-
     def set_default_headers(self):
         self.set_header('Content-Type', 'application/json; charset=UTF-8')
 
@@ -74,7 +100,10 @@ class BaseHandler(RequestHandler):
         return today.year - born.year - ((today.month, today.day) < (born.month, born.day))
 
     def encryptPassword(self,pattern):
-        return hashlib.sha256(utf8(pattern)).hexdigest()
+        return bcrypt.hashpw(password, bcrypt.gensalt())
+
+    def checkPassword(self,password,hashed):
+        return bcrypt.hashpw(password, hashed) == hashed
 
     def imgurl(self,urlpath,imgtype='thumbnail'):
         # type can be: full,medium,thumbnail and icon
@@ -90,26 +119,9 @@ class BaseHandler(RequestHandler):
             url = url + '_medium.jpg'
         return url
 
-
     def sanitizestr(self,strs):
         txt = "%s%s" % (string.ascii_letters, string.digits)
         return ''.join(c for c in strs if c in txt)
-
-    # http status code returned will be rechecked soon
-    def authfail(self):
-        self.set_status(401)
-        self.write({'status':'fail','message':'authentication failed'})
-        self.finish()
-
-    def data_exists(self,message=""):
-        self.set_status(409)
-        self.write({"status":"fail", "message":message})
-        self.finish()
-
-    def not_found(self,message=""):
-         self.set_status(404)
-         self.write({'status':'fail','message':message})
-         self.finish()
 
 class VersionHandler(BaseHandler):
     def get(self):
