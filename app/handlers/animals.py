@@ -276,10 +276,12 @@ class AnimalsHandler(BaseHandler):
             if updobj:
                 for field in fields_allowed_to_be_update:
                     if field in update_data.keys():
-                        if isinstance(update_data[field],str):
-                            updobj[field] = "'" + str(update_data[field]) + "'"
-                        else:
-                            updobj[field] = str(update_data[field])
+                        # if isinstance(update_data[field],str):
+                        #     updobj[field] = "'" + str(update_data[field]) + "'"
+                        # else:
+                        #     updobj[field] = str(update_data[field])
+                        updobj[field] = update_data[field]
+
                 updobj['updated_at'] = datetime.now()
                 #try:
                 if True:
