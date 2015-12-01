@@ -74,7 +74,7 @@ class LoginHandler(BaseHandler):
                     # Output Response
                     self.set_header('Linc-Api-AuthToken',outputtoken)
                     self.set_status(200)
-                    self.finish({'status':'success','message':'Autentication OK.','token':outputtoken})
+                    self.finish({'status':'success','message':'Autentication OK.','token':outputtoken,'role':role,'orgname':orgname})
                 else:
                     # wrong password
                     if username in count.keys() and datetime.now() < count[username]['d'] + timedelta(minutes=30):
