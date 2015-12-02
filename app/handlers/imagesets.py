@@ -42,10 +42,10 @@ class ImageSetsHandler(BaseHandler):
             return
         trashed = self.get_argument('trashed',False)
         if trashed:
-            if trashed.lower() == 'true':
-                trashed = True
+            if trashed == '*':
+                trashed = { '$in' : [True,False] }
             else:
-                trashed = False
+                trashed = (trashed.lower() == 'true')
         if imageset_id == 'list':
             # Show a list for the website
             # Get imagesets from the DB

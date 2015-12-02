@@ -32,10 +32,10 @@ class UsersHandler(BaseHandler):
     def get(self, user_id=None):
         trashed = self.get_argument('trashed',False)
         if trashed:
-            if trashed.lower() == 'true':
-                trashed = True
+            if trashed == '*':
+                trashed = { '$in' : [True,False] }
             else:
-                trashed = False
+                trashed = (trashed.lower() == 'true')
         if user_id:
             if user_id == 'list':
                 objs = yield self.settings['db'].users.find({'trashed':trashed}).to_list(None)

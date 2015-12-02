@@ -61,10 +61,10 @@ class ImagesHandler(BaseHandler):
         else:
             trashed = self.get_argument('trashed',False)
             if trashed:
-                if trashed.lower() == 'true':
-                    trashed = True
+                if trashed == '*':
+                    trashed = { '$in' : [True,False] }
                 else:
-                    trashed = False
+                    trashed = (trashed.lower() == 'true')
             print(image_id)
             if image_id:
                 if image_id == 'list':
