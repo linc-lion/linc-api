@@ -32,10 +32,10 @@ class AnimalsHandler(BaseHandler):
     def get(self, animal_id=None, xurl=None):
         trashed = self.get_argument('trashed',False)
         if trashed:
-            if trashed.lower() == 'true':
-                trashed = True
+            if trashed == '*':
+                trashed = { '$in' : [True,False] }
             else:
-                trashed = False
+                trashed = (trashed.lower() == 'true')
         noimages = self.get_argument('no_images','')
         if noimages.lower() == 'true':
             noimages = True

@@ -32,10 +32,10 @@ class OrganizationsHandler(BaseHandler):
     def get(self, org_id=None):
         trashed = self.get_argument('trashed',False)
         if trashed:
-            if trashed.lower() == 'true':
-                trashed = True
+            if trashed == '*':
+                trashed = { '$in' : [True,False] }
             else:
-                trashed = False
+                trashed = (trashed.lower() == 'true')
         if org_id:
             if org_id == 'list':
                 # return a list of organizations for the website
