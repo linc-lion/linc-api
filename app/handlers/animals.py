@@ -10,6 +10,7 @@ from datetime import datetime,time
 from bson import ObjectId as ObjId
 from pymongo import DESCENDING
 from lib.rolecheck import allowedRole, refusedRole, api_authenticated
+from schematics.exceptions import ValidationError
 
 class AnimalsHandler(BaseHandler):
     """A class that handles requests about animals informartion
@@ -30,6 +31,7 @@ class AnimalsHandler(BaseHandler):
     @asynchronous
     @coroutine
     def get(self, animal_id=None, xurl=None):
+        apiout = self.get_argument('api',None)
         trashed = self.get_argument('trashed',False)
         if trashed:
             if trashed == '*':
@@ -139,7 +141,17 @@ class AnimalsHandler(BaseHandler):
                 query = self.query_id(animal_id,trashed)
                 objs = yield self.settings['db'][self.settings['animals']].find_one(query)
                 if objs:
-                    objanimal = yield Task(self.prepareOutput,objs,trashed,noimages)
+                    if apiout:
+                        objanimal = objs
+                        self.switch_iid(objanimal)
+                        objanimal['obj_id'] = objs['_id']
+                        del objanimal['_id']
+                        objanimal['organization_id'] = objanimal['organization_iid']
+                        del objanimal['organization_iid']
+                        objanimal['primary_image_set_id'] = objanimal['primary_image_set_iid']
+                        del objanimal['primary_image_set_iid']
+                    else:
+                        objanimal = yield Task(self.prepareOutput,objs,trashed,noimages)
                     self.set_status(200)
                     self.finish(self.json_encode(objanimal))
                 else:
@@ -175,7 +187,6 @@ class AnimalsHandler(BaseHandler):
             else:
                 objs = yield self.settings['db'][self.settings['animals']].find(queryfilter).to_list(None)
             output = list()
-            apiout = self.get_argument('api',None)
             for x in objs:
                 if apiout:
                     obj = dict(x)
@@ -239,9 +250,9 @@ class AnimalsHandler(BaseHandler):
             except:
                 # duplicated index error
                 self.dropError(409,'Key violation. Check if you are using a name from a lion that already exists in the database.')
-        except:
+        except ValidationError,e:
             # received data is invalid in some way
-            self.dropError(400,'Invalid input data.')
+            self.dropError(400,'Invalid input data. Errors: '+str(e))
 
     @asynchronous
     @coroutine
@@ -286,16 +297,14 @@ class AnimalsHandler(BaseHandler):
                         updobj[field] = update_data[field]
 
                 updobj['updated_at'] = datetime.now()
-                #try:
-                if True:
+                try:
                     updid = ObjId(updobj['_id'])
                     del updobj['_id']
                     Animals = Animal(updobj)
                     Animals.collection(self.settings['animals'])
                     Animals.validate()
                     # the object is valid, so try to save
-                    #try:
-                    if True:
+                    try:
                         updated = yield self.settings['db'][self.settings['animals']].update({'_id':updid},Animals.to_native())
                         print(updated)
                         output = updobj
@@ -307,14 +316,12 @@ class AnimalsHandler(BaseHandler):
                         output['primary_image_set_id'] = output['primary_image_set_iid']
                         del output['primary_image_set_iid']
                         self.finish(self.json_encode({'status':'success','message':self.settings['animal']+' updated','data':output}))
-                    #except:
-                    else:
+                    except:
                         # duplicated index error
                         self.dropError(409,'duplicated name for '+self.settings['animal'])
-                #except:
-                else:
+                except ValidationError,e:
                     # received data is invalid in some way
-                    self.dropError(400,'Invalid input data.')
+                    self.dropError(400,'Invalid input data. Errors: '+str(e))
             else:
                 self.dropError(404,self.settings['animal']+' not found')
         else:
