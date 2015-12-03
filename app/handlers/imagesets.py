@@ -542,9 +542,12 @@ class ImageSetsHandler(BaseHandler):
     def list(self,trashed,callback=None):
         objs_imgsets = yield self.settings['db'].imagesets.find({'trashed':trashed}).to_list(None)
         animals = yield self.settings['db'][self.settings['animals']].find({'trashed':trashed}).to_list(None)
+        primary_imgsets_list = list()
         animals_names = dict()
         for x in animals:
             animals_names[x['iid']] = x['name']
+            if x['primary_image_set_iid']:
+                primary_imgsets_list.append(x['primary_image_set_iid'])
         output = list()
         for obj in objs_imgsets:
             imgset_obj = dict()
@@ -583,6 +586,7 @@ class ImageSetsHandler(BaseHandler):
 
             imgset_obj['gender'] = obj['gender']
             imgset_obj['is_verified'] = obj['is_verified']
+            imgset_obj['is_primary'] = (obj['iid'] in primary_imgsets_list)
 
             objcvreq = yield self.settings['db'].cvrequests.find_one({'image_set_iid':obj['iid']})
             if objcvreq:

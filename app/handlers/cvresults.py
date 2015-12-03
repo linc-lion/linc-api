@@ -162,11 +162,11 @@ class CVResultsHandler(BaseHandler):
                     # {'confidence': 0.0, 'id': '27'}, {'confidence': 0.0029, 'id': '3'}, {'confidence': 0.0109, 'id': '17'},
                     # {'confidence': 0.0, 'id': '20'}, {'confidence': 0.0, 'id': '28'}, {'confidence': 0.49079999999999996, 'id': '15'},
                     # {'confidence': 0.0087, 'id': '19'}, {'confidence': 0.3345, 'id': '7'}, {'confidence': 0.1605, 'id': '12'},
-                    #  {'confidence': 0.0, 'id': '29'}, {'confidence': 0.0003, 'id': '6'}, {'confidence': 0.0005, 'id': '2'},
-                    #  {'confidence': 0.0036, 'id': '4'}, {'confidence': 0.0014000000000000002, 'id': '5'},
-                    #   {'confidence': 0.8551000000000001, 'id': '24'}, {'confidence': 0.0003, 'id': '13'},
-                    #    {'confidence': 0.0042, 'id': '23'}, {'confidence': 0.3856, 'id': '8'}, {'confidence': 0.0, 'id': '21'},
-                    #    {'confidence': 0.0023, 'id': '26'}, {'confidence': 0.0106, 'id': '30'}], 'reason': 'OK'}
+                    # {'confidence': 0.0, 'id': '29'}, {'confidence': 0.0003, 'id': '6'}, {'confidence': 0.0005, 'id': '2'},
+                    # {'confidence': 0.0036, 'id': '4'}, {'confidence': 0.0014000000000000002, 'id': '5'},
+                    # {'confidence': 0.8551000000000001, 'id': '24'}, {'confidence': 0.0003, 'id': '13'},
+                    # {'confidence': 0.0042, 'id': '23'}, {'confidence': 0.3856, 'id': '8'}, {'confidence': 0.0, 'id': '21'},
+                    # {'confidence': 0.0023, 'id': '26'}, {'confidence': 0.0106, 'id': '30'}], 'reason': 'OK'}
                     """
                     newobj['match_probability'] = '[]'
                     rcode_to_cvrequest = 'fail'
@@ -174,7 +174,6 @@ class CVResultsHandler(BaseHandler):
                         if results['code'] == 200:
                             newobj['match_probability'] = dumps(results['lions'])
                             rcode_to_cvrequest = results['code']
-                            newobj['status'] = results['status']
                     """
                     CV Server status responses: "queued", "processing", "finished", and "error".
                     API have: "fail" that means the communication with cv server fail
@@ -228,7 +227,7 @@ class CVResultsHandler(BaseHandler):
                     if results['code'] == 200:
                         upddict['match_probability'] = dumps(results['lions'])
                         rcode_to_cvrequest = results['code']
-                        upddict['status'] = results['status']
+                        #upddict['status'] = results['status']
                         upddict['updated_at'] = datetime.now()
                 """
                 CV Server status responses: "queued", "processing", "finished", and "error".
@@ -248,7 +247,8 @@ class CVResultsHandler(BaseHandler):
                         output['cvrequest_id'] = output['cvrequest_iid']
                         del output['cvrequest_iid']
                         output['match_probability'] = upddict['match_probability']
-                        output['status'] = upddict['status']
+                        # Showing status of the cvrequest
+                        output['status'] = rcode_to_cvrequest
                         output['updated_at'] = upddict['updated_at']
                         self.finish(self.json_encode({'status':'success','message':'new cv results saved','data':output}))
                     else:
