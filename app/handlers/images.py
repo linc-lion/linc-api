@@ -14,6 +14,8 @@ from lib.image_utils import generate_images
 from os import remove
 from lib.rolecheck import allowedRole, refusedRole, api_authenticated
 import logging
+from uuid import uuid4
+from hashlib import md5
 
 class ImagesHandler(BaseHandler):
     """A class that handles requests about images informartion
@@ -113,6 +115,36 @@ class ImagesHandler(BaseHandler):
     @api_authenticated
     def post(self,updopt=None):
         # create a new image
+        # Check if file was sent and if its hash md5 already exists
+        if 'image' not in self.input_data.keys():
+            self.dropError(400,'The request to add image require the key "image" with the file encoded with base64.')
+            return
+        # Check if its a valid image
+        dirfs = dirname(realpath(__file__))
+        fnametest = dirfs+'/'+str(uuid4())+'.img'
+        try:
+            fh = open(fnametest, 'wb')
+            fh.write(self.input_data['image'].decode('base64'))
+            fh.close()
+        except:
+            try:
+                remove(fnametest)
+            except:
+                pass
+            self.dropError(400,'The encoded image is invalid, you must remake the encode using base64.')
+            return
+        # Ok, image is valid
+        # Now, check if it already exists in the database
+        image_file = open(fnametest).read()
+        filehash = md5(image_file).hexdigest()
+        try:
+            remove(fnametest)
+        except:
+            pass
+        imgaexists = yield self.settings['db'].images.find_one({'hashcheck':filehash})
+        if imgaexists:
+            self.dropError(400,'The file already exists in the system.')
+            return
         # parse data recept by POST and get only fields of the object
         newobj = self.parseInput(Image)
         # getting new integer id
@@ -121,8 +153,7 @@ class ImagesHandler(BaseHandler):
         dt = datetime.now()
         newobj['created_at'] = dt
         newobj['updated_at'] = dt
-        fields_needed = ['image_set_id',
-        'is_public','image_type']
+        fields_needed = ['image_set_id','is_public','image_type']
         for field in fields_needed:
             if field not in self.input_data.keys():
                 self.dropError(400,'you need to provide the field '+field)
@@ -142,6 +173,8 @@ class ImagesHandler(BaseHandler):
             folder_name = 'imageset_'+str(isexists['iid'])+'_'+str(isexists['_id'])
             url = folder_name+'/'+dt.date().isoformat() + '_image_' + str(newobj['iid']) + '_'
             newobj['url'] = url
+            # adding the hash pre calculed
+            newobj['hashcheck'] = filehash
             print(newobj)
             newimage = Image(newobj)
             newimage.validate()
@@ -160,7 +193,7 @@ class ImagesHandler(BaseHandler):
                     if 'image' in self.input_data.keys():
                         fupdname = dt.date().isoformat() + '_image_' + str(newobj['iid']) + '_' + str(newsaved)
                         imgname = fupdname + '.img'
-                        dirfs = dirname(realpath(__file__))
+                        #dirfs = dirname(realpath(__file__))
                         fh = open(dirfs+'/'+imgname, 'wb')
                         fh.write(self.input_data['image'].decode('base64'))
                         fh.close()

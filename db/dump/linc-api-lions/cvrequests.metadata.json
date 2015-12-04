@@ -1,1 +1,0 @@
-{ "indexes" : [ { "v" : 1, "key" : { "_id" : 1 }, "name" : "_id_", "ns" : "linc-api-lions.cvrequests" }, { "v" : 1, "unique" : true, "key" : { "iid" : 1 }, "name" : "iid_1", "ns" : "linc-api-lions.cvrequests", "alias" : null }, { "v" : 1, "unique" : true, "key" : { "image_set_iid" : 1 }, "name" : "image_set_iid_1", "ns" : "linc-api-lions.cvrequests" } ] }
