@@ -556,8 +556,10 @@ class ImageSetsHandler(BaseHandler):
 
             if obj['animal_iid']:
                 imgset_obj['name'] = animals_names[obj['animal_iid']]
+                imgset_obj[self.settings['animal']+'_id'] = obj['animal_iid']
             else:
                 imgset_obj['name'] = '-'
+                imgset_obj[self.settings['animal']+'_id'] = None
 
             obji = yield self.settings['db'].images.find_one({'iid':obj['main_image_iid']})
             if obji:

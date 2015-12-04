@@ -94,7 +94,7 @@ class UsersHandler(BaseHandler):
         # getting new integer id
         newobj['iid'] = yield Task(self.new_iid,User.collection())
         # encrypt password
-        newobj['encrypted_password'] = self.encryptPassword(self.input_data['password'])
+        newobj['encrypted_password'] = self.encryptPassword(self.input_data['password'].encode('utf-8'))
         orgiid = self.input_data['organization_id']
         orgexists = yield self.settings['db'].organizations.find_one({'iid':orgiid,'trashed':False})
         if orgexists:
