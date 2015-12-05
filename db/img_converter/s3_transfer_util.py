@@ -113,17 +113,3 @@ for iset in imgset:
             f.close()
             remove(imgname[:-4]+suf)
         upl = db.uploaded.insert({'iid':img['iid']})
-"""
-print("Checking images that was not uploaded")
-d = db.uploaded.find({},{'_id':0,'iid':1})
-upds = [e['iid'] for e in d]
-stnupd = db.urlimages.find({'iid': { '$nin' : upds}})
-for o in stnupd:
-    # Get the image object
-    img = db.images.find_one({'iid':o['iid']})
-    # Get the imageset object
-    imst = db.imagesets.find_one({'iid':img['image_set_iid']})
-    print(img)
-    print(imst)
-    break
-"""

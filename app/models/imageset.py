@@ -45,7 +45,7 @@ class Image(Model):
     image_set_iid = IntType(required=True,default=None)
     is_public = BooleanType(required=True,default=False)
     url = StringType(required=True)
-    hashcheck = StringType(required=True)
+    hashcheck = StringType(required=True,default='')
     created_at = DateTimeType(required=True,default=datetime.now())
     updated_at = DateTimeType(required=True,default=datetime.now())
     trashed = BooleanType(required=True,default=False)
