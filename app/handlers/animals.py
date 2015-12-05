@@ -366,6 +366,7 @@ class AnimalsHandler(BaseHandler):
             obj = dict()
             obj['id'] = x['iid']
             obj['name'] = x['name']
+            obj['primary_image_set_id'] = x['primary_image_set_iid']
             if orgnames and x['organization_iid'] in orgnames.keys():
                 obj['organization'] = orgnames[x['organization_iid']]
             else:

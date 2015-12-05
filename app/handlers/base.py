@@ -99,7 +99,7 @@ class BaseHandler(RequestHandler):
         today = date.today()
         return today.year - born.year - ((today.month, today.day) < (born.month, born.day))
 
-    def encryptPassword(self,pattern):
+    def encryptPassword(self,password):
         return bcrypt.hashpw(password, bcrypt.gensalt())
 
     def checkPassword(self,password,hashed):
