@@ -55,11 +55,12 @@ class ImageSetsHandler(BaseHandler):
             query = self.query_id(imageset_id,trashed)
             imgset = yield self.settings['db'].imagesets.find_one(query)
             if imgset:
+                imgprim = yield self.settings['db'][self.settings['animals']].find({},{'primary_image_set_iid':1}).to_list(None)
+                imgprim = [x['primary_image_set_iid'] for x in imgprim]
                 output = imgset
                 output['obj_id'] = str(imgset['_id'])
                 del output['_id']
                 self.switch_iid(output)
-
                 # Get organization name
                 org = yield self.settings['db'].organizations.find_one({'iid':output['owner_organization_iid']})
                 if org:
@@ -70,7 +71,14 @@ class ImageSetsHandler(BaseHandler):
                     output['organization_id'] = '-'
 
                 # Check animal
-                animalobj = yield self.settings['db'][self.settings['animals']].find_one({'iid':output['animal_iid']})
+                if output['id'] in imgprim:
+                    #it's a primary image set
+                    output['is_primary'] = True
+                    queryani = {'primary_image_set_iid':output['id']}
+                else:
+                    output['is_primary'] = False
+                    queryani = {'iid':output['animal_iid']}
+                animalobj = yield self.settings['db'][self.settings['animals']].find_one(queryani)
                 if animalobj:
                     output['name'] = animalobj['name']
                 else:
