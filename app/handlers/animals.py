@@ -382,7 +382,7 @@ class AnimalsHandler(BaseHandler):
                     obj['tags'] = imgset['tags']
                     obj['gender'] = imgset['gender']
                     obj['is_verified'] = imgset['is_verified']
-                    img = yield self.settings['db'].images.find_one({'image_set_iid':imgset['iid'],'image_type':'main-id','trashed':trashed})
+                    img = yield self.settings['db'].images.find_one({'iid':imgset['main_image_iid'],'trashed':trashed})
                     if img:
                         obj['thumbnail'] = self.settings['S3_URL']+img['url']+'_icon.jpg'
 

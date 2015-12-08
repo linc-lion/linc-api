@@ -11,6 +11,7 @@ import logging
 import bcrypt
 from json import load,loads,dumps,dump
 from lib.tokens import token_decode,gen_token
+from os import remove
 
 class BaseHandler(RequestHandler):
     """A class to collect common handler methods - all other handlers should
@@ -118,6 +119,12 @@ class BaseHandler(RequestHandler):
         #imgtype == 'medium':
             url = url + '_medium.jpg'
         return url
+
+    def remove_file(self,fname):
+        try:
+            remove(fname)
+        except:
+            pass
 
     def sanitizestr(self,strs):
         txt = "%s%s" % (string.ascii_letters, string.digits)

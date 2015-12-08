@@ -6,7 +6,7 @@ from tornado.gen import engine,coroutine,Task
 from handlers.base import BaseHandler
 from models.imageset import Image
 from bson import ObjectId as ObjId
-from datetime import datetime
+from datetime import datetime,timedelta
 from schematics.exceptions import ValidationError
 from tinys3 import Connection as s3con
 from os.path import realpath,dirname
@@ -16,8 +16,9 @@ from lib.rolecheck import allowedRole, refusedRole, api_authenticated
 import logging
 from uuid import uuid4
 from hashlib import md5
+from tornadoist import ProcessMixin
 
-class ImagesHandler(BaseHandler):
+class ImagesHandler(BaseHandler, ProcessMixin):
     """A class that handles requests about images informartion
     """
     def initialize(self):
@@ -29,6 +30,22 @@ class ImagesHandler(BaseHandler):
         except:
             self.s3con = None
             print('\n\nFail to connect to S3')
+        self.process = False
+
+    def on_finish(self):
+        if self.request.method == 'POST' and self.process:
+            #print(self.settings['S3_ACCESS_KEY'])
+            #print(self.settings['S3_SECRET_KEY'])
+            fupdname = self.dt.date().isoformat() + '_image_' + self.imgid + '_' + self.imgobjid
+            generate_images(self.imgname)
+            t = timedelta(days=1)
+            for suf in ['_full.jpg','_icon.jpg','_medium.jpg','_thumbnail.jpg']:
+                keynames3 = self.settings['S3_FOLDER'] + '/' + self.folder_name + '/' + fupdname + suf
+                print(keynames3)
+                f = open(self.imgname[:-4]+suf,'rb')
+                self.s3con.upload(keynames3,f,expires=t,content_type='image/jpeg',public=True)
+                f.close()
+                remove(self.imgname[:-4]+suf)
 
     def query_id(self,image_id,trashed=False):
         """This method configures the query that will find an object"""
@@ -115,36 +132,43 @@ class ImagesHandler(BaseHandler):
     @api_authenticated
     def post(self,updopt=None):
         # create a new image
+        ########################################################################
+        # Checking everything
+        ########################################################################
+        if not updopt:
+            self.dropError(400,'Uploads must be requested calling /images/upload.')
+            return
+        if not self.s3con:
+            self.dropError(500,'Fail to connect to S3. You must request support.')
+            return
         # Check if file was sent and if its hash md5 already exists
         if 'image' not in self.input_data.keys():
             self.dropError(400,'The request to add image require the key "image" with the file encoded with base64.')
             return
         # Check if its a valid image
         dirfs = dirname(realpath(__file__))
-        fnametest = dirfs+'/'+str(uuid4())+'.img'
+        imgname = dirfs+'/'+str(uuid4())+'.img'
         try:
-            fh = open(fnametest, 'wb')
+            fh = open(imgname, 'wb')
             fh.write(self.input_data['image'].decode('base64'))
             fh.close()
         except:
-            try:
-                remove(fnametest)
-            except:
-                pass
+            self.remove_file(imgname)
             self.dropError(400,'The encoded image is invalid, you must remake the encode using base64.')
             return
         # Ok, image is valid
         # Now, check if it already exists in the database
-        image_file = open(fnametest).read()
+        image_file = open(imgname).read()
         filehash = md5(image_file).hexdigest()
-        try:
-            remove(fnametest)
-        except:
-            pass
         imgaexists = yield self.settings['db'].images.find_one({'hashcheck':filehash})
         if imgaexists:
-            self.dropError(400,'The file already exists in the system.')
+            self.remove_file(imgname)
+            print('File already exists!')
+            self.dropError(409,'The file already exists in the system.')
             return
+        #####
+        # everything checked, so good to go.
+        #####
         # parse data recept by POST and get only fields of the object
         newobj = self.parseInput(Image)
         # getting new integer id
@@ -156,6 +180,7 @@ class ImagesHandler(BaseHandler):
         fields_needed = ['image_set_id','is_public','image_type']
         for field in fields_needed:
             if field not in self.input_data.keys():
+                self.remove_file(imgname)
                 self.dropError(400,'you need to provide the field '+field)
                 return
             else:
@@ -167,7 +192,8 @@ class ImagesHandler(BaseHandler):
             newobj['image_set_iid'] = imgsetid
             del newobj['image_set_id']
         else:
-            self.dropError(409,"image set id referenced doesn't exist")
+            self.remove_file(imgname)
+            self.dropError(400,"image set id referenced doesn't exist")
             return
         try:
             folder_name = 'imageset_'+str(isexists['iid'])+'_'+str(isexists['_id'])
@@ -179,51 +205,35 @@ class ImagesHandler(BaseHandler):
             newimage = Image(newobj)
             newimage.validate()
             # the new object is valid, so try to save
-            if updopt and not self.s3con:
-                self.dropError(500,'Fail to connect to S3 to save the files. You must request support.')
-                return
             try:
                 newsaved = yield self.settings['db'].images.insert(newimage.to_native())
                 updurl = yield self.settings['db'].images.update({'_id':newsaved},{'$set' : {'url':url+str(newsaved)}})
                 output = newimage.to_native()
-                # if upload file activated, generate files and upload to s3
-                if updopt:
-                    #print(self.settings['S3_ACCESS_KEY'])
-                    #print(self.settings['S3_SECRET_KEY'])
-                    if 'image' in self.input_data.keys():
-                        fupdname = dt.date().isoformat() + '_image_' + str(newobj['iid']) + '_' + str(newsaved)
-                        imgname = fupdname + '.img'
-                        #dirfs = dirname(realpath(__file__))
-                        fh = open(dirfs+'/'+imgname, 'wb')
-                        fh.write(self.input_data['image'].decode('base64'))
-                        fh.close()
-                        generate_images(dirfs+'/'+imgname)
-                        from datetime import timedelta
-                        t = timedelta(days=1)
-                        for suf in ['_full.jpg','_icon.jpg','_medium.jpg','_thumbnail.jpg']:
-                            keynames3 = self.settings['S3_FOLDER'] + '/' + folder_name + '/' + fupdname + suf
-                            print(keynames3)
-                            f = open(dirfs+'/'+imgname[:-4]+suf,'rb')
-                            self.s3con.upload(keynames3,f,expires=t,content_type='image/jpeg',public=True)
-                            f.close()
-                            remove(dirfs+'/'+imgname[:-4]+suf)
-                    else:
-                        self.dropError(400,'upload resource was used but no file can be found in the request. You must convert the file to base64 and pass it in the "image" key in the body JSON data.')
-                        return
-
+                # File data saved, now start to
                 output['obj_id'] = str(newsaved)
                 output['url'] = url+str(newsaved)
                 output['image_set_id'] = output['image_set_iid']
                 del output['image_set_iid']
                 self.switch_iid(output)
-                #self.finish(self.json_encode({'status':'success','message':'new image saved','data':output}))
-                self.setSuccess(201,'new image saved',output)
+                # if is Cover
+                if self.input_data['iscover']:
+                    updiscover = self.settings['db'].imagesets.update({'iid':output['image_set_id']},{'$set':{'updated_at':datetime.now(),'main_image_iid':output['id']}})
+                # Info to processing image
+                self.process = True
+                self.imgname = imgname
+                self.imgid = str(output['id'])
+                self.dt = dt
+                self.imgobjid = output['obj_id']
+                self.folder_name = folder_name
+                # Returning success
+                self.setSuccess(201,'New image saved. The image processing will start for this new image.',output)
             except ValidationError,e:
-                # duplicated index error
-                self.dropError(409,'fail to save image. Error: '+str(e))
+                self.remove_file(imgname)
+                self.dropError(400,'Fail to save image. Errors: '+str(e))
         except ValidationError, e:
+            self.remove_file(imgname)
             # received data is invalid in some way
-            self.dropError(400,'Invalid input data. Error: '+str(e))
+            self.dropError(400,'Invalid input data. Errors: '+str(e))
 
     @asynchronous
     @coroutine
