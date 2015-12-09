@@ -221,18 +221,19 @@ class ImageSetsHandler(BaseHandler):
                     self.dropError(400,'you must provide the key for '+field+' even it has the value = null')
                     return
             # check if date_stamp are valid
-            try:
-                dts = datetime.strptime(newobj['date_stamp'], "%Y-%m-%d").date()
-                newobj['date_stamp'] = str(dts)
-            except:
-                self.dropError(400,'invalid date_stamp. you must provide it in format YYYY-MM-DD')
-                return
-            try:
-                newobj['date_of_birth'] = datetime.strptime(newobj['date_of_birth'], "%Y-%m-%d")
-            except:
-                self.dropError(400,'invalid date_of_birth. you must provide it in format YYYY-MM-DD')
-                return
-
+            if newobj['date_stamp']:
+                try:
+                    dts = datetime.strptime(newobj['date_stamp'], "%Y-%m-%d").date()
+                    newobj['date_stamp'] = str(dts)
+                except:
+                    self.dropError(400,'invalid date_stamp. you must provide it in format YYYY-MM-DD')
+                    return
+            if newobj['date_of_birth']:
+                try:
+                    newobj['date_of_birth'] = datetime.strptime(newobj['date_of_birth'], "%Y-%m-%d")
+                except:
+                    self.dropError(400,'invalid date_of_birth. you must provide it in format YYYY-MM-DD')
+                    return
             # check if user exists
             useriid = self.input_data['uploading_user_id']
             userexists = yield self.settings['db'].users.find_one({'iid':useriid,'trashed':False})
@@ -416,18 +417,19 @@ class ImageSetsHandler(BaseHandler):
                             continue
                         elif field in ['date_stamp','date_of_birth']:
                             # check if date_stamp are valid
-                            try:
-                                dts = datetime.strptime(update_data[field], "%Y-%m-%d")
-                                print(dts)
-                                if field == 'date_stamp':
-                                    objimgset['date_stamp'] = str(dts.date())
-                                    continue
-                                else:
-                                    objimgset['date_of_birth'] = dts
-                                    continue
-                            except:
-                                self.dropError(400,'invalid '+field)
-                                return
+                            if update_data[field]:
+                                try:
+                                    dts = datetime.strptime(update_data[field], "%Y-%m-%d")
+                                    print(dts)
+                                    if field == 'date_stamp':
+                                        objimgset['date_stamp'] = str(dts.date())
+                                        continue
+                                    else:
+                                        objimgset['date_of_birth'] = dts
+                                        continue
+                                except:
+                                    self.dropError(400,'invalid '+field)
+                                    return
                         elif field in ['latitude','longitude']:
                             if 'latitude' in update_data.keys() and update_data['latitude'] and \
                                'longitude' in update_data.keys() and update_data['longitude']:
