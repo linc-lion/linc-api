@@ -21,7 +21,7 @@ class ImageSet(Model):
     updated_at = DateTimeType(required=True,default=datetime.now())
     date_of_birth = DateTimeType(required=False,default=None)
     tags = StringType(required=False,default='[]')
-    date_stamp = StringType(required=False,default='-')
+    date_stamp = StringType(required=False,default=None)
     notes = StringType(required=False)
     trashed = BooleanType(required=True,default=False)
 
