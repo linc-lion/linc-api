@@ -209,8 +209,7 @@ class CVRequestsHandler(BaseHandler):
             if updobj:
                 # removing cvrequest and cvresult related and they will be added in
                 # a history collection
-                #try:
-                if True:
+                try:
                     # get cvresult if it exists
                     cvres = yield self.settings['db'].cvresults.find_one({'cv_request_iid':req_id})
                     if cvres:
@@ -224,8 +223,7 @@ class CVRequestsHandler(BaseHandler):
                     newhreq = yield self.settings['db'].cvrequests_history.insert(updobj)
                     cvreq = yield self.settings['db'].cvrequests.remove(query)
                     self.setSuccess(200,'cvrequest successfully deleted')
-                #except:
-                else:
+                except:
                     self.dropError(500,'fail to delete cvrequest')
             else:
                 self.dropError(404,'cvrequest not found')
