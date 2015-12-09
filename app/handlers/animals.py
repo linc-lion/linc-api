@@ -376,6 +376,7 @@ class AnimalsHandler(BaseHandler):
             obj['gender'] = None
             obj['is_verified'] = False
             obj['thumbnail'] = ''
+            obj['image'] = ''
             if x['primary_image_set_iid'] > 0:
                 imgset = yield self.settings['db'].imagesets.find_one({'iid':x['primary_image_set_iid']})
                 if imgset:
@@ -386,6 +387,7 @@ class AnimalsHandler(BaseHandler):
                     img = yield self.settings['db'].images.find_one({'iid':imgset['main_image_iid'],'trashed':trashed})
                     if img:
                         obj['thumbnail'] = self.settings['S3_URL']+img['url']+'_icon.jpg'
+                        obj['image'] = self.settings['S3_URL']+img['url']+'_medium.jpg'
 
 
             output.append(obj)

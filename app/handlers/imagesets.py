@@ -575,12 +575,16 @@ class ImageSetsHandler(BaseHandler):
             obji = yield self.settings['db'].images.find_one({'iid':obj['main_image_iid']})
             if obji:
                 imgset_obj['thumbnail'] = self.settings['S3_URL']+obji['url']+'_icon.jpg'
+                imgset_obj['image'] = self.settings['S3_URL']+obji['url']+'_medium.jpg'
             else:
                 obji = yield self.settings['db'].images.find({'image_set_iid':obj['iid'],'trashed':trashed}).to_list(None)
                 if len(obji) > 0:
                     imgset_obj['thumbnail'] = self.settings['S3_URL']+obji[0]['url']+'_icon.jpg'
+                    imgset_obj['image'] = self.settings['S3_URL']+obji[0]['url']+'_medium.jpg'
                 else:
                     imgset_obj['thumbnail'] = ''
+                    imgset_obj['image'] = ''
+
 
             if obj['date_of_birth']:
                 imgset_obj['age'] = self.age(born=obj['date_of_birth'])
