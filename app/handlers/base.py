@@ -97,9 +97,11 @@ class BaseHandler(RequestHandler):
         self.set_header('Content-Type', 'application/json; charset=UTF-8')
 
     def age(self,born):
-        today = date.today()
-        return today.year - born.year - ((today.month, today.day) < (born.month, born.day))
-
+        if born:
+            today = date.today()
+            return today.year - born.year - ((today.month, today.day) < (born.month, born.day))
+        else:
+            return "-"
     def encryptPassword(self,password):
         return bcrypt.hashpw(password, bcrypt.gensalt())
 
