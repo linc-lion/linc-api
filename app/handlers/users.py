@@ -9,6 +9,7 @@ from bson import ObjectId as ObjId
 from datetime import datetime
 from schematics.exceptions import ValidationError
 from lib.rolecheck import allowedRole, refusedRole, api_authenticated
+from logging import info
 
 class UsersHandler(BaseHandler):
     """A class that handles requests about users informartion
@@ -201,6 +202,7 @@ class UsersHandler(BaseHandler):
                 iid = updobj['iid']
                 # imageset - uploading_user_iid
                 imgsetrc = yield self.settings['db'].imagesets.find({'uploading_user_iid':iid,'trashed':False}).count()
+                info('Checking references in imagesets:' + str(imgsetrc))
                 refcount += imgsetrc
                 if refcount > 0:
                     self.dropError(417,"the user can't be deleted because it has references in the database.")

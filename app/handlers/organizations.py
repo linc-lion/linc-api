@@ -10,6 +10,7 @@ from json import loads
 from tornado.escape import json_decode
 from datetime import datetime
 from lib.rolecheck import allowedRole, refusedRole, api_authenticated
+from logging import info
 
 class OrganizationsHandler(BaseHandler):
     """A class that handles requests about organizations informartion"""
@@ -178,16 +179,20 @@ class OrganizationsHandler(BaseHandler):
                 iid = updobj['iid']
                 # user - organization_iid
                 userrc = yield self.settings['db'].users.find({'organization_iid':iid,'trashed':False}).count()
+                info('Checking references in users - organization_iid:' + str(userrc))
                 refcount += userrc
                 # imageset - uploading_organization_iid
                 # imageset - owner_organization_iid
                 imgsetrc = yield self.settings['db'].imagesets.find({'$or' : [{'uploading_organization_iid':iid},{'owner_organization_iid':iid},{'trashed':False}]}).count()
+                info('Checking references in imagesets:' + str(imgsetrc))
                 refcount += imgsetrc
                 # animal - organization_iid
                 animalsrc = yield self.settings['db'][self.settings['animals']].find({'organization_iid':iid,'trashed':False}).count()
+                info('Checking references in animals(lions):' + str(animalsrc))
                 refcount += animalsrc
                 # cvrequest - uploading_organization_iid
                 cvreqrc = yield self.settings['db'].cvrequests.find({'uploading_organization_iid':iid,'trashed':False}).count()
+                info('Checking references in cvrequests:' + str(cvreqrc))
                 refcount += cvreqrc
                 if refcount > 0:
                     self.dropError(417,"organization can't be deleted because it has references in the database.")

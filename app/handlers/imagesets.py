@@ -15,6 +15,7 @@ from json import dumps
 from tornado.escape import json_decode
 from schematics.exceptions import ValidationError
 from lib.rolecheck import allowedRole, refusedRole, api_authenticated
+from logging import info
 
 class ImageSetsHandler(BaseHandler):
     """A class that handles requests about image sets informartion
@@ -368,7 +369,6 @@ class ImageSetsHandler(BaseHandler):
                         output['image_set_id'] = output['image_set_iid']
                         del output['image_set_iid']
 
-
                         self.set_status(response.code)
                         self.finish(self.json_encode({'status':'success','message':response.reason,'data':output}))
                     except ValidationError, e:
@@ -525,12 +525,15 @@ class ImageSetsHandler(BaseHandler):
                 iid = updobj['iid']
                 # lions - primary_image_set_iid
                 imgsetac = yield self.settings['db'][self.settings['animals']].find({'primary_image_set_iid':iid,'trashed':False}).count()
+                info('Checking references in lions - primary_image_set_iid:' + str(imgsetac))
                 refcount += imgsetac
                 # cvrequests
                 imgsetrc = yield self.settings['db'].cvrequests.find({'image_set_iid':iid,'trashed':False}).count()
+                info('Checking references in cvrequests - image_set_iid:' + str(imgsetrc))
                 refcount += imgsetrc
                 # images
                 imgsetic = yield self.settings['db'].images.find({'image_set_iid':iid,'trashed':False}).count()
+                info('Checking references in images - image_set_iid:' + str(imgsetic))
                 refcount += imgsetic
                 if refcount > 0:
                     self.dropError(417,"the image set can't be deleted because it has references in the database.")

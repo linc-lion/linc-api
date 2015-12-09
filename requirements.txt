@@ -5,3 +5,4 @@ pycurl
 schematics
 tinys3
 bcrypt
+tornadoist

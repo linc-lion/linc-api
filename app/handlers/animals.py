@@ -11,6 +11,7 @@ from bson import ObjectId as ObjId
 from pymongo import DESCENDING
 from lib.rolecheck import allowedRole, refusedRole, api_authenticated
 from schematics.exceptions import ValidationError
+from logging import info
 
 class AnimalsHandler(BaseHandler):
     """A class that handles requests about animals informartion
@@ -341,7 +342,7 @@ class AnimalsHandler(BaseHandler):
                 iid = updobj['iid']
                 # imageset - uploading_user_iid
                 imgsetrc = yield self.settings['db'].imagesets.find({'animal_iid':iid,'trashed':False}).count()
-                print(imgsetrc)
+                info('Checking references in lions - animal_iid:' + str(imgsetrc))
                 refcount += imgsetrc
                 if refcount > 0:
                     self.dropError(417,"the "+self.settings['animal']+" can't be deleted because it has references in the database.")
