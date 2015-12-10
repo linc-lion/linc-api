@@ -48,6 +48,17 @@ class UsersHandler(BaseHandler):
                     del obj['encrypted_password']
                 self.set_status(200)
                 self.finish(self.json_encode({'status':'success','data':self.list(objs,orgnames)}))
+            elif user_id == 'conservationists':
+                orgs = yield self.settings['db'].organizations.find({'trashed':False}).to_list(None)
+                users = yield self.settings['db'].users.find({'trashed':False}).to_list(None)
+                orglist = dict()
+                for org in orgs:
+                    if org['name'] not in orglist.keys():
+                        orglist[org['name']] = list()
+                    for user in users:
+                        if user['organization_iid'] == org['iid']:
+                            orglist[org['name']].append(user['email'])
+                self.setSuccess(200,'Ok, works',orglist)
             else:
                 # return a specific user accepting as id the integer id, hash and name
                 query = self.query_id(user_id,trashed)
