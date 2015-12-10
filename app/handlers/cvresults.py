@@ -90,7 +90,9 @@ class CVResultsHandler(BaseHandler):
                             output.append(objres)
                         cvreq = yield self.settings['db'].cvrequests.find_one({'iid':objs['cvrequest_iid']})
                         assoc = {'id': None,'name':None }
+                        reqstatus = '-'
                         if cvreq:
+                            reqstatus = cvreq['status']
                             imgset = yield self.settings['db'].imagesets.find_one({'iid':cvreq['image_set_iid']})
                             if imgset:
                                 assoc['id'] = imgset['animal_iid']
@@ -98,7 +100,7 @@ class CVResultsHandler(BaseHandler):
                                     lname = yield self.settings['db'][self.settings['animals']].find_one({'iid':imgset['animal_iid']})
                                     if lname:
                                         assoc['name'] = lname['name']
-                        output = { 'table':output,'associated':assoc }
+                        output = {'table':output,'associated':assoc,'status':reqstatus}
                     self.set_status(200)
                     self.finish(self.json_encode({'status':'success','data':output}))
                 else:
@@ -226,7 +228,7 @@ class CVResultsHandler(BaseHandler):
                 if results:
                     if results['code'] == 200:
                         upddict['match_probability'] = dumps(results['lions'])
-                        rcode_to_cvrequest = results['code']
+                        rcode_to_cvrequest = results['status']
                         #upddict['status'] = results['status']
                         upddict['updated_at'] = datetime.now()
                 """
