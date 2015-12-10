@@ -183,7 +183,9 @@ class OrganizationsHandler(BaseHandler):
                 refcount += userrc
                 # imageset - uploading_organization_iid
                 # imageset - owner_organization_iid
-                imgsetrc = yield self.settings['db'].imagesets.find({'$or' : [{'uploading_organization_iid':iid},{'owner_organization_iid':iid},{'trashed':False}]}).count()
+                imgsetrc1 = yield self.settings['db'].imagesets.find({'uploading_organization_iid':iid,'trashed':False}).count()
+                imgsetrc2 = yield self.settings['db'].imagesets.find({'owner_organization_iid':iid,'trashed':False}).count()
+                imgsetrc = imgsetrc1 + imgsetrc2
                 info('Checking references in imagesets:' + str(imgsetrc))
                 refcount += imgsetrc
                 # animal - organization_iid
