@@ -10,6 +10,10 @@ from tornado.options import define, options
 from handlers.error import ErrorHandler
 from tornado.ioloop import IOLoop
 from motor import MotorClient as connect
+from lib.check_cv import checkresults
+from apscheduler.schedulers.tornado import TornadoScheduler
+
+from pymongo import MongoClient
 
 # Adjusting path for the app
 
@@ -73,11 +77,15 @@ api['animals'] = 'lions'
 URI = os.environ.get("MONGOLAB_URI","local")
 if URI == "local":
     conn = connect("mongodb://localhost:27017")
+    pm = MongoClient("mongodb://localhost:27017")
     db = conn['linc-api-'+api['animals']]
+    sdb = pm['linc-api-'+api['animals']]
 else:
     dbname = URI.split("://")[1].split(":")[0]
     conn = connect(URI)
+    pm = MongoClient(URI)
     db = conn[dbname]
+    sdb = pm[dbname]
 
 api['db'] = db
 
@@ -98,3 +106,7 @@ api['S3_ACCESS_KEY'] = os.environ.get('S3_ACCESS_KEY','')
 api['S3_SECRET_KEY'] = os.environ.get('S3_SECRET_KEY','')
 
 api['url'] = os.environ.get('API_URL','')
+
+api['scheduler'] = TornadoScheduler()
+api['scheduler'].start()
+api['scheduler'].add_job(checkresults, 'interval', minutes=3, args=[sdb,api])

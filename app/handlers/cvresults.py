@@ -11,6 +11,7 @@ from tornado.httpclient import AsyncHTTPClient,HTTPRequest,HTTPError
 from tornado.escape import json_decode
 from json import dumps,loads
 from lib.rolecheck import allowedRole, refusedRole, api_authenticated
+from schematics.exceptions import ValidationError
 
 class CVResultsHandler(BaseHandler):
     """A class that handles requests about CV identificaiton results informartion
@@ -183,15 +184,8 @@ class CVResultsHandler(BaseHandler):
                     """
                     # save the new cvresult in the database
                     try:
-                        """
-                        {'updated_at': datetime.datetime(2015, 11, 2, 4, 16, 49, 709690),
-                        'match_probability': '[{"id": "14", "confidence": 0.0}, {"id": "18", "confidence": 0.0006}, {"id": "27", "confidence": 0.0}, {"id": "3", "confidence": 0.0029}, {"id": "17", "confidence": 0.0109}, {"id": "20", "confidence": 0.0}, {"id": "28", "confidence": 0.0}, {"id": "15", "confidence": 0.49079999999999996}, {"id": "19", "confidence": 0.0087}, {"id": "7", "confidence": 0.3345}, {"id": "12", "confidence": 0.1605}, {"id": "29", "confidence": 0.0}, {"id": "6", "confidence": 0.0003}, {"id": "2", "confidence": 0.0005}, {"id": "4", "confidence": 0.0036}, {"id": "5", "confidence": 0.0014000000000000002}, {"id": "24", "confidence": 0.8551000000000001}, {"id": "13", "confidence": 0.0003}, {"id": "23", "confidence": 0.0042}, {"id": "8", "confidence": 0.3856}, {"id": "21", "confidence": 0.0}, {"id": "26", "confidence": 0.0023}, {"id": "30", "confidence": 0.0106}]',
-                        'created_at': datetime.datetime(2015, 11, 2, 4, 16, 49, 709690),
-                        'iid': 15, 'cvrequest_iid': 37}
-                        """
                         newres = CVResult(newobj)
                         newres.validate()
-
                         try:
                             # updating the cvrequest with the status
                             cvrequ = self.settings['db'].cvrequests.update({'_id':cvreq['_id']},{'$set':{'status':rcode_to_cvrequest,'updated_at':datetime.now()}})
@@ -207,9 +201,9 @@ class CVResultsHandler(BaseHandler):
                         except:
                             # duplicated index error
                             self.dropError(409,'an error check for indexing violation. the cv results was not created.')
-                    except:
+                    except ValidationError, e:
                         # received data is invalid in some way
-                        self.dropError(500,'fail to save the new cvresult')
+                        self.dropError(500,'fail to save the new cvresult. Errors: '+str(e))
 
     @asynchronous
     @coroutine
