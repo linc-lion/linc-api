@@ -92,6 +92,7 @@ class CVResultsHandler(BaseHandler):
                         assoc = {'id': None,'name':None }
                         reqstatus = '-'
                         if cvreq:
+                            reqid = cvreq['iid']
                             reqstatus = cvreq['status']
                             imgset = yield self.settings['db'].imagesets.find_one({'iid':cvreq['image_set_iid']})
                             if imgset:
@@ -100,7 +101,7 @@ class CVResultsHandler(BaseHandler):
                                     lname = yield self.settings['db'][self.settings['animals']].find_one({'iid':imgset['animal_iid']})
                                     if lname:
                                         assoc['name'] = lname['name']
-                        output = {'table':output,'associated':assoc,'status':reqstatus}
+                        output = {'table':output,'associated':assoc,'status':reqstatus,'req_id':reqid}
                     self.set_status(200)
                     self.finish(self.json_encode({'status':'success','data':output}))
                 else:
