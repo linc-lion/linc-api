@@ -173,7 +173,7 @@ class CVResultsHandler(BaseHandler):
                     if results:
                         if results['code'] == 200:
                             newobj['match_probability'] = dumps(results['lions'])
-                            rcode_to_cvrequest = results['code']
+                            rcode_to_cvrequest = results['status']
                     """
                     CV Server status responses: "queued", "processing", "finished", and "error".
                     API have: "fail" that means the communication with cv server fail
@@ -306,7 +306,8 @@ class CVResultsHandler(BaseHandler):
             'url' : url+jobid,
             'method' : 'GET',
             'auth_username' : self.settings['CV_USERNAME'],
-            'auth_password' : self.settings['CV_PASSWORD']
+            'auth_password' : self.settings['CV_PASSWORD'],
+            'request_timeout': 720
         })
         try:
             response = yield http_client.fetch(request)
