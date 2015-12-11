@@ -142,7 +142,7 @@ class UsersHandler(BaseHandler):
         # update an user
         # parse data recept by PUT and get only fields of the object
         update_data = self.parseInput(User)
-        fields_allowed_to_be_update = ['email','trashed','organization_iid','admin']
+        fields_allowed_to_be_update = ['email','trashed','organization_iid','admin','password']
         if 'organization_id' in self.input_data.keys():
             orgiid = self.input_data['organization_id']
             orgexists = yield self.settings['db'].organizations.find_one({'iid':orgiid,'trashed':False})
@@ -154,7 +154,7 @@ class UsersHandler(BaseHandler):
         # validate the input for update
         update_ok = False
         for k in fields_allowed_to_be_update:
-            if k in update_data.keys():
+            if k in self.input_data.keys():
                 update_ok = True
                 break
         if user_id and update_ok:
@@ -167,6 +167,8 @@ class UsersHandler(BaseHandler):
                 for field in fields_allowed_to_be_update:
                     if field in update_data.keys():
                         updobj[field] = update_data[field]
+                if 'password' in self.input_data.keys():
+                    updobj['encrypted_password'] = self.encryptPassword(self.input_data['password'])
                 updobj['updated_at'] = datetime.now()
                 updid = ObjId(updobj['_id'])
                 del updobj['_id']
