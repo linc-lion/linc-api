@@ -600,8 +600,10 @@ class ImageSetsHandler(BaseHandler):
                 objo = yield self.settings['db'].organizations.find_one({'iid':obj['owner_organization_iid'],'trashed':trashed})
                 if objo:
                     imgset_obj['organization'] = objo['name']
+                    imgset_obj['organization_id'] = obj['owner_organization_iid']
                 else:
                     imgset_obj['organization'] = '-'
+                    imgset_obj['organization_id'] = '-'
 
             imgset_obj['gender'] = obj['gender']
             imgset_obj['is_verified'] = obj['is_verified']
