@@ -234,14 +234,18 @@ class CVRequestsHandler(BaseHandler):
         """ Implements the list output used for UI in the website
         """
         output = list()
+        cvresl = yield self.settings['db'].cvresults.find().to_list(None)
+        cvresd = dict()
+        for cvres in cvresl:
+            cvresd[cvres['cvrequest_iid']] = {'cvres_id':cvres['iid'],'cvres_obj_id':str(cvres['_id']) }
         for x in objs:
-            obj = dict(x)
-            self.switch_iid(obj)
-            obj['obj_id'] = str(obj['_id'])
-            del obj['_id']
-            obj['image_set_id'] = obj['image_set_iid']
-            del obj['image_set_iid']
-            obj['requesting_organization_id'] = obj['requesting_organization_iid']
-            del obj['requesting_organization_iid']
+            obj = dict()
+            obj['cvreq_id'] = x['iid']
+            obj['cvreq_obj_id'] = x['_id']
+            obj['status'] = x['status']
+            obj['imageset_id'] = x['image_set_iid']
+            obj['cvres_id'] = cvresd[x['iid']]['cvres_id']
+            obj['cvres_obj_id'] = cvresd[x['iid']]['cvres_obj_id']
+            obj['organization_id'] = x['requesting_organization_iid']
             output.append(obj)
         return output
