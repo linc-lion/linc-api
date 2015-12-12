@@ -34,7 +34,8 @@ class CVRequestsHandler(BaseHandler):
             if req_id == 'list':
                 objs = yield self.settings['db'].cvrequests.find().to_list(None)
                 self.set_status(200)
-                self.finish(self.json_encode({'status':'success','data':self.list(objs)}))
+                output = yield Task(self.list,objs)
+                self.finish(self.json_encode({'status':'success','data':output}))
             else:
                 query = self.query_id(req_id)
                 obj = yield self.settings['db'].cvrequests.find_one(query)
@@ -231,8 +232,8 @@ class CVRequestsHandler(BaseHandler):
             self.dropError(400,'Remove requests (DELETE) must have a resource ID.')
 
     @asynchronous
-    @coroutine
-    def list(self,objs):
+    @engine
+    def list(self,objs,callback=None):
         """ Implements the list output used for UI in the website
         """
         output = list()
@@ -250,4 +251,4 @@ class CVRequestsHandler(BaseHandler):
             obj['cvres_obj_id'] = cvresd[x['iid']]['cvres_obj_id']
             obj['organization_id'] = x['requesting_organization_iid']
             output.append(obj)
-        return output
+        callback(output)
