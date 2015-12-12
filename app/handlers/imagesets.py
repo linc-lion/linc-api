@@ -612,8 +612,10 @@ class ImageSetsHandler(BaseHandler):
             objcvreq = yield self.settings['db'].cvrequests.find_one({'image_set_iid':obj['iid']})
             if objcvreq:
                 imgset_obj['cvrequest'] = str(objcvreq['_id'])
+                imgset_obj['req_status'] = objcvreq['status']
             else:
                 imgset_obj['cvrequest'] = None
+                imgset_obj['req_status'] = None
 
             imgset_obj['cvresults'] = None
             if objcvreq:
