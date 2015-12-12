@@ -230,6 +230,8 @@ class CVRequestsHandler(BaseHandler):
         else:
             self.dropError(400,'Remove requests (DELETE) must have a resource ID.')
 
+    @asynchronous
+    @coroutine
     def list(self,objs):
         """ Implements the list output used for UI in the website
         """
