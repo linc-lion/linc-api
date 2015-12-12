@@ -247,8 +247,12 @@ class CVRequestsHandler(BaseHandler):
             obj['cvreq_obj_id'] = x['_id']
             obj['status'] = x['status']
             obj['imageset_id'] = x['image_set_iid']
-            obj['cvres_id'] = cvresd[x['iid']]['cvres_id']
-            obj['cvres_obj_id'] = cvresd[x['iid']]['cvres_obj_id']
             obj['organization_id'] = x['requesting_organization_iid']
+            if x['iid'] in cvresd.keys():
+                obj['cvres_id'] = cvresd[x['iid']]['cvres_id']
+                obj['cvres_obj_id'] = cvresd[x['iid']]['cvres_obj_id']
+            else:
+                obj['cvres_id'] = None
+                obj['cvres_obj_id'] = None
             output.append(obj)
         callback(output)
