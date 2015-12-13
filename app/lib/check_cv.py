@@ -6,13 +6,15 @@ from json import dumps
 
 def checkresults(db,api):
     AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient")
+    # Clear cvresults without cvrequests
+    cvreqs = db.cvrequests.find()
+    lcvreqids = [x['iid'] for x in cvreqs]
+    rmcv = db.cvresults.remove({'cvrequest_iid':{'$nin':lcvreqids}},multi=True)
     # Get ids with status != finished or error
     cvreqs = db.cvrequests.find({'status':{'$nin':['finished','error']}})
     #cvreqs = db.cvrequests.find({'server_uuid':'1a4db675-6fef-4e44-8bb2-18fbc80b7739'})
     # Check if cvresults exists
     for cvreq in cvreqs:
-        #print 'Request ID: '+str(cvreq_id)
-        #info('Request ID: '+str(cvreq_id))
         cvres = db.cvresults.find_one({'cvrequest_iid':cvreq['iid']})
         if not cvres:
             # Create the CVResults
