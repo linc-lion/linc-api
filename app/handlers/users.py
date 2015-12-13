@@ -58,9 +58,12 @@ class UsersHandler(BaseHandler):
                     for user in users:
                         if user['organization_iid'] == org['iid']:
                             orglist[org['name']].append(user['email'])
+                rm = list()
                 for k,v in orglist.iteritems():
                     if len(v) == 0:
-                        del orglist[k]
+                        rm.append(k)
+                for k in rm:
+                    del orglist[k]
                 self.setSuccess(200,'Ok, works',orglist)
             else:
                 # return a specific user accepting as id the integer id, hash and name
