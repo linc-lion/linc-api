@@ -4,7 +4,7 @@
 import sys
 from handlers.base import VersionHandler,DocHandler
 from handlers.error import ErrorHandler
-from handlers.auth import LoginHandler,LogoutHandler
+from handlers.auth import LoginHandler,LogoutHandler,CheckAuthHandler
 from handlers.animals import AnimalsHandler
 from handlers.organizations import OrganizationsHandler
 from handlers.users import UsersHandler
@@ -22,6 +22,7 @@ def url_patterns(animals='lions'):
         (r"/version/?", VersionHandler),
         (r"/auth/login/?", LoginHandler),
         (r"/auth/logout/?", LogoutHandler),
+        (r"/auth/check", CheckAuthHandler),
         (r"/documentation.html", DocHandler),
 
         (r"/"+animals+"/?$", AnimalsHandler),
