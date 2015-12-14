@@ -355,7 +355,7 @@ class ImageSetsHandler(BaseHandler):
                         newobj = dict()
                         newobj['iid'] = yield Task(self.new_iid,CVRequest.collection())
                         # This will be get from the user that do the request
-                        newobj['requesting_organization_iid'] = 2
+                        newobj['requesting_organization_iid'] = self.current_user['org_id']
                         newobj['image_set_iid'] = imageset_id
                         newobj['status'] = rbody['status']
                         newobj['server_uuid'] = rbody['id']
