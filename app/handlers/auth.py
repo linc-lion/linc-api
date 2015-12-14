@@ -11,6 +11,17 @@ from tornado.escape import utf8
 from tornado import web
 from json import dumps
 
+class CheckAuthHandler(BaseHandler):
+    @api_authenticated
+    def get(self):
+        x_real_ip = self.request.headers.get("X-Real-IP")
+        remote_ip = x_real_ip or self.request.remote_ip
+        output = {
+            'login ip':self.current_user['ip'],
+            'check ip':remote_ip,
+        }
+        self.setSuccess(200,'Token valid and the user '+self.current_user['username']+' is still logged.',output)
+
 class LoginHandler(BaseHandler):
     @asynchronous
     @coroutine
@@ -102,8 +113,6 @@ class LogoutHandler(BaseHandler):
         print(self.settings['attempts'])
         print(self.settings['tokens'])
         print(self.settings['wait_list'])
-
-
         if self.current_user['username'] in self.settings['tokens'].keys():
             del self.settings['tokens'][self.current_user['username']]
             self.setSuccess(200,'Logout OK.')
