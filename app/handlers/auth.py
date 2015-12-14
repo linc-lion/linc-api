@@ -60,6 +60,7 @@ class LoginHandler(BaseHandler):
                     objuser = { 'id': ouser['iid'],
                                 'username':ouser['email'],
                                 'orgname':orgname,
+                                'org_id':ouser['organization_iid'],
                                 'role': role,
                                 'token': gen_token(36),
                                 'ip':remote_ip,
