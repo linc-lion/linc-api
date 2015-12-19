@@ -22,6 +22,8 @@ class ImagesHandler(BaseHandler, ProcessMixin):
     """A class that handles requests about images informartion
     """
     def initialize(self):
+        self.s3con = self.initS3()
+        """
         S3_ACCESS_KEY = self.settings['S3_ACCESS_KEY']
         S3_SECRET_KEY = self.settings['S3_SECRET_KEY']
         S3_BUCKET = self.settings['S3_BUCKET']
@@ -30,6 +32,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
         except:
             self.s3con = None
             print('\n\nFail to connect to S3')
+        """
         self.process = False
 
     def on_finish(self):

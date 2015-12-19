@@ -17,6 +17,17 @@ class BaseHandler(RequestHandler):
     """A class to collect common handler methods - all other handlers should
     inherit this one.
     """
+    def initS3(self):
+        S3_ACCESS_KEY = self.settings['S3_ACCESS_KEY']
+        S3_SECRET_KEY = self.settings['S3_SECRET_KEY']
+        S3_BUCKET = self.settings['S3_BUCKET']
+        conn = None
+        try:
+            conn = s3con(S3_ACCESS_KEY,S3_SECRET_KEY,default_bucket=S3_BUCKET)
+        except:
+            print('\n\nFail to connect to S3')
+        return conn
+
     def prepare(self):
         #self.auth_check()
         self.input_data = dict()
