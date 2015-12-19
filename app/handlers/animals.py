@@ -134,7 +134,8 @@ class AnimalsHandler(BaseHandler):
                 litems = len(imgsets)
                 if imgsets:
                     for i in imgsets:
-                        locations.append({'id':i['iid'],'label':'Image Set '+str(i['iid']),'latitude':i['location'][0][0],'longitude':i['location'][0][1],'updated_at':i['updated_at'].date().isoformat()})
+                        if i['location']:
+                            locations.append({'id':i['iid'],'label':'Image Set '+str(i['iid']),'latitude':i['location'][0][0],'longitude':i['location'][0][1],'updated_at':i['updated_at'].date().isoformat()})
                 self.setSuccess(200,'location list',{'count':litems,'locations':locations})
                 return
             else:
