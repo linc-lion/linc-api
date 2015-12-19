@@ -50,9 +50,16 @@ class CVResultsHandler(BaseHandler):
                         output = objres
                     else:
                         # List data following the website form
+                        animl = yield self.settings['db'][self.settings['animals']].find().to_list(None)
+                        animl = [x['iid'] for x in animl]
+                        print animl
                         output = list()
                         mp = loads(objs['match_probability'])
                         for i in mp:
+                            # Prevent search a deleted lion
+                            print i
+                            if int(i['id']) not in animl:
+                                continue
                             objres = dict()
                             objres['id'] = int(i['id'])
                             objres['name'] = '-'

@@ -109,4 +109,4 @@ api['url'] = os.environ.get('API_URL','')
 
 api['scheduler'] = TornadoScheduler()
 api['scheduler'].start()
-api['scheduler'].add_job(checkresults, 'interval', minutes=3, args=[sdb,api])
+api['scheduler'].add_job(checkresults, 'interval', seconds=30, args=[sdb,api])
