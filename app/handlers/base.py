@@ -12,6 +12,8 @@ import bcrypt
 from json import load,loads,dumps,dump
 from lib.tokens import token_decode,gen_token
 from os import remove
+from tornado.httpclient import AsyncHTTPClient,HTTPRequest,HTTPError
+from tornado.httputil import HTTPHeaders
 
 class BaseHandler(RequestHandler):
     """A class to collect common handler methods - all other handlers should
@@ -142,6 +144,47 @@ class BaseHandler(RequestHandler):
     def sanitizestr(self,strs):
         txt = "%s%s" % (string.ascii_letters, string.digits)
         return ''.join(c for c in strs if c in txt)
+
+    @asynchronous
+    @engine
+    def api(self,url,method,body=None,headers=None,auth_username=None,auth_password=None,callback=None):
+        AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient")
+        http_client = AsyncHTTPClient()
+        dictheaders = {"content-type": "application/json"}
+        if headers:
+            for k,v in headers.iteritems():
+                dictheaders[k] = v
+        h = HTTPHeaders(dictheaders)
+        params={
+            'headers' : h,
+            'url' : url,
+            'method' : method,
+            'request_timeout': 720,
+            'validate_cert' : False}
+        if method in ['POST','PUT']:
+            params['body'] = body
+        if auth_username:
+            params['auth_username'] = auth_username
+            params['auth_password'] = auth_password
+        request = HTTPRequest(**params)
+        try:
+            response = yield http_client.fetch(request)
+        except HTTPError, e:
+            print 'HTTTP error returned... '
+            print "Code: ", e.code
+            print "Message: ", e.message
+            if e.response:
+                print 'URL: ', e.response.effective_url
+                print 'Reason: ', e.response.reason
+                print 'Body: ', e.response.body
+                response = e.response
+            else:
+                responde = e
+        except Exception as e:
+            # Other errors are possible, such as IOError.
+            print("Other Errors: " + str(e))
+            response = e
+        callback(response)
 
 class VersionHandler(BaseHandler):
     def get(self):

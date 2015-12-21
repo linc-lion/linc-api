@@ -3,10 +3,11 @@ from tornado import gen
 from tornado.escape import json_decode
 from logging import info
 from datetime import datetime
-from json import dumps
+from json import dumps,loads
 
 @gen.coroutine
 def checkresults(db,api):
+    # Check results execute GET in the CV Server URL to acquire results for cv requests
     AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient")
     # Clear cvresults without cvrequests
     cvreqs = db.cvrequests.find()
@@ -16,8 +17,6 @@ def checkresults(db,api):
     cvreqs = db.cvrequests.find({'status':{'$nin':['finished','error']}})
     cvreqs = [x for x in cvreqs]
     print 'CVReqs count: ',str(len(cvreqs))
-
-    #cvreqs = db.cvrequests.find({'server_uuid':'1a4db675-6fef-4e44-8bb2-18fbc80b7739'})
     # Check if cvresults exists
     for cvreq in cvreqs:
         cvres = db.cvresults.find_one({'cvrequest_iid':cvreq['iid']})
@@ -50,8 +49,6 @@ def checkresults(db,api):
             'validate_cert' : False
         })
         try:
-            #http_client.fetch(request,callback=lambda response:handle_request(response, cvreq, db))
-            #resp = fetch_coroutine(request)
             dt = datetime.now()
             info(" ### Checking CV Request: "+str(cvreq['iid'])+" ###")
             response = yield http_client.fetch(request)
@@ -64,7 +61,7 @@ def checkresults(db,api):
                 nstatus = 'finished'
             mresult = dumps(rbody['lions'])
             print rbody
-            #print 'CV Req Status: '+nstatus
+            print 'CV Req Status: '+nstatus
             #print 'match_probability: '+mresult
             db.cvrequests.update({'_id':cvreq['_id']},{'$set':{'status':nstatus,'updated_at':dt}})
             db.cvresults.update({'cvrequest_iid':cvreq['iid']},{'$set':{'match_probability':mresult,'updated_at':dt}})
@@ -76,36 +73,13 @@ def checkresults(db,api):
                 print 'URL: ', e.response.effective_url
                 print 'Reason: ', e.response.reason
                 print 'Body: ', e.response.body
-            db.cvrequests.update({'_id':cvreq['_id']},{'$set':{'status':'fail','updated_at':dt}})
+            if int(e.code) == 400 and loads(e.response.body)['status'] == 'error':
+                db.cvrequests.update({'_id':cvreq['_id']},{'$set':{'status':'error','updated_at':dt}})
+            elif int(e.code) == 401:
+                # authentication error
+                db.cvrequests.update({'_id':cvreq['_id']},{'$set':{'status':'authentication failure','updated_at':dt}})
+                # communication failure
+                db.cvrequests.update({'_id':cvreq['_id']},{'$set':{'status':'network failure','updated_at':dt}})
         except Exception as e:
             # Other errors are possible, such as IOError.
             print("Other Errors: " + str(e))
-
-"""
-def handle_request(response,cvreq,db):
-    dt = datetime.now()
-    #print "\n ### Checking CV Request: "+str(cvreq['iid'])+" ###"
-    info(" ### Checking CV Request: "+str(cvreq['iid'])+" ###")
-    info("URL:"+str(response.effective_url))
-    info("CVreq:"+str(cvreq['iid']))
-    info("DB:"+str(db))
-    dt = datetime.now()
-    if response.error:
-        print "Error:", response.error
-        print "Body:", response.body
-        print "Code:", response.code
-        print "Reason:", response.reason
-        db.cvrequests.update({'_id':cvreq['_id']},{'$set':{'status':'fail','updated_at':dt}})
-    else:
-        print 'Connection OK'
-        rbody = json_decode(response.body)
-        rbody['code'] = response.code
-        rbody['reason'] = response.reason
-        print(rbody)
-        nstatus = rbody['status']
-        mresult = dumps(rbody['lions'])
-        print 'CV Req Status: '+nstatus
-        print 'match_probability: '+mresult
-        db.cvrequests.update({'_id':cvreq['_id']},{'$set':{'status':nstatus,'updated_at':dt}})
-        db.cvresults.update({'cvrequest_iid':cvreq['iid']},{'$set':{'match_probability':mresult,'updated_at':dt}})
-"""
