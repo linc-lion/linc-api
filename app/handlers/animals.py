@@ -327,28 +327,62 @@ class AnimalsHandler(BaseHandler):
     @coroutine
     @api_authenticated
     def delete(self, animal_id=None):
+        self.s3con = self.initS3()
+        if not self.s3con:
+            self.dropError(500,'Unable to connect in S3.')
+            return
         # delete an animal
         if animal_id:
             query = self.query_id(animal_id)
-            updobj = yield self.settings['db'][self.settings['animals']].find_one(query)
-            if updobj:
-                # check for references
-                refcount = 0
-                iid = updobj['iid']
-                # imageset - uploading_user_iid
-                imgsetrc = yield self.settings['db'].imagesets.find({'animal_iid':iid,'trashed':False}).count()
-                info('Checking references in lions - animal_iid:' + str(imgsetrc))
-                refcount += imgsetrc
-                if refcount > 0:
-                    self.dropError(417,"the "+self.settings['animal']+" can't be deleted because it has references in the database.")
-                else:
+            query['trashed'] = {'$in':[True,False]}
+            animobj = yield self.settings['db'][self.settings['animals']].find_one(query)
+            if animobj:
+                rem_iid = animobj['iid']
+                rem_pis = animobj['primary_image_set_iid']
+                rem_pis_obj = yield self.settings['db'].imagesets.find_one({'iid':rem_pis})
+                if not rem_pis_obj:
+                    self.dropError(500,'Fail to find the object for the primary image set.')
+                    return
+                # 1 - Remove animal
+                rmved = yield self.settings['db'][self.settings['animals']].remove({'iid':rem_iid})
+                print rmved
+                # 2 - Remove its primary image set
+                rmved = yield self.settings['db'].imagesets.remove({'iid':rem_pis})
+                print
+                # 3 - Remove images of the primary image set
+                imgl = yield self.settings['db'].images.find({'image_set_iid':rem_pis}).to_list(None)
+                for img in imgl:
+                    # Delete the source file
+                    srcurl = self.settings['S3_FOLDER'] + '/imageset_'+str(rem_pis)+'_'+str(rem_pis_obj['_id'])+'/'
+                    srcurl = srcurl + img['created_at'].date().isoformat() + '_image_'+str(img['iid'])+'_'+str(img['_id'])
                     try:
-                        updobj = yield self.settings['db'][self.settings['animals']].update(query,{'$set':{'trashed':True,'updated_at':datetime.now()}})
-                        self.setSuccess(200,self.settings['animal']+' successfully deleted')
-                    except:
-                        self.dropError(500,'fail to delete '+self.settings['animal'])
+                        for suf in ['_full.jpg','_icon.jpg','_medium.jpg','_thumbnail.jpg']:
+                            self.s3con.delete(srcurl+suf,self.settings['S3_BUCKET'])
+                    except Exception, e:
+                        self.setSuccess(500,'Fail to delete image in S3. Errors: '+str(e))
+                        return
+                rmved = yield self.settings['db'].images.remove({'image_set_iid':rem_pis},multi=True)
+                print rmved
+                # 4 - Removing association
+                rmved = yield self.settings['db'].imagesets.update({'animal_iid':rem_iid},
+                        {'$set':{'animal_iid':None,'updated_at':datetime.now()}},multi=True)
+                print rmved
+                # 5 - Adjusting cvresults
+                cursor = self.settings['db'].cvresults.find()
+                while (yield cursor.fetch_next):
+                    doc = cursor.next_object()
+                    mp = loads(doc['match_probability'])
+                    rmup = False
+                    rmupl = list()
+                    for ma in mp:
+                        if int(ma['id']) == int(rem_iid):
+                            rmup = True
+                        else:
+                            rmupl.append(ma)
+                    if rmup:
+                        updcvr = yield self.settings['db'].cvresults.update({'_id':doc['_id']},{'$set':{'match_probability':dumps(rmupl)}})
             else:
-                self.dropError(404,self.settings['animal']+' not found')
+                self.dropError(404,self.settings['animal']+' not found.')
         else:
             self.dropError(400,'Remove requests (DELETE) must have a resource ID.')
 
