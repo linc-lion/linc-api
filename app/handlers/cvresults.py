@@ -52,12 +52,10 @@ class CVResultsHandler(BaseHandler):
                         # List data following the website form
                         animl = yield self.settings['db'][self.settings['animals']].find().to_list(None)
                         animl = [x['iid'] for x in animl]
-                        print animl
                         output = list()
                         mp = loads(objs['match_probability'])
                         for i in mp:
                             # Prevent search a deleted lion
-                            print i
                             if int(i['id']) not in animl:
                                 continue
                             objres = dict()
@@ -129,140 +127,13 @@ class CVResultsHandler(BaseHandler):
             self.set_status(200)
             self.finish(self.json_encode({'status':'success','data':output}))
 
-    @asynchronous
-    @engine
     @api_authenticated
     def post(self):
-        """ This method only creates a cvresult if still doesn't exist """
-        # create a new res
-        # parse data recept by POST and get only fields of the object
-        if not 'cvrequest_id' in self.input_data.keys():
-            self.dropError(400,'you must provide a cvrequest_id')
-            return
-        else:
-            cvrequest_id = self.input_data['cvrequest_id']
-            if cvrequest_id == 'all':
-                # create cvresults for all cvrequest that still doesn't have one
-                pass
-            else:
-                cvrequest_id = self.input_data['cvrequest_id']
-                # check the cvrequest
-                cvreq = yield self.settings['db'].cvrequests.find_one({'iid':cvrequest_id})
-                if not cvreq:
-                    self.dropError(404,'cvrequest_id provided not found')
-                    return
-                # check if exists
-                cvres = yield self.settings['db'].cvresults.find_one({'cvrequest_iid':cvrequest_id})
-                if cvres:
-                    # exists, so tray to update if the status is uncompleted
-                    self.setSuccess(400,'a result for the cvrequest_id '+str(cvrequest_id)+' already exists and the cvrequest has status = '+cvreq['status']+'. To update it send a PUT request in the /cvresults')
-                    return
-                else:
-                    # create a cvresult
-                    newobj = dict()
-                    newobj['iid'] = yield Task(self.new_iid,CVResult.collection())
-                    newobj['cvrequest_iid'] = cvrequest_id
-                    dt = datetime.now()
-                    newobj['created_at'] = dt
-                    newobj['updated_at'] = dt
-                    # Check the result in the Server
-                    results = yield Task(self.checkresult,cvreq['server_uuid'])
-                    """
-                    # {'code': 200, 'status': 'finished', 'id': '188855dc-2a0c-43fd-964b-d13cd2d328e8',
-                    # 'lions': [{'confidence': 0.0, 'id': '14'}, {'confidence': 0.0006, 'id': '18'},
-                    # {'confidence': 0.0, 'id': '27'}, {'confidence': 0.0029, 'id': '3'}, {'confidence': 0.0109, 'id': '17'},
-                    # {'confidence': 0.0, 'id': '20'}, {'confidence': 0.0, 'id': '28'}, {'confidence': 0.49079999999999996, 'id': '15'},
-                    # {'confidence': 0.0087, 'id': '19'}, {'confidence': 0.3345, 'id': '7'}, {'confidence': 0.1605, 'id': '12'},
-                    # {'confidence': 0.0, 'id': '29'}, {'confidence': 0.0003, 'id': '6'}, {'confidence': 0.0005, 'id': '2'},
-                    # {'confidence': 0.0036, 'id': '4'}, {'confidence': 0.0014000000000000002, 'id': '5'},
-                    # {'confidence': 0.8551000000000001, 'id': '24'}, {'confidence': 0.0003, 'id': '13'},
-                    # {'confidence': 0.0042, 'id': '23'}, {'confidence': 0.3856, 'id': '8'}, {'confidence': 0.0, 'id': '21'},
-                    # {'confidence': 0.0023, 'id': '26'}, {'confidence': 0.0106, 'id': '30'}], 'reason': 'OK'}
-                    """
-                    newobj['match_probability'] = '[]'
-                    rcode_to_cvrequest = 'fail'
-                    if results:
-                        if results['code'] == 200:
-                            newobj['match_probability'] = dumps(results['lions'])
-                            rcode_to_cvrequest = results['status']
-                    """
-                    CV Server status responses: "queued", "processing", "finished", and "error".
-                    API have: "fail" that means the communication with cv server fail
-                    """
-                    # save the new cvresult in the database
-                    try:
-                        newres = CVResult(newobj)
-                        newres.validate()
-                        try:
-                            # updating the cvrequest with the status
-                            cvrequ = self.settings['db'].cvrequests.update({'_id':cvreq['_id']},{'$set':{'status':rcode_to_cvrequest,'updated_at':datetime.now()}})
-                            # save the new cvresults
-                            newsaved = yield self.settings['db'].cvresults.insert(newres.to_native())
-                            #newres.save()
-                            output = newres.to_native()
-                            output['obj_id'] = str(newsaved)
-                            self.switch_iid(output)
-                            output['cvrequest_id'] = output['cvrequest_iid']
-                            del output['cvrequest_iid']
-                            self.finish(self.json_encode({'status':'success','message':'new cv results saved','data':output}))
-                        except:
-                            # duplicated index error
-                            self.dropError(409,'an error check for indexing violation. the cv results was not created.')
-                    except ValidationError, e:
-                        # received data is invalid in some way
-                        self.dropError(500,'fail to save the new cvresult. Errors: '+str(e))
+        self.dropError(400,"CV Results objects are created automatically, you can't POST to create them.")
 
-    @asynchronous
-    @coroutine
     @api_authenticated
     def put(self, res_id=None):
-        """ This method implements the update for a cvresult that already exists """
-        # update an res
-        if res_id:
-            query = self.query_id(res_id)
-            updobj = yield self.settings['db'].cvresults.find_one(query)
-            if updobj:
-                # get the cvrequest
-                cvreq = yield self.settings['db'].cvrequests.find_one({'iid':updobj['cvrequest_iid']})
-                # Check the result in the Server
-                results = yield Task(self.checkresult,cvreq['server_uuid'])
-                upddict = dict()
-                if results:
-                    if results['code'] == 200:
-                        upddict['match_probability'] = dumps(results['lions'])
-                        rcode_to_cvrequest = results['status']
-                        #upddict['status'] = results['status']
-                        upddict['updated_at'] = datetime.now()
-                """
-                CV Server status responses: "queued", "processing", "finished", and "error".
-                API have: "fail" that means the communication with cv server fail
-                """
-                # save the cvresult updated in the database
-                try:
-                    if upddict:
-                        # updating the cvrequest with the status
-                        cvrequ = self.settings['db'].cvrequests.update({'_id':cvreq['_id']},{'$set':{'status':rcode_to_cvrequest,'updated_at':datetime.now()}})
-                        # save the update cvresults
-                        newsaved = yield self.settings['db'].cvresults.update({'_id':updobj['_id']},{'$set':upddict})
-                        output = updobj
-                        output['obj_id'] = str(updobj['_id'])
-                        del output['_id']
-                        self.switch_iid(output)
-                        output['cvrequest_id'] = output['cvrequest_iid']
-                        del output['cvrequest_iid']
-                        output['match_probability'] = upddict['match_probability']
-                        # Showing status of the cvrequest
-                        output['status'] = rcode_to_cvrequest
-                        output['updated_at'] = upddict['updated_at']
-                        self.finish(self.json_encode({'status':'success','message':'new cv results saved','data':output}))
-                    else:
-                        self.dropError(500,'the cv server fails to respond the results.')
-                except:
-                    self.dropError(500,'fail to update the cvresult')
-            else:
-                self.dropError(404,'cv result not found')
-        else:
-            self.dropError(400,'Update requests (PUT) must have a resource ID and update pairs for key and value.')
+        self.dropError(400,"CV Results objects are updated automatically, you can't PUT to update them.")
 
     @asynchronous
     @coroutine

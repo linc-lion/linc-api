@@ -10,7 +10,6 @@ from models.imageset import ImageSet,Image
 from models.cv import CVRequest,CVResult
 from bson import ObjectId as ObjId
 from datetime import datetime
-from tornado.httpclient import AsyncHTTPClient,HTTPRequest,HTTPError
 from json import dumps
 from tornado.escape import json_decode
 from schematics.exceptions import ValidationError
@@ -315,8 +314,6 @@ class ImageSetsHandler(BaseHandler):
                     imgs = yield self.settings['db'].images.find(query_images).to_list(None)
                     limgs = list()
                     for img in imgs:
-                        #url = 'http://linc-production.s3.amazonaws.com/2015/06/16/01/25/53/633/uploads_2F2015_2F6_2F16_2F96e22dfc_9a1c_45d7_88d9_6f79bcfe695c_2Fc_PJB_9221.jpeg'
-                        #url = yield self.settings['db'].images.find_one({'iid':img['iid']})
                         limgs.append({'id':img['iid'],'type':img['image_type'],'url':self.settings['S3_URL']+img['url']+'_full.jpg'})
                     animals = self.input_data[self.settings['animals']]
                     animalscheck = yield self.settings['db'][self.settings['animals']].find({'iid' : { '$in' : animals }}).to_list(None)
@@ -327,31 +324,15 @@ class ImageSetsHandler(BaseHandler):
                     for animal in animalscheck:
                         url = self.settings['url']+self.settings['animals']+'/'
                         lanimals.append({'id':animal['iid'],'url':url+str(animal['iid'])})
-                    # images : [{"id": 123, "type": "whisker", "url": "https://s3.amazonaws.com/semanticmd-api-testing/api/cbc90b5705d51e9e218b0a7e518aa6d3506c190c"}]
-                    # lions : []{"id": 456, "url": "http://lg-api.com/lions/456", "updated_at": "timestamp"}]
                     body['identification']['images'] = limgs
                     body['identification'][self.settings['animals']] = lanimals
                     sbody = dumps(body)
-                    print(sbody)
-                    AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient")
-                    http_client = AsyncHTTPClient()
-                    url = self.settings['CVSERVER_URL_IDENTIFICATION']
-                    request = HTTPRequest(**{
-                        'url' : url,
-                        'method' : 'POST',
-                        'auth_username' : self.settings['CV_USERNAME'],
-                        'auth_password' : self.settings['CV_PASSWORD'],
-                        'body' : sbody,
-                        'validate_cert' : False
-                    })
-
+                    #print(sbody)
                     try:
-                        response = yield http_client.fetch(request)
+                        response = yield Task(self.api,url=self.settings['CVSERVER_URL_IDENTIFICATION'],method='POST', \
+                                            body=sbody,auth_username=self.settings['CV_USERNAME'],auth_password=self.settings['CV_PASSWORD'])
                         rbody = json_decode(response.body)
-                        # response example
-                        #{'status': 'queued', 'id': '82bcd768-ebae-41ac-ad84-2ee3a95dbe00', 'lions': []}
-
-                        # Create a cvrequest for this ImageSet
+                        # Create a cvrequest mongodb object for this ImageSet
                         newobj = dict()
                         newobj['iid'] = yield Task(self.new_iid,CVRequest.collection())
                         # This will be get from the user that do the request
@@ -371,7 +352,6 @@ class ImageSetsHandler(BaseHandler):
                         del output['requesting_organization_iid']
                         output['image_set_id'] = output['image_set_iid']
                         del output['image_set_iid']
-
                         self.set_status(response.code)
                         self.finish(self.json_encode({'status':'success','message':response.reason,'data':output}))
                     except ValidationError, e:
@@ -392,7 +372,6 @@ class ImageSetsHandler(BaseHandler):
             query = self.query_id(imageset_id)
             del query['trashed']
             objimgset = yield self.settings['db'].imagesets.find_one(query)
-            #ImageSet.objects.filter(**query).limit(1).find_all()
             if objimgset:
                 dt = datetime.now()
                 objimgset['updated_at'] = dt
@@ -448,14 +427,6 @@ class ImageSetsHandler(BaseHandler):
                             objimgset['trashed'] = update_data[field]
                             continue
                         objimgset[field] = update_data[field]
-                        #cmd = "objimgset['"+field+"'] = "
-                        #print(update_data)
-                        #if isinstance(update_data[field],str):
-                        #    cmd = cmd + "'" + str(update_data[field]) + "'"
-                        #else:
-                        #    cmd = cmd + str(update_data[field])
-                        #print(cmd)
-                        #exec(cmd)
 
                 # check if user exists
                 useriid = objimgset['uploading_user_iid']
@@ -482,9 +453,7 @@ class ImageSetsHandler(BaseHandler):
                 try:
                     imgid = ObjId(objimgset['_id'])
                     del objimgset['_id']
-
                     print(objimgset)
-
                     objimgset = ImageSet(objimgset)
                     objimgset.validate()
                     objimgset = objimgset.to_native()
@@ -519,34 +488,42 @@ class ImageSetsHandler(BaseHandler):
     @coroutine
     @api_authenticated
     def delete(self, imageset_id=None):
+        self.s3con = self.initS3()
+        if not self.s3con:
+            self.dropError(500,'Unable to connect in S3.')
+            return
         # delete an imageset
         if imageset_id:
             query = self.query_id(imageset_id)
-            updobj = yield self.settings['db'].imagesets.find_one(query)
-            if updobj:
-                # check for references
-                refcount = 0
-                iid = updobj['iid']
-                # lions - primary_image_set_iid
-                imgsetac = yield self.settings['db'][self.settings['animals']].find({'primary_image_set_iid':iid,'trashed':False}).count()
-                info('Checking references in lions - primary_image_set_iid:' + str(imgsetac))
-                refcount += imgsetac
-                # cvrequests
-                imgsetrc = yield self.settings['db'].cvrequests.find({'image_set_iid':iid,'trashed':False}).count()
-                info('Checking references in cvrequests - image_set_iid:' + str(imgsetrc))
-                refcount += imgsetrc
-                # images
-                imgsetic = yield self.settings['db'].images.find({'image_set_iid':iid,'trashed':False}).count()
-                info('Checking references in images - image_set_iid:' + str(imgsetic))
-                refcount += imgsetic
-                if refcount > 0:
-                    self.dropError(417,"the image set can't be deleted because it has references in the database.")
-                else:
+            query['trashed'] = {'$in':[True,False]}
+            imgobj = yield self.settings['db'].imagesets.find_one(query)
+            if imgobj:
+                # 1 - Remove imaget set
+                rmved = yield self.settings['db'].imagesets.remove({'iid':imgobj['iid']})
+                print rmved
+                # 2 - Remove images of the image set
+                imgl = yield self.settings['db'].images.find({'image_set_iid':imgobj['iid']}).to_list(None)
+                for img in imgl:
+                    # Delete the source file
+                    srcurl = self.settings['S3_FOLDER'] + '/imageset_'+str(imgobj['iid'])+'_'+str(imgobj['_id'])+'/'
+                    srcurl = srcurl + img['created_at'].date().isoformat() + '_image_'+str(img['iid'])+'_'+str(img['_id'])
                     try:
-                        updobj = yield self.settings['db'].imagesets.update(query,{'$set':{'trashed':True,'updated_at':datetime.now()}})
-                        self.setSuccess(200,'image set successfully deleted')
-                    except:
-                        self.dropError(500,'fail to delete image set')
+                        for suf in ['_full.jpg','_icon.jpg','_medium.jpg','_thumbnail.jpg']:
+                            self.s3con.delete(srcurl+suf,self.settings['S3_BUCKET'])
+                    except Exception, e:
+                        self.setSuccess(500,'Fail to delete image in S3. Errors: '+str(e))
+                        return
+                rmved = yield self.settings['db'].images.remove({'image_set_iid':imgobj['iid']},multi=True)
+                print rmved
+                # 3 - Removing cvrequests and cvresults
+                cvreql = yield self.settings['db'].cvrequests.find({'image_set_iid':imgobj['iid']}).to_list(None)
+                for cvreq in cvreql:
+                    # Removing cvresult
+                    rmved = yield self.settings['db'].cvresults.remove({'cvrequest_iid':cvreq['iid']})
+                    print rmved
+                    # Removing cvrequest
+                    rmved = yield self.settings['db'].cvrequests.remove({'_id':cvreq['_id']})
+                    print rmved
             else:
                 self.dropError(404,'image set not found')
         else:
