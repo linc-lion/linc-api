@@ -14,6 +14,7 @@ from lib.tokens import token_decode,gen_token
 from os import remove
 from tornado.httpclient import AsyncHTTPClient,HTTPRequest,HTTPError
 from tornado.httputil import HTTPHeaders
+from tinys3 import Connection as s3con
 
 class BaseHandler(RequestHandler):
     """A class to collect common handler methods - all other handlers should
