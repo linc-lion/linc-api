@@ -12,6 +12,7 @@ from pymongo import DESCENDING
 from lib.rolecheck import allowedRole, refusedRole, api_authenticated
 from schematics.exceptions import ValidationError
 from logging import info
+from json import loads,dumps
 
 class AnimalsHandler(BaseHandler):
     """A class that handles requests about animals informartion
@@ -328,10 +329,6 @@ class AnimalsHandler(BaseHandler):
     @coroutine
     @api_authenticated
     def delete(self, animal_id=None):
-        self.s3con = self.initS3()
-        if not self.s3con:
-            self.dropError(500,'Unable to connect in S3.')
-            return
         # delete an animal
         if animal_id:
             query = self.query_id(animal_id)
@@ -352,16 +349,18 @@ class AnimalsHandler(BaseHandler):
                 print
                 # 3 - Remove images of the primary image set
                 imgl = yield self.settings['db'].images.find({'image_set_iid':rem_pis}).to_list(None)
+                rmlist = list()
                 for img in imgl:
                     # Delete the source file
                     srcurl = self.settings['S3_FOLDER'] + '/imageset_'+str(rem_pis)+'_'+str(rem_pis_obj['_id'])+'/'
                     srcurl = srcurl + img['created_at'].date().isoformat() + '_image_'+str(img['iid'])+'_'+str(img['_id'])
                     try:
                         for suf in ['_full.jpg','_icon.jpg','_medium.jpg','_thumbnail.jpg']:
-                            self.s3con.delete(srcurl+suf,self.settings['S3_BUCKET'])
+                            rmlist.append(srcurl+suf)
                     except Exception, e:
                         self.setSuccess(500,'Fail to delete image in S3. Errors: '+str(e))
                         return
+                rmladd = yield self.settings['db'].dellist.insert({'list':rmlist,'ts':datetime.now()})
                 rmved = yield self.settings['db'].images.remove({'image_set_iid':rem_pis},multi=True)
                 print rmved
                 # 4 - Removing association
@@ -418,8 +417,6 @@ class AnimalsHandler(BaseHandler):
                     if img:
                         obj['thumbnail'] = self.settings['S3_URL']+img['url']+'_icon.jpg'
                         obj['image'] = self.settings['S3_URL']+img['url']+'_medium.jpg'
-
-
             output.append(obj)
         callback(output)
 
@@ -482,13 +479,7 @@ class AnimalsHandler(BaseHandler):
                         obji['thumbnail_url'] = self.settings['S3_URL']+img['url']+'_thumbnail.jpg'
                         obji['main_url'] = self.settings['S3_URL']+img['url']+'_full.jpg'
                         obji['url'] = self.settings['S3_URL']+img['url']+'_full.jpg'
-
-                    # This will be updated
-                    #"thumbnail_url":"http://lion-guardians-production.s3.amazonaws.com/2015/05/31/16/17/59/133/uploads_2Fe3f10f18_d176_41a7_84b9_0b2c5fef81e7_2F38yrs_Sikiria_300x300.jpg",
-                    #"main_url":"http://lion-guardians-production.s3.amazonaws.com/2015/05/31/16/18/00/752/uploads_2Fe3f10f18_d176_41a7_84b9_0b2c5fef81e7_2F38yrs_Sikiria_300x300.jpg",
-                    #"url":"http://lion-guardians-production.s3.amazonaws.com/2015/05/31/16/17/59/608/uploads_2Fe3f10f18_d176_41a7_84b9_0b2c5fef81e7_2F38yrs_Sikiria_300x300.jpg"
                     outimages.append(obji)
-                #oimgst['_embedded'] = {'images':images}
                 obj['_embedded'] = {'images':outimages}
             imgsets_output.append(obj)
         objanimal['_embedded'] = {'image_sets': imgsets_output}
