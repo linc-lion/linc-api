@@ -574,8 +574,8 @@ class ImageSetsHandler(BaseHandler):
             if obj['date_stamp']:
                 imgset_obj['date_stamp'] = obj['date_stamp']
             else:
-                imgset_obj['date_stamp'] = None
-                
+                imgset_obj['date_stamp'] = '-'
+
             if obj['tags']:
                 imgset_obj['tags'] = obj['tags']
 
