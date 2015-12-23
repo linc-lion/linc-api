@@ -11,6 +11,7 @@ from handlers.error import ErrorHandler
 from tornado.ioloop import IOLoop
 from motor import MotorClient as connect
 from lib.check_cv import checkresults
+from lib.check_s3 import checkS3
 from apscheduler.schedulers.tornado import TornadoScheduler
 
 from pymongo import MongoClient
@@ -109,4 +110,7 @@ api['url'] = os.environ.get('API_URL','')
 
 api['scheduler'] = TornadoScheduler()
 api['scheduler'].start()
+# Check CV Server results - every 30 seconds
 api['scheduler'].add_job(checkresults, 'interval', seconds=30, args=[sdb,api])
+# Delete files in S3
+api['scheduler'].add_job(checkS3, 'interval', hours=4, args=[sdb,api])
