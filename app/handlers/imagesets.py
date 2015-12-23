@@ -566,11 +566,15 @@ class ImageSetsHandler(BaseHandler):
                     imgset_obj['thumbnail'] = ''
                     imgset_obj['image'] = ''
 
-
             if obj['date_of_birth']:
                 imgset_obj['age'] = self.age(born=obj['date_of_birth'])
             else:
                 imgset_obj['age'] = '-'
+
+            if obj['date_stamp']:
+                imgset_obj['date_stamp'] = obj['date_stamp']
+            else:
+                imgset_obj['date_stamp'] = '-'
 
             if obj['tags']:
                 imgset_obj['tags'] = obj['tags']
