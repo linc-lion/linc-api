@@ -578,6 +578,8 @@ class ImageSetsHandler(BaseHandler):
 
             if obj['tags']:
                 imgset_obj['tags'] = obj['tags']
+            else:
+                imgset_obj['tags'] = None
 
             if obj['owner_organization_iid']:
                 objo = yield self.settings['db'].organizations.find_one({'iid':obj['owner_organization_iid'],'trashed':trashed})

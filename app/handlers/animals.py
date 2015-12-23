@@ -410,8 +410,14 @@ class AnimalsHandler(BaseHandler):
                 imgset = yield self.settings['db'].imagesets.find_one({'iid':x['primary_image_set_iid']})
                 if imgset:
                     obj['age'] = self.age(imgset['date_of_birth'])
-                    obj['date_stamp'] = imgset['date_stamp']
-                    obj['tags'] = imgset['tags']
+                    if imgset['date_stamp']:
+                        obj['date_stamp'] = imgset['date_stamp']
+                    else:
+                        obj['date_stamp'] = '-'
+                    if imgset['tags']:
+                        obj['tags'] = imgset['tags']
+                    else:
+                        obj['tags'] = None
                     obj['gender'] = imgset['gender']
                     obj['is_verified'] = imgset['is_verified']
                     img = yield self.settings['db'].images.find_one({'iid':imgset['main_image_iid'],'trashed':trashed})
