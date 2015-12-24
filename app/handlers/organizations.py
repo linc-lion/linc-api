@@ -175,35 +175,22 @@ class OrganizationsHandler(BaseHandler):
             updobj = yield self.settings['db'].organizations.find_one(query)
             if updobj:
                 # check for references
-                refcount = 0
                 iid = updobj['iid']
                 # user - organization_iid
-                userrc = yield self.settings['db'].users.find({'organization_iid':iid,'trashed':False}).count()
-                info('Checking references in users - organization_iid:' + str(userrc))
-                refcount += userrc
+                userrc = yield self.settings['db'].users.update({'organization_iid':iid},{'$set':{'organization_iid':self.current_user['org_id']}},multi=True)
                 # imageset - uploading_organization_iid
                 # imageset - owner_organization_iid
-                imgsetrc1 = yield self.settings['db'].imagesets.find({'uploading_organization_iid':iid,'trashed':False}).count()
-                imgsetrc2 = yield self.settings['db'].imagesets.find({'owner_organization_iid':iid,'trashed':False}).count()
-                imgsetrc = imgsetrc1 + imgsetrc2
-                info('Checking references in imagesets:' + str(imgsetrc))
-                refcount += imgsetrc
+                imgsetrc1 = yield self.settings['db'].imagesets.update({'uploading_organization_iid':iid},{'$set':{'uploading_organization_iid':self.current_user['org_id']}},multi=True)
+                imgsetrc2 = yield self.settings['db'].imagesets.update({'owner_organization_iid':iid},{'$set':{'owner_organization_iid':self.current_user['org_id']}},multi=True)
                 # animal - organization_iid
-                animalsrc = yield self.settings['db'][self.settings['animals']].find({'organization_iid':iid,'trashed':False}).count()
-                info('Checking references in animals(lions):' + str(animalsrc))
-                refcount += animalsrc
+                animalsrc = yield self.settings['db'][self.settings['animals']].update({'organization_iid':iid},{'$set':{'organization_iid':self.current_user['org_id']}},multi=True)
                 # cvrequest - uploading_organization_iid
-                cvreqrc = yield self.settings['db'].cvrequests.find({'uploading_organization_iid':iid,'trashed':False}).count()
-                info('Checking references in cvrequests:' + str(cvreqrc))
-                refcount += cvreqrc
-                if refcount > 0:
-                    self.dropError(417,"organization can't be deleted because it has references in the database.")
-                else:
-                    try:
-                        updobj = yield self.settings['db'].organizations.update(query,{'$set':{'trashed':True,'updated_at':datetime.now()}})
-                        self.setSuccess(200,'organization successfully deleted')
-                    except:
-                        self.dropError(500,'fail to delete organization')
+                cvreqrc = yield self.settings['db'].cvrequests.update({'requesting_organization_iid':iid},{'$set':{'requesting_organization_iid':self.current_user['org_id']}},multi=True)
+                try:
+                    updobj = yield self.settings['db'].organizations.remove(query)
+                    self.setSuccess(200,'organization successfully deleted')
+                except:
+                    self.dropError(500,'fail to delete organization')
             else:
                 self.dropError(404,'organization not found')
         else:

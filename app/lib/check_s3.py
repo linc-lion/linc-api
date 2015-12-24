@@ -20,9 +20,9 @@ def checkS3(db,api):
         S3_BUCKET = api['S3_BUCKET']
         try:
             conn = s3con(S3_ACCESS_KEY,S3_SECRET_KEY,default_bucket=S3_BUCKET,size=20)
-            print('\n\nConnected to S3')
+            print('\nConnected to S3')
         except:
-            print('\n\nFail to connect to S3')
+            print('\nFail to connect to S3')
             return
         for rmlist in dellist:
             if rmlist['list']:
