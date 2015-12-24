@@ -23,22 +23,10 @@ class ImagesHandler(BaseHandler, ProcessMixin):
     """
     def initialize(self):
         self.s3con = self.initS3()
-        """
-        S3_ACCESS_KEY = self.settings['S3_ACCESS_KEY']
-        S3_SECRET_KEY = self.settings['S3_SECRET_KEY']
-        S3_BUCKET = self.settings['S3_BUCKET']
-        try:
-            self.s3con = s3con(S3_ACCESS_KEY,S3_SECRET_KEY,default_bucket=S3_BUCKET)
-        except:
-            self.s3con = None
-            print('\n\nFail to connect to S3')
-        """
         self.process = False
 
     def on_finish(self):
         if self.request.method == 'POST' and self.process:
-            #print(self.settings['S3_ACCESS_KEY'])
-            #print(self.settings['S3_SECRET_KEY'])
             fupdname = self.dt.date().isoformat() + '_image_' + self.imgid + '_' + self.imgobjid
             generate_images(self.imgname)
             t = timedelta(days=1)
@@ -50,7 +38,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                 f.close()
                 remove(self.imgname[:-4]+suf)
 
-    def query_id(self,image_id,trashed=False):
+    def query_id(self,image_id):
         """This method configures the query that will find an object"""
         try:
             query = { 'iid' : int(image_id) }
@@ -60,7 +48,6 @@ class ImagesHandler(BaseHandler, ProcessMixin):
             except:
                 self.dropError(400,'invalid id key')
                 return
-        query['trashed'] = trashed
         return query
 
     @asynchronous
@@ -81,21 +68,15 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                 self.dropError(400,"you need to pass image's ids separated by commas")
                 return
         else:
-            trashed = self.get_argument('trashed',False)
-            if trashed:
-                if trashed == '*':
-                    trashed = { '$in' : [True,False] }
-                else:
-                    trashed = (trashed.lower() == 'true')
             print(image_id)
             if image_id:
                 if image_id == 'list':
-                    objs = yield self.settings['db'].images.find({'trashed':trashed}).to_list(None)
+                    objs = yield self.settings['db'].images.find().to_list(None)
                     self.set_status(200)
                     self.finish(self.json_encode({'status':'success','data':self.list(objs)}))
                 else:
                     # return a specific image accepting as id the integer id, hash and name
-                    query = self.query_id(image_id,trashed)
+                    query = self.query_id(image_id)
                     print(query)
                     objs = yield self.settings['db'].images.find_one(query)
                     if objs:
@@ -116,7 +97,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                         self.finish(self.json_encode({'status':'error','message':'not found'}))
             else:
                 # return a list of images
-                objs = yield self.settings['db'].images.find({'trashed':trashed}).to_list(None)
+                objs = yield self.settings['db'].images.find().to_list(None)
                 output = list()
                 for x in objs:
                     obj = dict(x)
@@ -190,7 +171,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                 newobj[field] = self.input_data[field]
         print(newobj)
         imgsetid = self.input_data['image_set_id']
-        isexists = yield self.settings['db'].imagesets.find_one({'iid':imgsetid,'trashed':False})
+        isexists = yield self.settings['db'].imagesets.find_one({'iid':imgsetid})
         if isexists:
             newobj['image_set_iid'] = imgsetid
             del newobj['image_set_id']
@@ -246,10 +227,10 @@ class ImagesHandler(BaseHandler, ProcessMixin):
         # parse data recept by PUT and get only fields of the object
         update_data = self.parseInput(Image)
         fields_allowed_to_be_update = ['image_set_id',
-        'is_public','image_type','trashed']
+        'is_public','image_type']
         if 'image_set_id' in self.input_data.keys():
             imgiid = self.input_data['image_set_id']
-            imgset = yield self.settings['db'].imagesets.find_one({'iid':imgiid,'trashed':False})
+            imgset = yield self.settings['db'].imagesets.find_one({'iid':imgiid})
             if imgset:
                 update_data['image_set_id'] = imgiid
             else:
@@ -263,8 +244,6 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                 break
         if image_id and update_ok:
             query = self.query_id(image_id)
-            if 'trashed' in update_data.keys():
-                del query['trashed']
             updobj = yield self.settings['db'].images.find_one(query)
             updurl = False
             if updobj:
@@ -287,7 +266,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                         if not self.s3con:
                             self.dropError(500,'Fail to connect to S3')
                             return
-                        oldimgset = yield self.settings['db'].imagesets.find_one({'iid':orig_imgset_id,'trashed':False})
+                        oldimgset = yield self.settings['db'].imagesets.find_one({'iid':orig_imgset_id})
                         srcurl = self.settings['S3_FOLDER'] + '/imageset_'+str(oldimgset['iid'])+'_'+str(oldimgset['_id'])+'/'
                         srcurl = srcurl + updobj['created_at'].date().isoformat() + '_image_'+str(updobj['iid'])+'_'+str(updobj['_id'])
                         desurl = self.settings['S3_FOLDER'] + '/' + url
@@ -343,10 +322,8 @@ class ImagesHandler(BaseHandler, ProcessMixin):
     @api_authenticated
     def delete(self, image_id=None):
         # delete an image
-        purge = self.get_argument('purge',None)
         if image_id:
             query = self.query_id(image_id)
-            query['trashed'] = {'$in':[False,True]}
             updobj = yield self.settings['db'].images.find_one(query)
             if updobj:
                 # check for references
@@ -354,28 +331,28 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                 iid = updobj['image_set_iid']
                 try:
                     print(updobj)
-                    if not purge:
-                        delobj = yield self.settings['db'].images.update(query,{'$set':{'trashed':True,'updated_at':datetime.now()}})
-                        self.setSuccess(200,'image successfully deleted')
-                    else:
-                        delobj = yield self.settings['db'].images.remove(query)
-                        # Purge was activated, so delete everything
-                        # Delete the source file
-                        bkpcopy = self.settings['S3_FOLDER']+'/backup/'+updobj['created_at'].date().isoformat() + '_image_'+str(updobj['iid'])+'_'+str(updobj['_id'])+'_full.jpg'
-                        imgset = yield self.settings['db'].imagesets.find_one({'iid':updobj['image_set_iid']})
-                        srcurl = self.settings['S3_FOLDER'] + '/imageset_'+str(imgset['iid'])+'_'+str(imgset['_id'])+'/'
-                        srcurl = srcurl + updobj['created_at'].date().isoformat() + '_image_'+str(updobj['iid'])+'_'+str(updobj['_id'])
-                        try:
-                            self.s3con.delete(bkpcopy,self.settings['S3_BUCKET'])
-                        except:
-                            pass
-                        try:
-                            for suf in ['_full.jpg','_icon.jpg','_medium.jpg','_thumbnail.jpg']:
-                                self.s3con.delete(srcurl+suf,self.settings['S3_BUCKET'])
-                        except Exception, e:
-                            self.setSuccess(200,'image successfully deleted but can\'t remove files from S3. Errors: '+str(e))
-                            return
-                        self.setSuccess(200,'image successfully deleted and purged')
+                    delobj = yield self.settings['db'].images.remove(query)
+                    # Purge was activated, so delete everything
+                    # Delete the source file
+                    bkpcopy = self.settings['S3_FOLDER']+'/backup/'+updobj['created_at'].date().isoformat() + '_image_'+str(updobj['iid'])+'_'+str(updobj['_id'])+'_full.jpg'
+                    imgset = yield self.settings['db'].imagesets.find_one({'iid':updobj['image_set_iid']})
+                    srcurl = self.settings['S3_FOLDER'] + '/imageset_'+str(imgset['iid'])+'_'+str(imgset['_id'])+'/'
+                    srcurl = srcurl + updobj['created_at'].date().isoformat() + '_image_'+str(updobj['iid'])+'_'+str(updobj['_id'])
+                    #try:
+                    #    self.s3con.delete(bkpcopy,self.settings['S3_BUCKET'])
+                    #except:
+                    #    pass
+                    rmlist = list()
+                    try:
+                        for suf in ['_full.jpg','_icon.jpg','_medium.jpg','_thumbnail.jpg']:
+                            #self.s3con.delete(srcurl+suf,self.settings['S3_BUCKET'])
+                            rmlist.append(srcurl+suf)
+                    except Exception, e:
+                        self.setSuccess(200,'image successfully deleted but can\'t remove files from S3. Errors: '+str(e))
+                        return
+                    if len(rmlist):
+                        rmladd = yield self.settings['db'].dellist.insert({'list':rmlist,'ts':datetime.now()})
+                    self.setSuccess(200,'image successfully deleted and purged')
                 except Exception,e:
                     self.dropError(500,'fail to delete image. Errors: '+str(e))
             else:
