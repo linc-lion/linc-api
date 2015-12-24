@@ -360,7 +360,8 @@ class AnimalsHandler(BaseHandler):
                     except Exception, e:
                         self.setSuccess(500,'Fail to delete image in S3. Errors: '+str(e))
                         return
-                rmladd = yield self.settings['db'].dellist.insert({'list':rmlist,'ts':datetime.now()})
+                if len(rmlist) > 0:
+                    rmladd = yield self.settings['db'].dellist.insert({'list':rmlist,'ts':datetime.now()})
                 rmved = yield self.settings['db'].images.remove({'image_set_iid':rem_pis},multi=True)
                 print rmved
                 # 4 - Removing association

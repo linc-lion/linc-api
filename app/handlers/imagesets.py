@@ -488,10 +488,6 @@ class ImageSetsHandler(BaseHandler):
     @coroutine
     @api_authenticated
     def delete(self, imageset_id=None):
-        self.s3con = self.initS3()
-        if not self.s3con:
-            self.dropError(500,'Unable to connect in S3.')
-            return
         # delete an imageset
         if imageset_id:
             query = self.query_id(imageset_id)
@@ -503,16 +499,19 @@ class ImageSetsHandler(BaseHandler):
                 print rmved
                 # 2 - Remove images of the image set
                 imgl = yield self.settings['db'].images.find({'image_set_iid':imgobj['iid']}).to_list(None)
+                rmlist = list()
                 for img in imgl:
                     # Delete the source file
                     srcurl = self.settings['S3_FOLDER'] + '/imageset_'+str(imgobj['iid'])+'_'+str(imgobj['_id'])+'/'
                     srcurl = srcurl + img['created_at'].date().isoformat() + '_image_'+str(img['iid'])+'_'+str(img['_id'])
                     try:
                         for suf in ['_full.jpg','_icon.jpg','_medium.jpg','_thumbnail.jpg']:
-                            self.s3con.delete(srcurl+suf,self.settings['S3_BUCKET'])
+                            rmlist.append(srcurl+suf)
                     except Exception, e:
                         self.setSuccess(500,'Fail to delete image in S3. Errors: '+str(e))
                         return
+                if len(rmlist) > 0:
+                    rmladd = yield self.settings['db'].dellist.insert({'list':rmlist,'ts':datetime.now()})
                 rmved = yield self.settings['db'].images.remove({'image_set_iid':imgobj['iid']},multi=True)
                 print rmved
                 # 3 - Removing cvrequests and cvresults

@@ -216,21 +216,15 @@ class UsersHandler(BaseHandler):
             query = self.query_id(user_id)
             updobj = yield self.settings['db'].users.find_one(query)
             if updobj:
-                # check for references
-                refcount = 0
                 iid = updobj['iid']
                 # imageset - uploading_user_iid
-                imgsetrc = yield self.settings['db'].imagesets.find({'uploading_user_iid':iid,'trashed':False}).count()
-                info('Checking references in imagesets:' + str(imgsetrc))
-                refcount += imgsetrc
-                if refcount > 0:
-                    self.dropError(417,"the user can't be deleted because it has references in the database.")
-                else:
-                    try:
-                        updobj = yield self.settings['db'].users.update(query,{'$set':{'trashed':True,'updated_at':datetime.now()}})
-                        self.setSuccess(200,'user successfully deleted')
-                    except:
-                        self.dropError(500,'fail to delete user')
+                # Imagesets now will be uploaded by the admin iid
+                imgsetrc = yield self.settings['db'].imagesets.update({'uploading_user_iid':iid},{'$set':{'uploading_user_iid':self.current_user['id']}},multi=True)
+                try:
+                    updobj = yield self.settings['db'].users.remove(query)
+                    self.setSuccess(200,'user successfully deleted')
+                except:
+                    self.dropError(500,'fail to delete user')
             else:
                 self.dropError(404,'user not found')
         else:
