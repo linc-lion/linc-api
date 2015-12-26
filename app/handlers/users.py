@@ -15,7 +15,7 @@ class UsersHandler(BaseHandler):
     """A class that handles requests about users informartion
     """
 
-    def query_id(self,user_id,trashed=False):
+    def query_id(self,user_id):
         """This method configures the query that will find an object"""
         try:
             query = { 'iid' : int(user_id) }
@@ -24,23 +24,16 @@ class UsersHandler(BaseHandler):
                 query = { '_id' : ObjId(user_id) }
             except:
                 query = { 'email' : user_id}
-        query['trashed'] = trashed
         return query
 
     @asynchronous
     @coroutine
     @api_authenticated
     def get(self, user_id=None):
-        trashed = self.get_argument('trashed',False)
-        if trashed:
-            if trashed == '*':
-                trashed = { '$in' : [True,False] }
-            else:
-                trashed = (trashed.lower() == 'true')
         if user_id:
             if user_id == 'list':
-                objs = yield self.settings['db'].users.find({'trashed':trashed}).to_list(None)
-                orgs = yield self.settings['db'].organizations.find({'trashed':trashed}).to_list(None)
+                objs = yield self.settings['db'].users.find().to_list(None)
+                orgs = yield self.settings['db'].organizations.find().to_list(None)
                 orgnames = dict()
                 for org in orgs:
                     orgnames[org['iid']] = org['name']
@@ -49,8 +42,8 @@ class UsersHandler(BaseHandler):
                 self.set_status(200)
                 self.finish(self.json_encode({'status':'success','data':self.list(objs,orgnames)}))
             elif user_id == 'conservationists':
-                orgs = yield self.settings['db'].organizations.find({'trashed':False}).to_list(None)
-                users = yield self.settings['db'].users.find({'trashed':False}).to_list(None)
+                orgs = yield self.settings['db'].organizations.find().to_list(None)
+                users = yield self.settings['db'].users.find().to_list(None)
                 orglist = dict()
                 for org in orgs:
                     if org['name'] not in orglist.keys():
@@ -67,9 +60,8 @@ class UsersHandler(BaseHandler):
                 self.setSuccess(200,'Ok, works',orglist)
             else:
                 # return a specific user accepting as id the integer id, hash and name
-                query = self.query_id(user_id,trashed)
+                query = self.query_id(user_id)
                 objs = yield self.settings['db'].users.find_one(query)
-                #yield User.objects.filter(**query).limit(1).find_all()
                 if objs:
                     objuser = objs
                     objuser['obj_id'] = str(objs['_id'])
@@ -87,7 +79,7 @@ class UsersHandler(BaseHandler):
         else:
             # return a list of users
             #objs = yield User.objects.find_all()
-            objs = yield self.settings['db'].users.find({'trashed':trashed}).to_list(None)
+            objs = yield self.settings['db'].users.find().to_list(None)
             output = list()
             for x in objs:
                 obj = dict(x)
@@ -114,7 +106,7 @@ class UsersHandler(BaseHandler):
         # encrypt password
         newobj['encrypted_password'] = self.encryptPassword(self.input_data['password'].encode('utf-8'))
         orgiid = self.input_data['organization_id']
-        orgexists = yield self.settings['db'].organizations.find_one({'iid':orgiid,'trashed':False})
+        orgexists = yield self.settings['db'].organizations.find_one({'iid':orgiid})
         if orgexists:
             newobj['organization_iid'] = orgiid
         else:
@@ -148,10 +140,10 @@ class UsersHandler(BaseHandler):
         # update an user
         # parse data recept by PUT and get only fields of the object
         update_data = self.parseInput(User)
-        fields_allowed_to_be_update = ['email','trashed','organization_iid','admin','password']
+        fields_allowed_to_be_update = ['email','organization_iid','admin','password']
         if 'organization_id' in self.input_data.keys():
             orgiid = self.input_data['organization_id']
-            orgexists = yield self.settings['db'].organizations.find_one({'iid':orgiid,'trashed':False})
+            orgexists = yield self.settings['db'].organizations.find_one({'iid':orgiid})
             if orgexists:
                 update_data['organization_iid'] = orgiid
             else:
@@ -165,10 +157,7 @@ class UsersHandler(BaseHandler):
                 break
         if user_id and update_ok:
             query = self.query_id(user_id)
-            if 'trashed' in update_data.keys():
-                del query['trashed']
             updobj = yield self.settings['db'].users.find_one(query)
-            #User.objects.filter(**query).limit(1).find_all()
             if updobj:
                 for field in fields_allowed_to_be_update:
                     if field in update_data.keys():
@@ -219,7 +208,7 @@ class UsersHandler(BaseHandler):
                 iid = updobj['iid']
                 # imageset - uploading_user_iid
                 # Imagesets now will be uploaded by the admin iid
-                imgsetrc = yield self.settings['db'].imagesets.update({'uploading_user_iid':iid},{'$set':{'uploading_user_iid':self.current_user['id']}},multi=True)
+                imgsetrc = yield self.settings['db'].imagesets.update({'uploading_user_iid':iid},{'$set':{'uploading_user_iid':self.current_user['id'],'updated_at':datetime.now()}},multi=True)
                 try:
                     updobj = yield self.settings['db'].users.remove(query)
                     self.setSuccess(200,'user successfully deleted')

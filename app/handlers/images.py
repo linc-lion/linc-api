@@ -332,7 +332,6 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                 try:
                     print(updobj)
                     delobj = yield self.settings['db'].images.remove(query)
-                    # Purge was activated, so delete everything
                     # Delete the source file
                     bkpcopy = self.settings['S3_FOLDER']+'/backup/'+updobj['created_at'].date().isoformat() + '_image_'+str(updobj['iid'])+'_'+str(updobj['_id'])+'_full.jpg'
                     imgset = yield self.settings['db'].imagesets.find_one({'iid':updobj['image_set_iid']})
@@ -352,11 +351,11 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                         return
                     if len(rmlist):
                         rmladd = yield self.settings['db'].dellist.insert({'list':rmlist,'ts':datetime.now()})
-                    self.setSuccess(200,'image successfully deleted and purged')
+                    self.setSuccess(200,'Image successfully deleted.')
                 except Exception,e:
-                    self.dropError(500,'fail to delete image. Errors: '+str(e))
+                    self.dropError(500,'Fail to delete image. Errors: '+str(e))
             else:
-                self.dropError(404,'image not found')
+                self.dropError(404,'Image not found')
         else:
             self.dropError(400,'Remove requests (DELETE) must have a resource ID.')
 

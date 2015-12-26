@@ -18,7 +18,7 @@ class AnimalsHandler(BaseHandler):
     """A class that handles requests about animals informartion
     """
 
-    def query_id(self,animal_id,trashed=False):
+    def query_id(self,animal_id):
         """This method configures the query that will find an object"""
         try:
             query = { 'iid' : int(animal_id) }
@@ -27,19 +27,12 @@ class AnimalsHandler(BaseHandler):
                 query = { '_id' : ObjId(animal_id) }
             except:
                 query = { 'name' : animal_id}
-        query['trashed'] = trashed
         return query
 
     @asynchronous
     @coroutine
     def get(self, animal_id=None, xurl=None):
         apiout = self.get_argument('api',None)
-        trashed = self.get_argument('trashed',False)
-        if trashed:
-            if trashed == '*':
-                trashed = { '$in' : [True,False] }
-            else:
-                trashed = (trashed.lower() == 'true')
         noimages = self.get_argument('no_images','')
         if noimages.lower() == 'true':
             noimages = True
@@ -47,17 +40,17 @@ class AnimalsHandler(BaseHandler):
             noimages = False
         if animal_id:
             if animal_id == 'list':
-                objs = yield self.settings['db'][self.settings['animals']].find({'trashed':trashed}).to_list(None)
-                orgs = yield self.settings['db'].organizations.find({'trashed':trashed}).to_list(None)
+                objs = yield self.settings['db'][self.settings['animals']].find().to_list(None)
+                orgs = yield self.settings['db'].organizations.find().to_list(None)
                 orgnames = dict()
                 for org in orgs:
                     orgnames[org['iid']] = org['name']
                 self.set_status(200)
-                output = yield Task(self.list,objs,orgnames,trashed)
+                output = yield Task(self.list,objs,orgnames)
                 self.finish(self.json_encode({'status':'success','data':output}))
             elif animal_id and xurl == 'profile':
                 # show profile page data for the website
-                query = self.query_id(animal_id,trashed)
+                query = self.query_id(animal_id)
                 objanimal = yield self.settings['db'][self.settings['animals']].find_one(query)
                 if objanimal:
                     output = objanimal
@@ -141,7 +134,7 @@ class AnimalsHandler(BaseHandler):
                 return
             else:
                 # return a specific animal accepting as id the integer id, hash and name
-                query = self.query_id(animal_id,trashed)
+                query = self.query_id(animal_id)
                 objs = yield self.settings['db'][self.settings['animals']].find_one(query)
                 if objs:
                     if apiout:
@@ -154,7 +147,7 @@ class AnimalsHandler(BaseHandler):
                         objanimal['primary_image_set_id'] = objanimal['primary_image_set_iid']
                         del objanimal['primary_image_set_iid']
                     else:
-                        objanimal = yield Task(self.prepareOutput,objs,trashed,noimages)
+                        objanimal = yield Task(self.prepareOutput,objs,noimages)
                     self.set_status(200)
                     self.finish(self.json_encode(objanimal))
                 else:
@@ -162,7 +155,7 @@ class AnimalsHandler(BaseHandler):
                     self.finish(self.json_encode({'status':'error','message':'not found'}))
         else:
             # return a list of animals
-            queryfilter = {'trashed':trashed }
+            queryfilter = dict()
             filtersaccepted = ['gender','organization_id','dob_start','dob_end']
             for k,v in self.request.arguments.items():
                 if k in filtersaccepted:
@@ -182,13 +175,10 @@ class AnimalsHandler(BaseHandler):
             except:
                 self.dropError(400,'invalid value for dob_start/dob_end')
                 return
-            if not trashed:
-                objs = yield self.settings['db'].imagesets.find(queryfilter).to_list(None)
-                iids = [x['animal_iid'] for x in objs]
-                iids = list(set(iids))
-                objs = yield self.settings['db'][self.settings['animals']].find({'iid': { '$in' : iids }}).to_list(None)
-            else:
-                objs = yield self.settings['db'][self.settings['animals']].find(queryfilter).to_list(None)
+            objs = yield self.settings['db'].imagesets.find(queryfilter).to_list(None)
+            iids = [x['animal_iid'] for x in objs]
+            iids = list(set(iids))
+            objs = yield self.settings['db'][self.settings['animals']].find({'iid': { '$in' : iids }}).to_list(None)
             output = list()
             for x in objs:
                 if apiout:
@@ -201,7 +191,7 @@ class AnimalsHandler(BaseHandler):
                     del obj['primary_image_set_iid']
                     self.switch_iid(obj)
                 else:
-                    obj = yield Task(self.prepareOutput,x,trashed,noimages)
+                    obj = yield Task(self.prepareOutput,x,noimages)
                 output.append(obj)
             self.set_status(200)
             if apiout:
@@ -225,11 +215,11 @@ class AnimalsHandler(BaseHandler):
             'name' in self.input_data.keys():
             newobj['organization_iid'] = self.input_data['organization_id']
             newobj['primary_image_set_iid'] = self.input_data['primary_image_set_id']
-            check_org = yield self.settings['db'].organizations.find_one({'iid':newobj['organization_iid'],'trashed':False})
+            check_org = yield self.settings['db'].organizations.find_one({'iid':newobj['organization_iid']})
             if not check_org:
                 self.dropError(409,'invalid organization_id')
                 return
-            check_imageset = yield self.settings['db'].imagesets.find_one({'iid':newobj['primary_image_set_iid'],'trashed':False})
+            check_imageset = yield self.settings['db'].imagesets.find_one({'iid':newobj['primary_image_set_iid']})
             if not check_imageset:
                 self.dropError(409,'invalid primary_image_set_id')
                 return
@@ -264,18 +254,18 @@ class AnimalsHandler(BaseHandler):
         # update an animal
         # parse data recept by PUT and get only fields of the object
         update_data = self.parseInput(Animal)
-        fields_allowed_to_be_update = ['name','trashed','organization_iid','primary_image_set_iid']
+        fields_allowed_to_be_update = ['name','organization_iid','primary_image_set_iid']
         if 'organization_id' in self.input_data.keys():
             update_data['organization_iid'] = self.input_data['organization_id']
             del self.input_data['organization_id']
-            check_org = yield self.settings['db'].organizations.find_one({'iid':update_data['organization_iid'],'trashed':False})
+            check_org = yield self.settings['db'].organizations.find_one({'iid':update_data['organization_iid']})
             if not check_org:
                 self.dropError(409,'invalid organization_id')
                 return
         if 'primary_image_set_id' in self.input_data.keys():
             update_data['primary_image_set_iid'] = self.input_data['primary_image_set_id']
             del self.input_data['primary_image_set_id']
-            check_imageset = yield self.settings['db'].imagesets.find_one({'iid':update_data['primary_image_set_iid'],'trashed':False})
+            check_imageset = yield self.settings['db'].imagesets.find_one({'iid':update_data['primary_image_set_iid']})
             if not check_imageset:
                 self.dropError(409,'invalid primary_image_set_id')
                 return
@@ -287,8 +277,6 @@ class AnimalsHandler(BaseHandler):
                 break
         if animal_id and update_ok:
             query = self.query_id(animal_id)
-            if 'trashed' in update_data.keys():
-                del query['trashed']
             updobj = yield self.settings['db'][self.settings['animals']].find_one(query)
             if updobj:
                 for field in fields_allowed_to_be_update:
@@ -332,7 +320,6 @@ class AnimalsHandler(BaseHandler):
         # delete an animal
         if animal_id:
             query = self.query_id(animal_id)
-            query['trashed'] = {'$in':[True,False]}
             animobj = yield self.settings['db'][self.settings['animals']].find_one(query)
             if animobj:
                 rem_iid = animobj['iid']
@@ -389,7 +376,7 @@ class AnimalsHandler(BaseHandler):
 
     @asynchronous
     @engine
-    def list(self,objs,orgnames,trashed=False,callback=None):
+    def list(self,objs,orgnames,callback=None):
         """ Implements the list output used for UI in the website
         """
         output = list()
@@ -421,7 +408,7 @@ class AnimalsHandler(BaseHandler):
                         obj['tags'] = None
                     obj['gender'] = imgset['gender']
                     obj['is_verified'] = imgset['is_verified']
-                    img = yield self.settings['db'].images.find_one({'iid':imgset['main_image_iid'],'trashed':trashed})
+                    img = yield self.settings['db'].images.find_one({'iid':imgset['main_image_iid']})
                     if img:
                         obj['thumbnail'] = self.settings['S3_URL']+img['url']+'_icon.jpg'
                         obj['image'] = self.settings['S3_URL']+img['url']+'_medium.jpg'
@@ -430,14 +417,14 @@ class AnimalsHandler(BaseHandler):
 
     @asynchronous
     @engine
-    def prepareOutput(self,objs,trashed=False,noimages=False,callback=None):
+    def prepareOutput(self,objs,noimages=False,callback=None):
         objanimal = dict()
         objanimal['id'] = objs['iid']
         objanimal['name'] = objs['name']
         objanimal['organization_id'] = objs['organization_iid']
         objanimal['primary_image_set_id'] = objs['primary_image_set_iid']
         # Get imagesets for the animal
-        imgsets = yield self.settings['db'].imagesets.find({'animal_iid':objanimal['id'],'trashed':trashed}).to_list(None)
+        imgsets = yield self.settings['db'].imagesets.find({'animal_iid':objanimal['id']}).to_list(None)
         imgsets_output = list()
         for oimgst in imgsets:
             obj = dict()
@@ -471,7 +458,7 @@ class AnimalsHandler(BaseHandler):
                 obj['has_cv_request'] = False
                 obj['has_cv_result'] = False
             if not noimages:
-                images = yield self.settings['db'].images.find({'image_set_iid':oimgst['iid'],'trashed':trashed}).to_list(None)
+                images = yield self.settings['db'].images.find({'image_set_iid':oimgst['iid']}).to_list(None)
                 outimages = list()
                 for image in images:
                     obji = dict()

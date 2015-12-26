@@ -12,7 +12,6 @@ class Animal(Model):
     created_at = DateTimeType(required=True,default=datetime.now())
     updated_at = DateTimeType(required=True,default=datetime.now())
     primary_image_set_iid = IntType(required=False,default=-1)
-    trashed = BooleanType(required=True,default=False)
 
     @classmethod
     def collection(self,name=None):

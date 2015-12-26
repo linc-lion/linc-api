@@ -20,7 +20,7 @@ class ImageSetsHandler(BaseHandler):
     """A class that handles requests about image sets informartion
     """
 
-    def query_id(self,imageset_id,trashed=False):
+    def query_id(self,imageset_id):
         """This method configures the query that will find an object"""
         try:
             query = { 'iid' : int(imageset_id) }
@@ -30,7 +30,6 @@ class ImageSetsHandler(BaseHandler):
             except:
                 self.dropError(400,'invalid id key')
                 return
-        query['trashed'] = trashed
         return query
 
     @asynchronous
@@ -40,19 +39,13 @@ class ImageSetsHandler(BaseHandler):
         if param == 'cvrequest':
             self.dropError(400,'to request cv identification you must use POST method')
             return
-        trashed = self.get_argument('trashed',False)
-        if trashed:
-            if trashed == '*':
-                trashed = { '$in' : [True,False] }
-            else:
-                trashed = (trashed.lower() == 'true')
         if imageset_id == 'list':
             # Show a list for the website
             # Get imagesets from the DB
-            output = yield Task(self.list,trashed)
+            output = yield Task(self.list)
             self.setSuccess(200,'imagesets list',output)
         elif imageset_id and param == 'profile':
-            query = self.query_id(imageset_id,trashed)
+            query = self.query_id(imageset_id)
             imgset = yield self.settings['db'].imagesets.find_one(query)
             if imgset:
                 imgprim = yield self.settings['db'][self.settings['animals']].find({},{'primary_image_set_iid':1}).to_list(None)
@@ -141,10 +134,10 @@ class ImageSetsHandler(BaseHandler):
                 self.dropError(404,'imageset not found')
                 return
         elif imageset_id and param == 'gallery':
-            query = self.query_id(imageset_id,trashed)
+            query = self.query_id(imageset_id)
             objimgset = yield self.settings['db'].imagesets.find_one(query)
             if objimgset:
-                images = yield self.settings['db'].images.find({'image_set_iid':objimgset['iid'],'trashed':trashed}).to_list(None)
+                images = yield self.settings['db'].images.find({'image_set_iid':objimgset['iid']}).to_list(None)
                 output = dict()
                 output['id'] = imageset_id
                 cover = objimgset['main_image_iid']
@@ -161,10 +154,10 @@ class ImageSetsHandler(BaseHandler):
             return
         else:
             if imageset_id:
-                query = self.query_id(imageset_id,trashed)
+                query = self.query_id(imageset_id)
                 objimgsets = yield self.settings['db'].imagesets.find(query).to_list(None)
             else:
-                objimgsets = yield self.settings['db'].imagesets.find({'trashed':trashed}).to_list(None)
+                objimgsets = yield self.settings['db'].imagesets.find().to_list(None)
             if len(objimgsets) > 0:
                 loutput = list()
                 for objimgset in objimgsets:
@@ -211,7 +204,6 @@ class ImageSetsHandler(BaseHandler):
             dt = datetime.now()
             newobj['created_at'] = dt
             newobj['updated_at'] = dt
-            newobj['trashed'] = False
             # validate the input
             fields_needed = ['uploading_user_id','uploading_organization_id','owner_organization_id',
                              'is_verified','gender','date_of_birth',
@@ -237,7 +229,7 @@ class ImageSetsHandler(BaseHandler):
                     return
             # check if user exists
             useriid = self.input_data['uploading_user_id']
-            userexists = yield self.settings['db'].users.find_one({'iid':useriid,'trashed':False})
+            userexists = yield self.settings['db'].users.find_one({'iid':useriid})
             if userexists:
                 newobj['uploading_user_iid'] = useriid
             else:
@@ -245,14 +237,14 @@ class ImageSetsHandler(BaseHandler):
                 return
             # check if organizations exists
             orgiid = self.input_data['uploading_organization_id']
-            orgexists = yield self.settings['db'].organizations.find_one({'iid':orgiid,'trashed':False})
+            orgexists = yield self.settings['db'].organizations.find_one({'iid':orgiid})
             if orgexists:
                 newobj['uploading_organization_iid'] = orgiid
             else:
                 self.dropError(409,"uploading organization id referenced doesn't exist")
                 return
             oorgiid = self.input_data['owner_organization_id']
-            oorgexists = yield self.settings['db'].organizations.find_one({'iid':oorgiid,'trashed':False})
+            oorgexists = yield self.settings['db'].organizations.find_one({'iid':oorgiid})
             if oorgexists['iid'] == orgiid:
                 newobj['owner_organization_iid'] = oorgiid
             else:
@@ -370,7 +362,6 @@ class ImageSetsHandler(BaseHandler):
         if imageset_id:
             # getting the object
             query = self.query_id(imageset_id)
-            del query['trashed']
             objimgset = yield self.settings['db'].imagesets.find_one(query)
             if objimgset:
                 dt = datetime.now()
@@ -378,7 +369,7 @@ class ImageSetsHandler(BaseHandler):
                 # validate the input
                 fields_allowed = ['uploading_user_id','uploading_organization_id','owner_organization_id',
                                  'is_verified','latitude','longitude','gender','date_of_birth',
-                                 'tags','date_stamp','notes',self.settings['animal']+'_id','main_image_id','trashed']
+                                 'tags','date_stamp','notes',self.settings['animal']+'_id','main_image_id']
                 update_data = dict()
                 for k,v in self.input_data.items():
                     if k in fields_allowed:
@@ -423,30 +414,27 @@ class ImageSetsHandler(BaseHandler):
                             else:
                                 objimgset['location'] = None
                             continue
-                        elif field == 'trashed':
-                            objimgset['trashed'] = update_data[field]
-                            continue
                         objimgset[field] = update_data[field]
 
                 # check if user exists
                 useriid = objimgset['uploading_user_iid']
-                userexists = yield self.settings['db'].users.find_one({'iid':useriid,'trashed':False})
+                userexists = yield self.settings['db'].users.find_one({'iid':useriid})
                 if not userexists:
                     self.dropError(409,"uploading user id referenced doesn't exist")
                     return
                 # check if organizations exists
                 orgiid = objimgset['uploading_organization_iid']
-                orgexists = yield self.settings['db'].organizations.find_one({'iid':orgiid,'trashed':False})
+                orgexists = yield self.settings['db'].organizations.find_one({'iid':orgiid})
                 if not orgexists:
                     self.dropError(409,"uploading organization id referenced doesn't exist")
                     return
                 oorgiid = objimgset['owner_organization_iid']
-                oorgexists = yield self.settings['db'].organizations.find_one({'iid':oorgiid,'trashed':False})
+                oorgexists = yield self.settings['db'].organizations.find_one({'iid':oorgiid})
                 if oorgexists['iid'] != oorgiid:
                     self.dropError(409,"owner organization id referenced doesn't exist")
                     return
                 if objimgset['animal_iid']:
-                    aniexists = yield self.settings['db'][self.settings['animals']].find_one({'iid':objimgset['animal_iid'],'trashed':False})
+                    aniexists = yield self.settings['db'][self.settings['animals']].find_one({'iid':objimgset['animal_iid']})
                     if aniexists['iid'] != objimgset['animal_iid']:
                         self.dropError(409,'the '+self.settings['animal']+" id sent doesn't exist")
                         return
@@ -491,7 +479,6 @@ class ImageSetsHandler(BaseHandler):
         # delete an imageset
         if imageset_id:
             query = self.query_id(imageset_id)
-            query['trashed'] = {'$in':[True,False]}
             imgobj = yield self.settings['db'].imagesets.find_one(query)
             if imgobj:
                 # 1 - Remove imaget set
@@ -530,9 +517,9 @@ class ImageSetsHandler(BaseHandler):
 
     @asynchronous
     @engine
-    def list(self,trashed,callback=None):
-        objs_imgsets = yield self.settings['db'].imagesets.find({'trashed':trashed}).to_list(None)
-        animals = yield self.settings['db'][self.settings['animals']].find({'trashed':trashed}).to_list(None)
+    def list(self,callback=None):
+        objs_imgsets = yield self.settings['db'].imagesets.find().to_list(None)
+        animals = yield self.settings['db'][self.settings['animals']].find().to_list(None)
         primary_imgsets_list = list()
         animals_names = dict()
         for x in animals:
@@ -557,7 +544,7 @@ class ImageSetsHandler(BaseHandler):
                 imgset_obj['thumbnail'] = self.settings['S3_URL']+obji['url']+'_icon.jpg'
                 imgset_obj['image'] = self.settings['S3_URL']+obji['url']+'_medium.jpg'
             else:
-                obji = yield self.settings['db'].images.find({'image_set_iid':obj['iid'],'trashed':trashed}).to_list(None)
+                obji = yield self.settings['db'].images.find({'image_set_iid':obj['iid']}).to_list(None)
                 if len(obji) > 0:
                     imgset_obj['thumbnail'] = self.settings['S3_URL']+obji[0]['url']+'_icon.jpg'
                     imgset_obj['image'] = self.settings['S3_URL']+obji[0]['url']+'_medium.jpg'
@@ -581,7 +568,7 @@ class ImageSetsHandler(BaseHandler):
                 imgset_obj['tags'] = None
 
             if obj['owner_organization_iid']:
-                objo = yield self.settings['db'].organizations.find_one({'iid':obj['owner_organization_iid'],'trashed':trashed})
+                objo = yield self.settings['db'].organizations.find_one({'iid':obj['owner_organization_iid']})
                 if objo:
                     imgset_obj['organization'] = objo['name']
                     imgset_obj['organization_id'] = obj['owner_organization_iid']

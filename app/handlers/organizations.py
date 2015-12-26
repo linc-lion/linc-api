@@ -15,7 +15,7 @@ from logging import info
 class OrganizationsHandler(BaseHandler):
     """A class that handles requests about organizations informartion"""
 
-    def query_id(self,org_id,trashed=False):
+    def query_id(self,org_id):
         """This method configures the query that will find an object"""
         try:
             query = { 'iid' : int(org_id) }
@@ -24,31 +24,24 @@ class OrganizationsHandler(BaseHandler):
                 query = { '_id' : ObjId(org_id) }
             except:
                 query = { 'name' : org_id}
-        query['trashed'] = trashed
         return query
 
     @asynchronous
     @coroutine
     @api_authenticated
     def get(self, org_id=None):
-        trashed = self.get_argument('trashed',False)
-        if trashed:
-            if trashed == '*':
-                trashed = { '$in' : [True,False] }
-            else:
-                trashed = (trashed.lower() == 'true')
         if org_id:
             if org_id == 'list':
                 # return a list of organizations for the website
                 # ORM way
                 #objs = yield Organization.objects.find_all()
                 # Motor way
-                objs = yield self.settings['db'].organizations.find({'trashed':trashed}).to_list(None)
+                objs = yield self.settings['db'].organizations.find().to_list(None)
                 self.set_status(200)
                 self.finish(self.json_encode({'status':'success','data':self.list(objs)}))
             else:
                 # return a specific organization accepting as id the integer id, hash and name
-                query = self.query_id(org_id,trashed)
+                query = self.query_id(org_id)
                 objs = yield self.settings['db'].organizations.find_one(query)
                 if objs:
                     objorg = objs
@@ -63,7 +56,7 @@ class OrganizationsHandler(BaseHandler):
                     self.finish(self.json_encode({'status':'error','message':'not found'}))
         else:
             # return a list of organizations
-            objs = yield self.settings['db'].organizations.find({'trashed':trashed}).to_list(None)
+            objs = yield self.settings['db'].organizations.find().to_list(None)
             output = list()
             for x in objs:
                 obj = dict(x)
@@ -111,7 +104,7 @@ class OrganizationsHandler(BaseHandler):
         # update an organization
         # parse data recept by PUT and get only fields of the object
         update_data = self.input_data
-        fields_allowed_to_be_update = ['name','trashed']
+        fields_allowed_to_be_update = ['name']
         # validate the input for update
         update_ok = False
         for k in fields_allowed_to_be_update:
@@ -120,26 +113,18 @@ class OrganizationsHandler(BaseHandler):
                 break
         if org_id and update_ok:
             query = self.query_id(org_id)
-            if 'trashed' in update_data.keys():
-                del query['trashed']
             updobj = yield self.settings['db'].organizations.find_one(query)
             if updobj:
                 updict = dict()
                 for field in fields_allowed_to_be_update:
                     if field in update_data.keys():
-                        #if isinstance(update_data[field],str):
-                        #    updict[field] =  "'" + str(update_data[field]) + "'"
-                        #else:
-                        #    updict[field] = str(update_data[field])
                         updict[field] = update_data[field]
-                if True:
-                #try:
+                try:
                     if updict:
                         updict['updated_at'] = datetime.now()
                         updid = updobj['_id']
                         # the object is valid, so try to save
-                        #try:
-                        if True:
+                        try:
                             saved = yield self.settings['db'].organizations.update({'_id':updid},{'$set' : updict})
                             output = updobj
                             output['obj_id'] = str(updid)
@@ -149,14 +134,12 @@ class OrganizationsHandler(BaseHandler):
                             # Change iid to id in the output
                             self.switch_iid(output)
                             self.finish(self.json_encode({'status':'success','message':'organization updated','data':output}))
-                        #except:
-                        else:
+                        except:
                             # duplicated index error
                             self.dropError(409,'duplicated name for an organization')
                     else:
                         self.dropError(400,'No data provided to be updated')
-                #except:
-                else:
+                except:
                     # received data is invalid in some way
                     self.dropError(400,'Invalid input data.')
             else:
@@ -177,15 +160,15 @@ class OrganizationsHandler(BaseHandler):
                 # check for references
                 iid = updobj['iid']
                 # user - organization_iid
-                userrc = yield self.settings['db'].users.update({'organization_iid':iid},{'$set':{'organization_iid':self.current_user['org_id']}},multi=True)
+                userrc = yield self.settings['db'].users.update({'organization_iid':iid},{'$set':{'organization_iid':self.current_user['org_id'],'updated_at':datetime.now()}},multi=True)
                 # imageset - uploading_organization_iid
                 # imageset - owner_organization_iid
-                imgsetrc1 = yield self.settings['db'].imagesets.update({'uploading_organization_iid':iid},{'$set':{'uploading_organization_iid':self.current_user['org_id']}},multi=True)
-                imgsetrc2 = yield self.settings['db'].imagesets.update({'owner_organization_iid':iid},{'$set':{'owner_organization_iid':self.current_user['org_id']}},multi=True)
+                imgsetrc1 = yield self.settings['db'].imagesets.update({'uploading_organization_iid':iid},{'$set':{'uploading_organization_iid':self.current_user['org_id'],'updated_at':datetime.now()}},multi=True)
+                imgsetrc2 = yield self.settings['db'].imagesets.update({'owner_organization_iid':iid},{'$set':{'owner_organization_iid':self.current_user['org_id'],'updated_at':datetime.now()}},multi=True)
                 # animal - organization_iid
-                animalsrc = yield self.settings['db'][self.settings['animals']].update({'organization_iid':iid},{'$set':{'organization_iid':self.current_user['org_id']}},multi=True)
+                animalsrc = yield self.settings['db'][self.settings['animals']].update({'organization_iid':iid},{'$set':{'organization_iid':self.current_user['org_id'],'updated_at':datetime.now()}},multi=True)
                 # cvrequest - uploading_organization_iid
-                cvreqrc = yield self.settings['db'].cvrequests.update({'requesting_organization_iid':iid},{'$set':{'requesting_organization_iid':self.current_user['org_id']}},multi=True)
+                cvreqrc = yield self.settings['db'].cvrequests.update({'requesting_organization_iid':iid},{'$set':{'requesting_organization_iid':self.current_user['org_id'],'updated_at':datetime.now()}},multi=True)
                 try:
                     updobj = yield self.settings['db'].organizations.remove(query)
                     self.setSuccess(200,'organization successfully deleted')

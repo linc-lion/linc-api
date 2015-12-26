@@ -23,7 +23,6 @@ class ImageSet(Model):
     tags = StringType(required=False,default='[]')
     date_stamp = StringType(required=False,default=None)
     notes = StringType(required=False)
-    trashed = BooleanType(required=True,default=False)
 
     @classmethod
     def collection(self,name=None):
@@ -48,7 +47,6 @@ class Image(Model):
     hashcheck = StringType(required=True,default='')
     created_at = DateTimeType(required=True,default=datetime.now())
     updated_at = DateTimeType(required=True,default=datetime.now())
-    trashed = BooleanType(required=True,default=False)
 
     @classmethod
     def collection(self,name=None):
