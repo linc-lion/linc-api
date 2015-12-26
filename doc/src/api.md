@@ -41,32 +41,17 @@ Motor was used to manage data between the API and MongoDB. Also, Schematics was 
 
 ## Folder Structure
 
-
-
-
+This item will describe the repo folder structure.
 
 ## EndPoints Concepts
 
+This item will describe endpoints concepts.
 
 ## Input and Output
 
 The LINC API is a JSON API, so all information sent and receipt should be have its content type as `application/json`. The development didn't follow any specific approach or standard proposed like [http://jsonapi.org/](http://jsonapi.org/).
 The decision was made to keep simple format in the input that is based in only mention keys that are included in the data model for the resource.
 An example is showed below.
-
-## organizations [/organizations]
-
-
-+ BODY:
-```
-{
-  "name" : "Name for the new organization"
-}
-```
-### Create a new organization [POST]
-
-+ Response 201 (application/json)
-
 
 ## Group Authentication
 
@@ -76,10 +61,27 @@ The CV Server implements basic authentication.
 curl -H 'Linc-Api-AuthToken: fRFsVWcaCU8RPWFFGA9BHW9HFmxoYUgbbVYEQjhCIkchRFEYH3kQYR0sLAkWExcpF094AXMFPhcVHxkLBgNZD1ULRiBKJGNGBh8-SgJLBydiRxApMSJVSywbbwNoNSs0MQptFT8FeUI0fx9IcA1sJ3IcFCMEUTdpJQczW2QyRT4VTxE1HzsmPQ09diVlP2kjbGslWANlbwEZDHEcbQIRHEZ5TFsMIBU1Ezo5DgFfP2UaGzpdKGQLV2IZaDYtAwVPI3cxPjhlc0dKHj1kPws8TSkTOhFhIHwDcR1RDC1EOUESFh8QWjJ0KB8cY1cRcRgbQjUVIDEkHlwEYH1GNRsYSV08bCdpMjk8K1I0WQ8DRVpzHBkhOk0NJB48CC4hH1h8ZxUcM2x7KRwDXDwRGSV5HEAWARxtVzRTMCYcYSBgGV9lVQcPfEw3Tn4QDQJOK0BtTWdRCUQXeTIWFgwQHjAVR2U4N0BeZF4EDi8ZNEssRQtTHX8WOB1iVQ1DGCQz' localhost:5000/images?trashed=*
 '''
 
+## Group Organizations resource CRUD
+
+### Create a new organization [POST]
+
++ Response 201 (application/json)
+
+### organizations [/organizations]
++ BODY:
+```
+{
+  "name" : "Name for the new organization"
+}
+```
+
 ## Group Lion
 
 Resources related to lions in the API.
 
+DELETE: set an animal and its imagesets to Trashed = true
+DELETE?restore=true: restores an animal and its imagesets to Trashed = false
+DELETE?purge=true: deletes permanently an animal and its imagesets / also it's images
 ## Lion [/lions/{lion_id}]
 
 + Parameters

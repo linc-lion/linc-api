@@ -19,7 +19,6 @@ class User(Model):
     last_sign_in_ip = StringType(required=False,default=None)
     last_sign_in_at = DateTimeType(required=False,default=None)
     admin = BooleanType(required=True,default=False)
-    trashed = BooleanType(required=True,default=False)
 
     @classmethod
     def collection(self,name=None):

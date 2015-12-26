@@ -32,10 +32,7 @@ class LoginHandler(BaseHandler):
             password = utf8(self.input_data['password'])
             wlist = self.settings['wait_list']
             count = self.settings['attempts']
-            query = { 'email' : username,
-                      'trashed' : False
-                    }
-            ouser = yield self.settings['db'].users.find_one(query)
+            ouser = yield self.settings['db'].users.find_one({'email':username})
             if username in wlist.keys():
                 dt = wlist[username]
                 if datetime.now() < dt + timedelta(minutes=30):

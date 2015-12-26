@@ -19,4 +19,4 @@ class ErrorHandler(EHandler, BaseHandler):
         self.reqresp(self)
 
     def reqresp(self):
-        self.write({'status':'error','message':'resource can not be found','code':str(self.status_code)})
+        self.write({'status':'error','message':'resource can not be accessed','code':str(self.status_code)})

@@ -67,15 +67,15 @@ class CVResultsHandler(BaseHandler):
                             objres['is_verified'] = False
                             objres['organization'] = ''
                             # get the animal
-                            aobj = yield self.settings['db'][self.settings['animals']].find_one({'iid':objres['id'],'trashed':False})
+                            aobj = yield self.settings['db'][self.settings['animals']].find_one({'iid':objres['id']})
                             if aobj:
                                 #cvreq = yield self.settings['db'].cvrequests.find_one({'iid':objs['cvrequest_iid']})
                                 # here
-                                img = yield self.settings['db'].images.find_one({'image_set_iid':aobj['primary_image_set_iid'],'image_type':'main-id','trashed':False})
+                                img = yield self.settings['db'].images.find_one({'image_set_iid':aobj['primary_image_set_iid'],'image_type':'main-id'})
                                 if img:
                                     objres['thumbnail'] = self.settings['S3_URL']+img['url']+'_icon.jpg'
                                 else:
-                                    img = yield self.settings['db'].images.find({'image_set_iid':aobj['primary_image_set_iid'],'trashed':False}).to_list(length=1)
+                                    img = yield self.settings['db'].images.find({'image_set_iid':aobj['primary_image_set_iid']}).to_list(length=1)
                                     if len(img) > 0:
                                         objres['thumbnail'] = self.settings['S3_URL']+img[0]['url']+'_icon.jpg'
                                     else:
@@ -83,13 +83,13 @@ class CVResultsHandler(BaseHandler):
 
                                 if aobj:
                                     objres['name'] = aobj['name']
-                                imgss = yield self.settings['db'].imagesets.find_one({'iid':aobj['primary_image_set_iid'],'trashed':False})
+                                imgss = yield self.settings['db'].imagesets.find_one({'iid':aobj['primary_image_set_iid']})
                                 if imgss:
                                     objres['age'] = self.age(imgss['date_of_birth'])
                                     objres['gender'] = imgss['gender']
                                     objres['is_verified'] = imgss['is_verified']
                                 if aobj:
-                                    org = yield self.settings['db'].organizations.find_one({'iid':aobj['organization_iid'],'trashed':False})
+                                    org = yield self.settings['db'].organizations.find_one({'iid':aobj['organization_iid']})
                                     if org:
                                         objres['organization'] = org['name']
                             objres['cv'] = i['confidence']

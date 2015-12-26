@@ -11,7 +11,6 @@ class Organization(Model):
     iid = IntType(required=True)
     created_at = DateTimeType(required=True,default=datetime.now())
     updated_at = DateTimeType(required=True,default=datetime.now())
-    trashed = BooleanType(required=True,default=False)
 
     @classmethod
     def collection(self,name=None):
