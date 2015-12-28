@@ -567,6 +567,13 @@ class ImageSetsHandler(BaseHandler):
             else:
                 imgset_obj['tags'] = None
 
+            if obj['location']:
+                imgset_obj['latitude'] = obj['location'][0][0]
+                imgset_obj['longitude'] = obj['location'][0][1]
+            else:
+                imgset_obj['latitude'] = None
+                imgset_obj['longitude'] = None
+
             if obj['owner_organization_iid']:
                 objo = yield self.settings['db'].organizations.find_one({'iid':obj['owner_organization_iid']})
                 if objo:
