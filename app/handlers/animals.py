@@ -406,6 +406,14 @@ class AnimalsHandler(BaseHandler):
                         obj['tags'] = imgset['tags']
                     else:
                         obj['tags'] = None
+
+                    if imgset['location']:
+                        obj['latitude'] = imgset['location'][0][0]
+                        obj['longitude'] = imgset['location'][0][1]
+                    else:
+                        obj['latitude'] = None
+                        obj['longitude'] = None
+
                     obj['gender'] = imgset['gender']
                     obj['is_verified'] = imgset['is_verified']
                     img = yield self.settings['db'].images.find_one({'iid':imgset['main_image_iid']})
