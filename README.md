@@ -2,16 +2,23 @@
 LINC is a simple API allowing Lion Guardians to identify lions in Africa.
 This API coordinate interactions between front-ends and the computational vision service.
 
+# License
 
+LINC is an open source shared database and facial recognition
+system that allows for collaboration in wildlife monitoring.
+Copyright (C) 2016  Wildlifeguardians
 
-# Troubleshooting
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as
+published by the Free Software Foundation, either version 3 of the
+License, or (at your option) any later version.
 
-## Development
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
 
-* Sometimes the code will continue return values that is no more in the structures, so try:
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-```
-$ cd <git-repo-directory>/devenv
-$ vagrant ssh
-$ find /home/vagrant/linc-api/app/ -name __pycache__ -exec rm -fr {} \;
-$ find /home/vagrant/linc-api/app/ -name *.pyc -exec rm -fr {} \;  
+For more information or to contact visit linclion.org or email tech@linclion.org

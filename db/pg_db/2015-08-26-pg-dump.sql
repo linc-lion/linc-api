@@ -1,3 +1,22 @@
+-- LINC is an open source shared database and facial recognition
+-- system that allows for collaboration in wildlife monitoring.
+-- Copyright (C) 2016  Wildlifeguardians
+--
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU Affero General Public License as
+-- published by the Free Software Foundation, either version 3 of the
+-- License, or (at your option) any later version.
+--
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU Affero General Public License for more details.
+--
+-- You should have received a copy of the GNU Affero General Public License
+-- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+--
+-- For more information or to contact visit linclion.org or email tech@linclion.org
+
 --
 -- PostgreSQL database dump
 --
@@ -10,14 +29,14 @@ SET check_function_bodies = false;
 SET client_min_messages = warning;
 
 --
--- Name: plpgsql; Type: EXTENSION; Schema: -; Owner: 
+-- Name: plpgsql; Type: EXTENSION; Schema: -; Owner:
 --
 
 CREATE EXTENSION IF NOT EXISTS plpgsql WITH SCHEMA pg_catalog;
 
 
 --
--- Name: EXTENSION plpgsql; Type: COMMENT; Schema: -; Owner: 
+-- Name: EXTENSION plpgsql; Type: COMMENT; Schema: -; Owner:
 --
 
 COMMENT ON EXTENSION plpgsql IS 'PL/pgSQL procedural language';
@@ -30,7 +49,7 @@ SET default_tablespace = '';
 SET default_with_oids = false;
 
 --
--- Name: active_admin_comments; Type: TABLE; Schema: public; Owner: uinncqqseaysgl; Tablespace: 
+-- Name: active_admin_comments; Type: TABLE; Schema: public; Owner: uinncqqseaysgl; Tablespace:
 --
 
 CREATE TABLE active_admin_comments (
@@ -70,7 +89,7 @@ ALTER SEQUENCE active_admin_comments_id_seq OWNED BY active_admin_comments.id;
 
 
 --
--- Name: admin_users; Type: TABLE; Schema: public; Owner: uinncqqseaysgl; Tablespace: 
+-- Name: admin_users; Type: TABLE; Schema: public; Owner: uinncqqseaysgl; Tablespace:
 --
 
 CREATE TABLE admin_users (
@@ -114,7 +133,7 @@ ALTER SEQUENCE admin_users_id_seq OWNED BY admin_users.id;
 
 
 --
--- Name: cv_requests; Type: TABLE; Schema: public; Owner: uinncqqseaysgl; Tablespace: 
+-- Name: cv_requests; Type: TABLE; Schema: public; Owner: uinncqqseaysgl; Tablespace:
 --
 
 CREATE TABLE cv_requests (
@@ -152,7 +171,7 @@ ALTER SEQUENCE cv_requests_id_seq OWNED BY cv_requests.id;
 
 
 --
--- Name: cv_results; Type: TABLE; Schema: public; Owner: uinncqqseaysgl; Tablespace: 
+-- Name: cv_results; Type: TABLE; Schema: public; Owner: uinncqqseaysgl; Tablespace:
 --
 
 CREATE TABLE cv_results (
@@ -189,7 +208,7 @@ ALTER SEQUENCE cv_results_id_seq OWNED BY cv_results.id;
 
 
 --
--- Name: image_sets; Type: TABLE; Schema: public; Owner: uinncqqseaysgl; Tablespace: 
+-- Name: image_sets; Type: TABLE; Schema: public; Owner: uinncqqseaysgl; Tablespace:
 --
 
 CREATE TABLE image_sets (
@@ -239,7 +258,7 @@ ALTER SEQUENCE image_sets_id_seq OWNED BY image_sets.id;
 
 
 --
--- Name: images; Type: TABLE; Schema: public; Owner: uinncqqseaysgl; Tablespace: 
+-- Name: images; Type: TABLE; Schema: public; Owner: uinncqqseaysgl; Tablespace:
 --
 
 CREATE TABLE images (
@@ -281,7 +300,7 @@ ALTER SEQUENCE images_id_seq OWNED BY images.id;
 
 
 --
--- Name: lions; Type: TABLE; Schema: public; Owner: uinncqqseaysgl; Tablespace: 
+-- Name: lions; Type: TABLE; Schema: public; Owner: uinncqqseaysgl; Tablespace:
 --
 
 CREATE TABLE lions (
@@ -318,7 +337,7 @@ ALTER SEQUENCE lions_id_seq OWNED BY lions.id;
 
 
 --
--- Name: organizations; Type: TABLE; Schema: public; Owner: uinncqqseaysgl; Tablespace: 
+-- Name: organizations; Type: TABLE; Schema: public; Owner: uinncqqseaysgl; Tablespace:
 --
 
 CREATE TABLE organizations (
@@ -353,7 +372,7 @@ ALTER SEQUENCE organizations_id_seq OWNED BY organizations.id;
 
 
 --
--- Name: schema_migrations; Type: TABLE; Schema: public; Owner: uinncqqseaysgl; Tablespace: 
+-- Name: schema_migrations; Type: TABLE; Schema: public; Owner: uinncqqseaysgl; Tablespace:
 --
 
 CREATE TABLE schema_migrations (
@@ -364,7 +383,7 @@ CREATE TABLE schema_migrations (
 ALTER TABLE public.schema_migrations OWNER TO uinncqqseaysgl;
 
 --
--- Name: users; Type: TABLE; Schema: public; Owner: uinncqqseaysgl; Tablespace: 
+-- Name: users; Type: TABLE; Schema: public; Owner: uinncqqseaysgl; Tablespace:
 --
 
 CREATE TABLE users (
@@ -1478,7 +1497,7 @@ SELECT pg_catalog.setval('users_id_seq', 9, true);
 
 
 --
--- Name: active_admin_comments_pkey; Type: CONSTRAINT; Schema: public; Owner: uinncqqseaysgl; Tablespace: 
+-- Name: active_admin_comments_pkey; Type: CONSTRAINT; Schema: public; Owner: uinncqqseaysgl; Tablespace:
 --
 
 ALTER TABLE ONLY active_admin_comments
@@ -1486,7 +1505,7 @@ ALTER TABLE ONLY active_admin_comments
 
 
 --
--- Name: admin_users_pkey; Type: CONSTRAINT; Schema: public; Owner: uinncqqseaysgl; Tablespace: 
+-- Name: admin_users_pkey; Type: CONSTRAINT; Schema: public; Owner: uinncqqseaysgl; Tablespace:
 --
 
 ALTER TABLE ONLY admin_users
@@ -1494,7 +1513,7 @@ ALTER TABLE ONLY admin_users
 
 
 --
--- Name: cv_requests_pkey; Type: CONSTRAINT; Schema: public; Owner: uinncqqseaysgl; Tablespace: 
+-- Name: cv_requests_pkey; Type: CONSTRAINT; Schema: public; Owner: uinncqqseaysgl; Tablespace:
 --
 
 ALTER TABLE ONLY cv_requests
@@ -1502,7 +1521,7 @@ ALTER TABLE ONLY cv_requests
 
 
 --
--- Name: cv_results_pkey; Type: CONSTRAINT; Schema: public; Owner: uinncqqseaysgl; Tablespace: 
+-- Name: cv_results_pkey; Type: CONSTRAINT; Schema: public; Owner: uinncqqseaysgl; Tablespace:
 --
 
 ALTER TABLE ONLY cv_results
@@ -1510,7 +1529,7 @@ ALTER TABLE ONLY cv_results
 
 
 --
--- Name: image_sets_pkey; Type: CONSTRAINT; Schema: public; Owner: uinncqqseaysgl; Tablespace: 
+-- Name: image_sets_pkey; Type: CONSTRAINT; Schema: public; Owner: uinncqqseaysgl; Tablespace:
 --
 
 ALTER TABLE ONLY image_sets
@@ -1518,7 +1537,7 @@ ALTER TABLE ONLY image_sets
 
 
 --
--- Name: images_pkey; Type: CONSTRAINT; Schema: public; Owner: uinncqqseaysgl; Tablespace: 
+-- Name: images_pkey; Type: CONSTRAINT; Schema: public; Owner: uinncqqseaysgl; Tablespace:
 --
 
 ALTER TABLE ONLY images
@@ -1526,7 +1545,7 @@ ALTER TABLE ONLY images
 
 
 --
--- Name: lions_pkey; Type: CONSTRAINT; Schema: public; Owner: uinncqqseaysgl; Tablespace: 
+-- Name: lions_pkey; Type: CONSTRAINT; Schema: public; Owner: uinncqqseaysgl; Tablespace:
 --
 
 ALTER TABLE ONLY lions
@@ -1534,7 +1553,7 @@ ALTER TABLE ONLY lions
 
 
 --
--- Name: organizations_pkey; Type: CONSTRAINT; Schema: public; Owner: uinncqqseaysgl; Tablespace: 
+-- Name: organizations_pkey; Type: CONSTRAINT; Schema: public; Owner: uinncqqseaysgl; Tablespace:
 --
 
 ALTER TABLE ONLY organizations
@@ -1542,7 +1561,7 @@ ALTER TABLE ONLY organizations
 
 
 --
--- Name: users_pkey; Type: CONSTRAINT; Schema: public; Owner: uinncqqseaysgl; Tablespace: 
+-- Name: users_pkey; Type: CONSTRAINT; Schema: public; Owner: uinncqqseaysgl; Tablespace:
 --
 
 ALTER TABLE ONLY users
@@ -1550,98 +1569,98 @@ ALTER TABLE ONLY users
 
 
 --
--- Name: index_active_admin_comments_on_author_type_and_author_id; Type: INDEX; Schema: public; Owner: uinncqqseaysgl; Tablespace: 
+-- Name: index_active_admin_comments_on_author_type_and_author_id; Type: INDEX; Schema: public; Owner: uinncqqseaysgl; Tablespace:
 --
 
 CREATE INDEX index_active_admin_comments_on_author_type_and_author_id ON active_admin_comments USING btree (author_type, author_id);
 
 
 --
--- Name: index_active_admin_comments_on_namespace; Type: INDEX; Schema: public; Owner: uinncqqseaysgl; Tablespace: 
+-- Name: index_active_admin_comments_on_namespace; Type: INDEX; Schema: public; Owner: uinncqqseaysgl; Tablespace:
 --
 
 CREATE INDEX index_active_admin_comments_on_namespace ON active_admin_comments USING btree (namespace);
 
 
 --
--- Name: index_active_admin_comments_on_resource_type_and_resource_id; Type: INDEX; Schema: public; Owner: uinncqqseaysgl; Tablespace: 
+-- Name: index_active_admin_comments_on_resource_type_and_resource_id; Type: INDEX; Schema: public; Owner: uinncqqseaysgl; Tablespace:
 --
 
 CREATE INDEX index_active_admin_comments_on_resource_type_and_resource_id ON active_admin_comments USING btree (resource_type, resource_id);
 
 
 --
--- Name: index_admin_users_on_email; Type: INDEX; Schema: public; Owner: uinncqqseaysgl; Tablespace: 
+-- Name: index_admin_users_on_email; Type: INDEX; Schema: public; Owner: uinncqqseaysgl; Tablespace:
 --
 
 CREATE UNIQUE INDEX index_admin_users_on_email ON admin_users USING btree (email);
 
 
 --
--- Name: index_admin_users_on_reset_password_token; Type: INDEX; Schema: public; Owner: uinncqqseaysgl; Tablespace: 
+-- Name: index_admin_users_on_reset_password_token; Type: INDEX; Schema: public; Owner: uinncqqseaysgl; Tablespace:
 --
 
 CREATE UNIQUE INDEX index_admin_users_on_reset_password_token ON admin_users USING btree (reset_password_token);
 
 
 --
--- Name: index_cv_requests_on_image_set_id; Type: INDEX; Schema: public; Owner: uinncqqseaysgl; Tablespace: 
+-- Name: index_cv_requests_on_image_set_id; Type: INDEX; Schema: public; Owner: uinncqqseaysgl; Tablespace:
 --
 
 CREATE INDEX index_cv_requests_on_image_set_id ON cv_requests USING btree (image_set_id);
 
 
 --
--- Name: index_cv_requests_on_uploading_organization_id_and_status; Type: INDEX; Schema: public; Owner: uinncqqseaysgl; Tablespace: 
+-- Name: index_cv_requests_on_uploading_organization_id_and_status; Type: INDEX; Schema: public; Owner: uinncqqseaysgl; Tablespace:
 --
 
 CREATE INDEX index_cv_requests_on_uploading_organization_id_and_status ON cv_requests USING btree (uploading_organization_id, status);
 
 
 --
--- Name: index_cv_results_on_cv_request_id; Type: INDEX; Schema: public; Owner: uinncqqseaysgl; Tablespace: 
+-- Name: index_cv_results_on_cv_request_id; Type: INDEX; Schema: public; Owner: uinncqqseaysgl; Tablespace:
 --
 
 CREATE INDEX index_cv_results_on_cv_request_id ON cv_results USING btree (cv_request_id);
 
 
 --
--- Name: index_cv_results_on_lion_id; Type: INDEX; Schema: public; Owner: uinncqqseaysgl; Tablespace: 
+-- Name: index_cv_results_on_lion_id; Type: INDEX; Schema: public; Owner: uinncqqseaysgl; Tablespace:
 --
 
 CREATE INDEX index_cv_results_on_lion_id ON cv_results USING btree (lion_id);
 
 
 --
--- Name: index_image_sets_on_tags; Type: INDEX; Schema: public; Owner: uinncqqseaysgl; Tablespace: 
+-- Name: index_image_sets_on_tags; Type: INDEX; Schema: public; Owner: uinncqqseaysgl; Tablespace:
 --
 
 CREATE INDEX index_image_sets_on_tags ON image_sets USING gin (tags);
 
 
 --
--- Name: index_images_on_image_set_id_and_is_deleted; Type: INDEX; Schema: public; Owner: uinncqqseaysgl; Tablespace: 
+-- Name: index_images_on_image_set_id_and_is_deleted; Type: INDEX; Schema: public; Owner: uinncqqseaysgl; Tablespace:
 --
 
 CREATE INDEX index_images_on_image_set_id_and_is_deleted ON images USING btree (image_set_id, is_deleted) WHERE (is_deleted IS NOT TRUE);
 
 
 --
--- Name: index_lions_on_name; Type: INDEX; Schema: public; Owner: uinncqqseaysgl; Tablespace: 
+-- Name: index_lions_on_name; Type: INDEX; Schema: public; Owner: uinncqqseaysgl; Tablespace:
 --
 
 CREATE UNIQUE INDEX index_lions_on_name ON lions USING btree (name);
 
 
 --
--- Name: index_users_on_email; Type: INDEX; Schema: public; Owner: uinncqqseaysgl; Tablespace: 
+-- Name: index_users_on_email; Type: INDEX; Schema: public; Owner: uinncqqseaysgl; Tablespace:
 --
 
 CREATE UNIQUE INDEX index_users_on_email ON users USING btree (email);
 
 
 --
--- Name: unique_schema_migrations; Type: INDEX; Schema: public; Owner: uinncqqseaysgl; Tablespace: 
+-- Name: unique_schema_migrations; Type: INDEX; Schema: public; Owner: uinncqqseaysgl; Tablespace:
 --
 
 CREATE UNIQUE INDEX unique_schema_migrations ON schema_migrations USING btree (version);
@@ -1650,4 +1669,3 @@ CREATE UNIQUE INDEX unique_schema_migrations ON schema_migrations USING btree (v
 --
 -- PostgreSQL database dump complete
 --
-

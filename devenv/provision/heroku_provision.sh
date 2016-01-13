@@ -1,6 +1,5 @@
 heroku login
 
-
 # PostgreSQL Database
 heroku addons:create heroku-postgresql:hobby-dev
 
