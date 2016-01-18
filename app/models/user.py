@@ -28,16 +28,16 @@ from datetime import datetime
 class User(Model):
     email = EmailType(required=True)
     iid = IntType(required=True)
-    organization_iid = IntType(required=True,default=-1)
-    created_at = DateTimeType(required=True,default=datetime.now())
-    updated_at = DateTimeType(required=True,default=datetime.now())
+    organization_iid = IntType(required=True,default=None)
     encrypted_password = StringType(required=True)
+    admin = BooleanType(required=True,default=False)
     sign_in_count = IntType(required=False,default=0)
     current_sign_in_ip = StringType(required=False,default=None)
     current_sign_in_at = DateTimeType(required=False,default=None)
     last_sign_in_ip = StringType(required=False,default=None)
     last_sign_in_at = DateTimeType(required=False,default=None)
-    admin = BooleanType(required=True,default=False)
+    created_at = DateTimeType(required=True,default=datetime.now())
+    updated_at = DateTimeType(required=True,default=datetime.now())
 
     @classmethod
     def collection(self,name=None):

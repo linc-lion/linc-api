@@ -36,12 +36,12 @@ class ImageSet(Model):
     is_verified = BooleanType(required=True,default=False)
     location = ListType(ListType(FloatType()))
     gender = StringType(required=False,default=None)
-    created_at = DateTimeType(required=True,default=datetime.now())
-    updated_at = DateTimeType(required=True,default=datetime.now())
     date_of_birth = DateTimeType(required=False,default=None)
     tags = StringType(required=False,default='[]')
     date_stamp = StringType(required=False,default=None)
     notes = StringType(required=False)
+    created_at = DateTimeType(required=True,default=datetime.now())
+    updated_at = DateTimeType(required=True,default=datetime.now())
 
     @classmethod
     def collection(self,name=None):
