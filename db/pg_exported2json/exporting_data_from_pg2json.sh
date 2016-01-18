@@ -31,7 +31,7 @@
 # $ bash exporting_data_from_pg2json.sh
 # You will need to provide 'postgres' as password for each table
 # The password was defined in the provision of Vagrant
-db=final_db
+db=prod
 ldir=$(pwd)
 export () {
     echo " Exporting data from table: "$1

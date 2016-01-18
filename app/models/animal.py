@@ -28,9 +28,9 @@ class Animal(Model):
     name = StringType(required=True)
     iid = IntType(required=True)
     organization_iid = IntType(required=True)
+    primary_image_set_iid = IntType(required=False,default=None)
     created_at = DateTimeType(required=True,default=datetime.now())
     updated_at = DateTimeType(required=True,default=datetime.now())
-    primary_image_set_iid = IntType(required=False,default=-1)
 
     @classmethod
     def collection(self,name=None):

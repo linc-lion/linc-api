@@ -36,10 +36,12 @@ db = conn['linc-api-lions']
 imgs = db.urlimages.find()
 for img in imgs:
     imgobj = db.images.find_one({'iid':img['iid']})
-    imgset = db.imagesets.find_one({'iid':imgobj['image_set_iid']})
-    if imgset:
-        folder_name = 'imageset_'+str(imgset['iid'])+'_'+str(imgset['_id'])
-        fname = folder_name +'/' + str(imgobj['created_at'].date().isoformat()) + '_image_' + str(imgobj['iid']) + '_' + str(imgobj['_id'])
-        #print(fname)
-        upd = db.images.update({'_id':imgobj['_id']},{'$set' : {'url':fname}})
-        print(upd)
+    if imgobj:
+        imgset = db.imagesets.find_one({'iid':imgobj['image_set_iid']})
+        if imgset:
+            folder_name = 'imageset_'+str(imgset['iid'])+'_'+str(imgset['_id'])
+            fname = folder_name +'/' + str(imgobj['created_at'].date().isoformat()) + '_image_' + str(imgobj['iid']) + '_' + str(imgobj['_$
+            upd = db.images.update({'_id':imgobj['_id']},{'$set' : {'url':fname}})
+            print(upd)
+    else:
+        print 'Image without imageset: ',img

@@ -35,8 +35,8 @@ db = conn['linc-api-lions']
 
 import tinys3
 # Creating a simple connection
-S3_ACCESS_KEY =
-S3_SECRET_KEY =
+S3_ACCESS_KEY = ''
+S3_SECRET_KEY = ''
 S3_BUCKET = 'linc-test'
 
 conns3 = tinys3.Connection(S3_ACCESS_KEY,S3_SECRET_KEY,default_bucket=S3_BUCKET)
@@ -87,7 +87,6 @@ def generate_images(fn):
         r = newsize/w
         newh = h*r
         msize = newsize,newh
-
     if msize[0] == 0 or msize[1] == 0:
         msize = newsize,newsize
     print(msize)
@@ -111,7 +110,6 @@ apidir = 'linc-api-lions/'
 for iset in imgset:
     print('Processing Image Set: '+str(iset['iid']))
     folder_name = 'imageset_'+str(iset['iid'])+'_'+str(iset['_id'])
-    #print('Folder name:' + folder_name)
     nupd = db.uploaded.find()
     lnupd = [x['iid'] for x in nupd ]
     imgs = db.images.find({'image_set_iid':iset['iid'],'iid': {'$nin':lnupd}})
@@ -122,7 +120,6 @@ for iset in imgset:
         imgname = str(img['created_at'].date().isoformat()) + '_image_' + str(img['iid']) + '_' + str(img['_id']) + ".img"
         print('Getting image: '+imgurl)
         urllib.urlretrieve(imgurl, imgname)
-
 
         generate_images(imgname)
         for suf in ['_full.jpg','_icon.jpg','_medium.jpg','_thumbnail.jpg']:
