@@ -1,5 +1,5 @@
 FORMAT: 1A
-HOST: https://still.be.defined.com
+HOST: https://linc-api.herokuapp.com/documentation.html
 
 # Group LINC API
 
@@ -20,7 +20,7 @@ So, the documentation presented below will use the terms `<animal>` and `<animal
 
 ## License
 
-"""
+```
 LINC is an open source shared database and facial recognition
 system that allows for collaboration in wildlife monitoring.
 Copyright (C) 2016  Wildlifeguardians
@@ -39,7 +39,7 @@ You should have received a copy of the GNU Affero General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 For more information or to contact visit linclion.org or email tech@linclion.org
-"""
+```
 
 ## LINC API Resources
 
@@ -59,6 +59,11 @@ The API was completely rewrite to use MongoDB, since the first API and schema wa
 
 To accomplish the goal of coding productivity and also database access,
 Motor was used to manage data between the API and MongoDB. Also, Schematics was used to define models that validates the
+
+Here we have a relational model to be used as reference for the model files stored in the `<repo>/app/models`.
+It helps the transition from ER to NoSQL.
+
+![ER Model](rmodel.png)
 
 ## Data models
 
