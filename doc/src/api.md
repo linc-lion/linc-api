@@ -63,7 +63,7 @@ Motor was used to manage data between the API and MongoDB. Also, Schematics was 
 Here we have a relational model to be used as reference for the model files stored in the `<repo>/app/models`.
 It helps the transition from ER to NoSQL.
 
-![ER Model](rmodel.png)
+![ER Model](/static/rmodel.png)
 
 ## Data models
 
