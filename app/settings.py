@@ -73,16 +73,18 @@ define("config",default=None,help=("Tornado configuration file"))
 define('debug',default=True,type=bool,help=("Turn on autoreload, log to stderr only"))
 tornado.options.parse_command_line()
 
+appdir = os.path.dirname(os.path.realpath(__file__))
+
 # API settings
 api = {}
 api['debug'] = options.debug
 api['xsrf_cookies'] = False
-api['app_path'] = os.path.dirname(os.path.realpath(__file__))
+api['app_path'] = appdir
 api['default_handler_class'] = ErrorHandler
 api['default_handler_args'] = dict(status_code=404)
 api['version'] = 'api version v1.0.0 - 20160117'
-api['template_path'] = os.path.dirname(os.path.realpath(__file__))+"/templates"
-
+api['template_path'] = os.path.join(appdir,"templates")
+api['static_path'] = os.path.join(appdir, "static")
 
 # Token security
 api['attempts'] = dict()
