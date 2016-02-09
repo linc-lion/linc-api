@@ -59,14 +59,25 @@ class AnimalsHandler(BaseHandler):
             noimages = False
         if animal_id:
             if animal_id == 'list':
-                objs = yield self.settings['db'][self.settings['animals']].find().to_list(None)
-                orgs = yield self.settings['db'].organizations.find().to_list(None)
+                org_filter = self.get_argument('org_id',None)
+                query_ani = {}
+                query_org = {}
+                if org_filter:
+                    query_ani = {'organization_iid':int(org_filter)}
+                    query_org = {'iid':int(org_filter)}
+                objs = yield self.settings['db'][self.settings['animals']].find(query_ani).to_list(None)
+                orgs = yield self.settings['db'].organizations.find(query_org).to_list(None)
                 orgnames = dict()
                 for org in orgs:
                     orgnames[org['iid']] = org['name']
-                self.set_status(200)
-                output = yield Task(self.list,objs,orgnames)
-                self.finish(self.json_encode({'status':'success','data':output}))
+                if len(objs) > 0:
+                    output = yield Task(self.list,objs,orgnames)
+                    self.setSuccess(200,'success',output)
+                else:
+                    self.dropError(404,'not found')
+                return
+                #self.set_status(200)
+                #self.finish(self.json_encode({'status':'success','data':output}))
             elif animal_id and xurl == 'profile':
                 # show profile page data for the website
                 query = self.query_id(animal_id)
@@ -406,8 +417,10 @@ class AnimalsHandler(BaseHandler):
             obj['primary_image_set_id'] = x['primary_image_set_iid']
             if orgnames and x['organization_iid'] in orgnames.keys():
                 obj['organization'] = orgnames[x['organization_iid']]
+                obj['organization_id'] = x['organization_iid']
             else:
                 obj['organization'] = '-'
+                obj['organization_id'] = '-'
             obj['age'] = None
             obj['gender'] = None
             obj['is_verified'] = False
