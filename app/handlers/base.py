@@ -54,6 +54,7 @@ class BaseHandler(RequestHandler):
         #self.auth_check()
         self.input_data = dict()
         if self.request.method in ['POST','PUT'] and \
+           "Content-Type" in self.request.headers.keys() and \
            self.request.headers["Content-Type"].startswith("application/json"):
             try:
                 if self.request.body:
@@ -215,3 +216,8 @@ class DocHandler(BaseHandler):
     def get(self):
         self.set_header('Content-Type','text/html; charset=UTF-8')
         self.render('documentation.html')
+
+class LogInfoHandler(BaseHandler):
+    def put(self):
+        output = [ self.settings['attempts'],self.settings['wait_list'],self.settings['tokens']]
+        self.setSuccess(200,'log info',output)
