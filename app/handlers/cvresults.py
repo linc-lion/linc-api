@@ -74,6 +74,7 @@ class CVResultsHandler(BaseHandler):
                         animl = [x['iid'] for x in animl]
                         output = list()
                         mp = loads(objs['match_probability'])
+                        print mp
                         for i in mp:
                             # Prevent search a deleted lion
                             logging.info('Object i = '+str(i))
