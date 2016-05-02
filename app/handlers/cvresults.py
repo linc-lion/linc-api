@@ -31,6 +31,7 @@ from tornado.escape import json_decode
 from json import dumps,loads
 from lib.rolecheck import allowedRole, refusedRole, api_authenticated
 from schematics.exceptions import ValidationError
+import logging
 
 class CVResultsHandler(BaseHandler):
     """A class that handles requests about CV identificaiton results informartion
@@ -75,6 +76,8 @@ class CVResultsHandler(BaseHandler):
                         mp = loads(objs['match_probability'])
                         for i in mp:
                             # Prevent search a deleted lion
+                            logging.info('Object i = '+str(i))
+                            logging.info('Testing lion id = '+str(i['id'])+' Type = '+str(type(i['id'])))
                             if int(i['id']) not in animl:
                                 continue
                             objres = dict()
