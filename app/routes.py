@@ -21,7 +21,7 @@
 # For more information or to contact visit linclion.org or email tech@linclion.org
 
 import sys
-from handlers.base import VersionHandler,DocHandler
+from handlers.base import VersionHandler,DocHandler,LogInfoHandler
 from handlers.error import ErrorHandler
 from handlers.auth import LoginHandler,LogoutHandler,CheckAuthHandler
 from handlers.animals import AnimalsHandler
@@ -38,6 +38,7 @@ from handlers.cvresults import CVResultsHandler
 # Defining routes
 def url_patterns(animals='lions'):
     routes = [
+        (r"/loginfo/?", LogInfoHandler),
         (r"/version/?", VersionHandler),
         (r"/auth/login/?", LoginHandler),
         (r"/auth/logout/?", LogoutHandler),
