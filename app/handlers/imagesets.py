@@ -433,6 +433,14 @@ class ImageSetsHandler(BaseHandler):
                             else:
                                 objimgset['location'] = None
                             continue
+                        elif field == 'is_verified':
+                            verval = False
+                            try:
+                                verval = eval(update_data['is_verified'].capitalize())
+                            except:
+                                verval = False
+                            objimgset['is_verified'] = verval
+                            continue
                         objimgset[field] = update_data[field]
 
                 # check if user exists
