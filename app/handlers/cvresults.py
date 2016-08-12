@@ -81,6 +81,7 @@ class CVResultsHandler(BaseHandler):
                             objres['id'] = int(i['id'])
                             objres['name'] = '-'
                             objres['thumbnail'] = ''
+                            objres['image'] = ''
                             objres['age'] = '-'
                             objres['gender'] = ''
                             objres['is_verified'] = False
@@ -97,8 +98,10 @@ class CVResultsHandler(BaseHandler):
                                     img = yield self.settings['db'].images.find({'image_set_iid':aobj['primary_image_set_iid']}).to_list(length=1)
                                     if len(img) > 0:
                                         objres['thumbnail'] = self.settings['S3_URL']+img[0]['url']+'_icon.jpg'
+                                        objres['image'] = self.settings['S3_URL']+img[0]['url']+'_medium.jpg'
                                     else:
                                         objres['thumbnail'] = ''
+                                        objres['image'] = ''
 
                                 if aobj:
                                     objres['name'] = aobj['name']

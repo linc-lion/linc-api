@@ -423,7 +423,11 @@ class AnimalsHandler(BaseHandler):
                 obj['organization_id'] = '-'
             obj['age'] = None
             obj['gender'] = None
-            obj['is_verified'] = False
+            ivc = yield self.settings['db'].imagesets.find({'animal_iid':x['iid'],'is_verified':False}).count()
+            if ivc > 0:
+                obj['is_verified'] = False
+            else:
+                obj['is_verified'] = True
             obj['thumbnail'] = ''
             obj['image'] = ''
             if x['primary_image_set_iid'] > 0:
