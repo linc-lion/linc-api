@@ -433,9 +433,9 @@ class ImageSetsHandler(BaseHandler):
                             else:
                                 objimgset['location'] = None
                             continue
-                        elif field == 'is_verified':
-                            objimgset['is_verified'] = update_data['is_verified']
-                            continue
+                        #elif field == 'is_verified':
+                        #    objimgset['is_verified'] = update_data['is_verified']
+                        #    continue
                         objimgset[field] = update_data[field]
 
                 # check if user exists
