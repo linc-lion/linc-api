@@ -34,6 +34,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   # Use an Ubuntu box based in the host arch
   arch = Vagrant::Util::Platform::bit64? ? 64 : 32
   config.vm.box = "ubuntu/trusty#{arch}"
+  config.vm.hostname = "linc-api"
 
   # Ports for services and api in development mode - 5000 for heroky deploy
   config.vm.network :forwarded_port, guest:  5000, host: 5000 # API Port
@@ -45,6 +46,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.vm.network :private_network, ip: "192.168.100.10"
 
   config.vm.provider :virtualbox do |vb|
+    vb.name = "linc-api"
     vb.customize ["setextradata", :id, "VBoxInternal2/SharedFoldersEnableSymlinksCreate/app", "1"]
     vb.customize ["setextradata", :id, "VBoxInternal2/SharedFoldersEnableSymlinksCreate/linc-api", "1"]
     vb.customize ["modifyvm", :id, "--memory", "1024"]
