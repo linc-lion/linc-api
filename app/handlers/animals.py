@@ -423,11 +423,15 @@ class AnimalsHandler(BaseHandler):
                 obj['organization_id'] = '-'
             obj['age'] = None
             obj['gender'] = None
-            ivc = yield self.settings['db'].imagesets.find({'animal_iid':x['iid'],'is_verified':False}).count()
-            if ivc > 0:
-                obj['is_verified'] = False
-            else:
+            ivcquery = {'animal_iid':x['iid'],'is_verified':False,'iid':{"$ne":x['primary_image_set_iid']}}
+            ivc = yield self.settings['db'].imagesets.find(ivcquery).count()
+            if x['iid'] == 3:
+                info(ivcquery)
+                info(ivc)
+            if ivc == 0:
                 obj['is_verified'] = True
+            else:
+                obj['is_verified'] = False
             obj['thumbnail'] = ''
             obj['image'] = ''
             if x['primary_image_set_iid'] > 0:
@@ -451,7 +455,7 @@ class AnimalsHandler(BaseHandler):
                         obj['longitude'] = None
 
                     obj['gender'] = imgset['gender']
-                    obj['is_verified'] = imgset['is_verified']
+                    #obj['is_verified'] = imgset['is_verified']
                     img = yield self.settings['db'].images.find_one({'iid':imgset['main_image_iid']})
                     if img:
                         obj['thumbnail'] = self.settings['S3_URL']+img['url']+'_icon.jpg'
