@@ -140,6 +140,14 @@ class AnimalsHandler(BaseHandler):
                         output['longitude'] = None
                     del output['location']
 
+                    # Check verified
+                    ivcquery = {'animal_iid':output['id'],'is_verified':False,'iid':{"$ne":output['primary_image_set_id']}}
+                    ivc = yield self.settings['db'].imagesets.find(ivcquery).count()
+                    if ivc == 0:
+                        output['is_verified'] = True
+                    else:
+                        output['is_verified'] = False
+
                     self.setSuccess(200,self.settings['animal']+' found',output)
                     return
                 else:
@@ -425,9 +433,6 @@ class AnimalsHandler(BaseHandler):
             obj['gender'] = None
             ivcquery = {'animal_iid':x['iid'],'is_verified':False,'iid':{"$ne":x['primary_image_set_iid']}}
             ivc = yield self.settings['db'].imagesets.find(ivcquery).count()
-            if x['iid'] == 3:
-                info(ivcquery)
-                info(ivc)
             if ivc == 0:
                 obj['is_verified'] = True
             else:
