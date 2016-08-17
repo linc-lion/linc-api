@@ -143,7 +143,11 @@ class ImageSetsHandler(BaseHandler):
                     output['req_status'] = None
                     output['cvrequest'] = None
                     output['cvresults'] = None
-
+                output[self.settings['animals']+'_org_id'] = ''
+                if output['animal_iid']:
+                    animal_org_iid = yield self.settings['db'][self.settings['animals']].find_one({'iid':output['animal_iid']})
+                    if animal_org_iid:
+                        output[self.settings['animals']+'_org_id'] = animal_org_iid['organization_iid']
                 output[self.settings['animal']+'_id'] = output['animal_iid']
                 del output['animal_iid']
 
@@ -554,9 +558,13 @@ class ImageSetsHandler(BaseHandler):
             imgset_obj['obj_id'] = str(obj['_id'])
             imgset_obj['id'] = obj['iid']
 
+            imgset_obj[self.settings['animals']+'_org_id'] = ''
             if obj['animal_iid']:
                 imgset_obj['name'] = animals_names[obj['animal_iid']]
                 imgset_obj[self.settings['animal']+'_id'] = obj['animal_iid']
+                animal_org_iid = yield self.settings['db'][self.settings['animals']].find_one({'iid':output['animal_iid']})
+                if animal_org_iid:
+                    imgset_obj[self.settings['animals']+'_org_id'] = animal_org_iid['organization_iid']
             else:
                 imgset_obj['name'] = '-'
                 imgset_obj[self.settings['animal']+'_id'] = None
