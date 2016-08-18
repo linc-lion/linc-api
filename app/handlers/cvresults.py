@@ -86,6 +86,7 @@ class CVResultsHandler(BaseHandler):
                             objres['gender'] = ''
                             objres['is_verified'] = False
                             objres['organization'] = ''
+                            objres['organization_id'] = ''
                             # get the animal
                             aobj = yield self.settings['db'][self.settings['animals']].find_one({'iid':objres['id']})
                             if aobj:
@@ -112,9 +113,11 @@ class CVResultsHandler(BaseHandler):
                                     objres['gender'] = imgss['gender']
                                     objres['is_verified'] = imgss['is_verified']
                                 if aobj:
+                                    objres['organization_id'] = aobj['organization_iid']
                                     org = yield self.settings['db'].organizations.find_one({'iid':aobj['organization_iid']})
                                     if org:
                                         objres['organization'] = org['name']
+
                             objres['cv'] = i['confidence']
                             output.append(objres)
                         cvreq = yield self.settings['db'].cvrequests.find_one({'iid':objs['cvrequest_iid']})
