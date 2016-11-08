@@ -68,7 +68,7 @@ sys.path[:0] = new_sys_path
 # database directory
 site.addsitedir("../db")
 
-define("port",default=5000,type=int,help=("Server port"))
+define("port",default=5050,type=int,help=("Server port"))
 define("config",default=None,help=("Tornado configuration file"))
 define('debug',default=True,type=bool,help=("Turn on autoreload, log to stderr only"))
 tornado.options.parse_command_line()
