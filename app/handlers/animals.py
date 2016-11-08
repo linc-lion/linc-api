@@ -281,7 +281,7 @@ class AnimalsHandler(BaseHandler):
             except:
                 # duplicated index error
                 self.dropError(409,'Key violation. Check if you are using a name from a lion that already exists in the database.')
-        except ValidationError,e:
+        except ValidationError as e:
             # received data is invalid in some way
             self.dropError(400,'Invalid input data. Errors: '+str(e))
 
@@ -330,7 +330,7 @@ class AnimalsHandler(BaseHandler):
                     # the object is valid, so try to save
                     try:
                         updated = yield self.settings['db'][self.settings['animals']].update({'_id':updid},Animals.to_native())
-                        print(updated)
+                        info(updated)
                         output = updobj
                         output['obj_id'] = str(updid)
                         # Change iid to id in the output
@@ -343,7 +343,7 @@ class AnimalsHandler(BaseHandler):
                     except:
                         # duplicated index error
                         self.dropError(409,'duplicated name for '+self.settings['animal'])
-                except ValidationError,e:
+                except ValidationError as e:
                     # received data is invalid in some way
                     self.dropError(400,'Invalid input data. Errors: '+str(e))
             else:
@@ -368,10 +368,9 @@ class AnimalsHandler(BaseHandler):
                     return
                 # 1 - Remove animal
                 rmved = yield self.settings['db'][self.settings['animals']].remove({'iid':rem_iid})
-                print rmved
+                info(str(rmved))
                 # 2 - Remove its primary image set
                 rmved = yield self.settings['db'].imagesets.remove({'iid':rem_pis})
-                print
                 # 3 - Remove images of the primary image set
                 imgl = yield self.settings['db'].images.find({'image_set_iid':rem_pis}).to_list(None)
                 rmlist = list()
@@ -382,17 +381,17 @@ class AnimalsHandler(BaseHandler):
                     try:
                         for suf in ['_full.jpg','_icon.jpg','_medium.jpg','_thumbnail.jpg']:
                             rmlist.append(srcurl+suf)
-                    except Exception, e:
+                    except Exception as e:
                         self.setSuccess(500,'Fail to delete image in S3. Errors: '+str(e))
                         return
                 if len(rmlist) > 0:
                     rmladd = yield self.settings['db'].dellist.insert({'list':rmlist,'ts':datetime.now()})
                 rmved = yield self.settings['db'].images.remove({'image_set_iid':rem_pis},multi=True)
-                print rmved
+                info(str(rmved))
                 # 4 - Removing association
                 rmved = yield self.settings['db'].imagesets.update({'animal_iid':rem_iid},
                         {'$set':{'animal_iid':None,'updated_at':datetime.now()}},multi=True)
-                print rmved
+                info(str(rmved))
                 # 5 - Adjusting cvresults
                 cursor = self.settings['db'].cvresults.find()
                 while (yield cursor.fetch_next):

@@ -147,7 +147,7 @@ class UsersHandler(BaseHandler):
             except:
                 # duplicated index error
                 self.dropError(409,'key violation')
-        except ValidationError, e:
+        except ValidationError as e:
             # received data is invalid in some way
             self.dropError(400,'Invalid input data. Errors: '+str(e))
 
@@ -206,7 +206,7 @@ class UsersHandler(BaseHandler):
                     except:
                         # duplicated index error
                         self.dropError(409,'invalid data for update')
-                except ValidationError, e:
+                except ValidationError as e:
                     # received data is invalid in some way
                     self.dropError(400,'Invalid input data. Errors: '+str(e))
             else:
@@ -242,7 +242,7 @@ class UsersHandler(BaseHandler):
         """ Implements the list output used for UI in the website
         """
         output = list()
-        print(orgnames)
+        info(orgnames)
         for x in objs:
             obj = dict()
             obj['id'] = x['iid']

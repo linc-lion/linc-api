@@ -5,5 +5,5 @@ pycurl
 schematics
 tinys3
 bcrypt
-tornadoist
 APScheduler
+git+https://github.com/venidera/tornadoist.git
