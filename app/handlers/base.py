@@ -26,7 +26,7 @@ from tornado import web
 from tornado.escape import utf8
 import string,os
 from datetime import date
-import logging
+from logging import info
 import bcrypt
 from json import load,loads,dumps,dump
 from lib.tokens import token_decode,gen_token
@@ -70,9 +70,9 @@ class BaseHandler(RequestHandler):
         # check for https comunication
         using_ssl = (self.request.headers.get('X-Scheme', 'http') == 'https')
         if not using_ssl:
-            logging.info('Not using SSL')
+            info('Not using SSL')
         else:
-            logging.info('Using SSL')
+            info('Using SSL')
         # get the token for authentication
         token = self.request.headers.get("Linc-Api-AuthToken")
         res = None
@@ -191,14 +191,14 @@ class BaseHandler(RequestHandler):
         request = HTTPRequest(**params)
         try:
             response = yield http_client.fetch(request)
-        except HTTPError, e:
-            print 'HTTTP error returned... '
-            print "Code: ", e.code
-            print "Message: ", e.message
+        except HTTPError as e:
+            info('HTTTP error returned... ')
+            info("Code: "+str(e.code))
+            info("Message: "+str(e.message))
             if e.response:
-                print 'URL: ', e.response.effective_url
-                print 'Reason: ', e.response.reason
-                print 'Body: ', e.response.body
+                info('URL: '+str(e.response.effective_url))
+                info('Reason: '+str(e.response.reason))
+                info('Body: '+str(e.response.body))
                 response = e.response
             else:
                 responde = e

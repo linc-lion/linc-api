@@ -30,6 +30,7 @@ VAGRANTFILE_API_VERSION = "2"
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.vm.synced_folder "../app", "/home/vagrant/app", create: true
   config.vm.synced_folder "../", "/home/vagrant/linc-api", create: true
+  config.vm.synced_folder "../../linc-website", "/home/vagrant/linc-website", create: true
 
   # Use an Ubuntu box based in the host arch
   arch = Vagrant::Util::Platform::bit64? ? 64 : 32
@@ -37,18 +38,20 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.vm.hostname = "linc-api"
 
   # Ports for services and api in development mode - 5000 for heroky deploy
-  config.vm.network :forwarded_port, guest:  5000, host: 5000 # API Port
+  config.vm.network :forwarded_port, guest:  5050, host: 5050 # API Port
   config.vm.network :forwarded_port, guest: 27017, host: 27017 # MongoDB
   config.vm.network :forwarded_port, guest: 8081, host: 8081 # MongoDB Adimin Dev Purposes
   config.vm.network :forwarded_port, guest: 7081, host: 7081 # MongoDB Adimin Dev Purposes
-
+  config.vm.network :forwarded_port, guest: 5080, host: 5080 # MongoDB Adimin Dev Purposes
 
   config.vm.network :private_network, ip: "192.168.100.10"
+  config.vm.network :private_network, ip: "192.168.100.20"
 
   config.vm.provider :virtualbox do |vb|
-    vb.name = "linc-api"
+    vb.name = "linc-dev"
     vb.customize ["setextradata", :id, "VBoxInternal2/SharedFoldersEnableSymlinksCreate/app", "1"]
     vb.customize ["setextradata", :id, "VBoxInternal2/SharedFoldersEnableSymlinksCreate/linc-api", "1"]
+    vb.customize ["setextradata", :id, "VBoxInternal2/SharedFoldersEnableSymlinksCreate/linc-website", "1"]
     vb.customize ["modifyvm", :id, "--memory", "1024"]
   end
 

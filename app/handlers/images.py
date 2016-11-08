@@ -32,7 +32,7 @@ from os.path import realpath,dirname
 from lib.image_utils import generate_images
 from os import remove
 from lib.rolecheck import allowedRole, refusedRole, api_authenticated
-import logging
+from logging import info
 from uuid import uuid4
 from hashlib import md5
 from tornadoist import ProcessMixin
@@ -51,7 +51,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
             t = timedelta(days=1)
             for suf in ['_full.jpg','_icon.jpg','_medium.jpg','_thumbnail.jpg']:
                 keynames3 = self.settings['S3_FOLDER'] + '/' + self.folder_name + '/' + fupdname + suf
-                print(keynames3)
+                info(str(keynames3))
                 f = open(self.imgname[:-4]+suf,'rb')
                 self.s3con.upload(keynames3,f,expires=t,content_type='image/jpeg',public=True)
                 f.close()
@@ -87,7 +87,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                 self.dropError(400,"you need to pass image's ids separated by commas")
                 return
         else:
-            print(image_id)
+            info(image_id)
             if image_id:
                 if image_id == 'list':
                     objs = yield self.settings['db'].images.find().to_list(None)
@@ -96,7 +96,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                 else:
                     # return a specific image accepting as id the integer id, hash and name
                     query = self.query_id(image_id)
-                    print(query)
+                    info(query)
                     objs = yield self.settings['db'].images.find_one(query)
                     if objs:
                         objimage = objs
@@ -166,7 +166,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
         imgaexists = yield self.settings['db'].images.find_one({'hashcheck':filehash})
         if imgaexists:
             self.remove_file(imgname)
-            print('File already exists!')
+            info('File already exists!')
             self.dropError(409,'The file already exists in the system.')
             return
         #####
@@ -188,7 +188,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                 return
             else:
                 newobj[field] = self.input_data[field]
-        print(newobj)
+        info(newobj)
         imgsetid = self.input_data['image_set_id']
         isexists = yield self.settings['db'].imagesets.find_one({'iid':imgsetid})
         if isexists:
@@ -204,7 +204,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
             newobj['url'] = url
             # adding the hash pre calculed
             newobj['hashcheck'] = filehash
-            print(newobj)
+            info(newobj)
             newimage = Image(newobj)
             newimage.validate()
             # the new object is valid, so try to save
@@ -230,10 +230,10 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                 self.folder_name = folder_name
                 # Returning success
                 self.setSuccess(201,'New image saved. The image processing will start for this new image.',output)
-            except ValidationError,e:
+            except ValidationError as e:
                 self.remove_file(imgname)
                 self.dropError(400,'Fail to save image. Errors: '+str(e))
-        except ValidationError, e:
+        except ValidationError as e:
             self.remove_file(imgname)
             # received data is invalid in some way
             self.dropError(400,'Invalid input data. Errors: '+str(e))
@@ -325,10 +325,10 @@ class ImagesHandler(BaseHandler, ProcessMixin):
 
                         #self.finish(self.json_encode({'status':'success','message':'image updated','data':output}))
                         self.setSuccess(200,'image id '+str(output['id'])+ ' updated successfully.',output)
-                    except Exception, e:
+                    except Exception as e:
                         # duplicated index error
                         self.dropError(409,'key violation. Errors: '+str(e))
-                except ValidationError, e:
+                except ValidationError as e:
                     # received data is invalid in some way
                     self.dropError(400,'Invalid input data. Errors: '+str(e))
             else:
@@ -349,7 +349,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                 refcount = 0
                 iid = updobj['image_set_iid']
                 try:
-                    print(updobj)
+                    info(updobj)
                     delobj = yield self.settings['db'].images.remove(query)
                     # Delete the source file
                     bkpcopy = self.settings['S3_FOLDER']+'/backup/'+updobj['created_at'].date().isoformat() + '_image_'+str(updobj['iid'])+'_'+str(updobj['_id'])+'_full.jpg'
@@ -365,13 +365,13 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                         for suf in ['_full.jpg','_icon.jpg','_medium.jpg','_thumbnail.jpg']:
                             #self.s3con.delete(srcurl+suf,self.settings['S3_BUCKET'])
                             rmlist.append(srcurl+suf)
-                    except Exception, e:
+                    except Exception as e:
                         self.setSuccess(200,'image successfully deleted but can\'t remove files from S3. Errors: '+str(e))
                         return
                     if len(rmlist):
                         rmladd = yield self.settings['db'].dellist.insert({'list':rmlist,'ts':datetime.now()})
                     self.setSuccess(200,'Image successfully deleted.')
-                except Exception,e:
+                except Exception as e:
                     self.dropError(500,'Fail to delete image. Errors: '+str(e))
             else:
                 self.dropError(404,'Image not found')

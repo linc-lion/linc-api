@@ -22,8 +22,8 @@
 
 from random import choice
 from base64 import b64encode, b64decode
-from string import printable, whitespace, letters, digits, ascii_letters
-from itertools import izip, cycle
+from string import printable, whitespace, digits, ascii_letters
+from itertools import cycle
 
 safechars = ''.join(sorted(set(printable) - set(whitespace)))
 
@@ -32,10 +32,10 @@ def gen_token(token_size=100):
     return token
 
 def mksecret(length=50):
-    return ''.join(choice(safechars) for i in xrange(length))
+    return ''.join(choice(safechars) for i in range(length))
 
 def xor(w1, w2):
-    return ''.join(chr(ord(c1)^ord(c2)) for c1, c2 in izip(w1, cycle(w2)))
+    return ''.join(chr(ord(c1)^ord(c2)) for c1, c2 in zip(w1, cycle(w2)))
 
 def token_encode(word, secret):
     w = len(word)

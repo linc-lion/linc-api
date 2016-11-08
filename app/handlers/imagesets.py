@@ -298,7 +298,7 @@ class ImageSetsHandler(BaseHandler):
 
                 self.set_status(200)
                 self.finish(self.json_encode({'status':'success','message':'new image set added','data':output}))
-            except ValidationError, e:
+            except ValidationError as e:
                 self.dropError(400,"Invalid input data. Error: "+str(e))
                 return
         else:
@@ -369,7 +369,7 @@ class ImageSetsHandler(BaseHandler):
                         del output['image_set_iid']
                         self.set_status(response.code)
                         self.finish(self.json_encode({'status':'success','message':response.reason,'data':output}))
-                    except ValidationError, e:
+                    except ValidationError as e:
                         self.set_status(500)
                         self.finish({'status':'error','message':'Fail to execute the request for identification. Errors: '+str(e)})
                 else:
@@ -490,7 +490,7 @@ class ImageSetsHandler(BaseHandler):
 
                     self.set_status(200)
                     self.finish(self.json_encode({'status':'success','message':'image set updated','data':output}))
-                except ValidationError, e:
+                except ValidationError as e:
                     self.dropError(400,"Invalid input data. Error: "+str(e))
                     return
             else:
@@ -504,12 +504,14 @@ class ImageSetsHandler(BaseHandler):
     def delete(self, imageset_id=None):
         # delete an imageset
         if imageset_id:
+            # check if it's a primary image set
+            #
             query = self.query_id(imageset_id)
             imgobj = yield self.settings['db'].imagesets.find_one(query)
             if imgobj:
                 # 1 - Remove imaget set
                 rmved = yield self.settings['db'].imagesets.remove({'iid':imgobj['iid']})
-                print rmved
+                info(str(rmved))
                 # 2 - Remove images of the image set
                 imgl = yield self.settings['db'].images.find({'image_set_iid':imgobj['iid']}).to_list(None)
                 rmlist = list()
@@ -520,22 +522,22 @@ class ImageSetsHandler(BaseHandler):
                     try:
                         for suf in ['_full.jpg','_icon.jpg','_medium.jpg','_thumbnail.jpg']:
                             rmlist.append(srcurl+suf)
-                    except Exception, e:
+                    except Exception as e:
                         self.setSuccess(500,'Fail to delete image in S3. Errors: '+str(e))
                         return
                 if len(rmlist) > 0:
                     rmladd = yield self.settings['db'].dellist.insert({'list':rmlist,'ts':datetime.now()})
                 rmved = yield self.settings['db'].images.remove({'image_set_iid':imgobj['iid']},multi=True)
-                print rmved
+                info(str(rmved))
                 # 3 - Removing cvrequests and cvresults
                 cvreql = yield self.settings['db'].cvrequests.find({'image_set_iid':imgobj['iid']}).to_list(None)
                 for cvreq in cvreql:
                     # Removing cvresult
                     rmved = yield self.settings['db'].cvresults.remove({'cvrequest_iid':cvreq['iid']})
-                    print rmved
+                    info(str(rmved))
                     # Removing cvrequest
                     rmved = yield self.settings['db'].cvrequests.remove({'_id':cvreq['_id']})
-                    print rmved
+                    info(str(rmved))
             else:
                 self.dropError(404,'image set not found')
         else:
