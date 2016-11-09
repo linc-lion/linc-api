@@ -39,7 +39,7 @@ class CheckAuthHandler(BaseHandler):
             'login ip':self.current_user['ip'],
             'check ip':remote_ip,
         }
-        self.setSuccess(200,'Token valid and the user '+self.current_user['username']+' is still logged.',output)
+        self.response(200,'Token valid and the user '+self.current_user['username']+' is still logged.',output)
 
 class LoginHandler(BaseHandler):
     @asynchronous
@@ -55,7 +55,7 @@ class LoginHandler(BaseHandler):
             if username in wlist.keys():
                 dt = wlist[username]
                 if datetime.now() < dt + timedelta(minutes=30):
-                    self.dropError(401,'Authentication failed, your user have more than 3 attempts so you must wait 30 minutes since your last attempt.')
+                    self.response(401,'Authentication failed, your user have more than 3 attempts so you must wait 30 minutes since your last attempt.')
                     return
                 else:
                     del wlist[username]
@@ -116,13 +116,13 @@ class LoginHandler(BaseHandler):
                     count[username]['d'] = datetime.now()
                     if count[username]['c'] > 3:
                         wlist[username] = datetime.now()
-                        self.dropError(401,'Authentication failure, and you have more than three attempts in 30 minutes, so you will need to wait 30 minutes to try to login again.')
+                        self.response(401,'Authentication failure, and you have more than three attempts in 30 minutes, so you will need to wait 30 minutes to try to login again.')
                     else:
-                        self.dropError(401,'Authentication failure, password incorrect.')
+                        self.response(401,'Authentication failure, password incorrect.')
             else:
-                self.dropError(401,'Authentication failure. Username or password are incorrect or maybe the user are disabled.')
+                self.response(401,'Authentication failure. Username or password are incorrect or maybe the user are disabled.')
         else:
-            self.dropError(400,'Authentication requires username and password')
+            self.response(400,'Authentication requires username and password')
 
 class LogoutHandler(BaseHandler):
     @api_authenticated
@@ -132,6 +132,6 @@ class LogoutHandler(BaseHandler):
         print(self.settings['wait_list'])
         if self.current_user['username'] in self.settings['tokens'].keys():
             del self.settings['tokens'][self.current_user['username']]
-            self.setSuccess(200,'Logout OK.')
+            self.response(200,'Logout OK.')
         else:
-            self.setSuccess(400,'Authentication token invalid. User already logged off.')
+            self.response(400,'Authentication token invalid. User already logged off.')

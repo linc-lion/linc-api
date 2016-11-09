@@ -110,10 +110,10 @@ class OrganizationsHandler(BaseHandler):
                 self.finish(self.json_encode({'status':'success','message':'new organization saved','data':output}))
             except:
                 # duplicated index error
-                self.dropError(409,'duplicated name for an organization')
+                self.response(409,'Duplicated name for an organization.')
         except:
             # received data is invalid in some way
-            self.dropError(400,'Invalid input data.')
+            self.response(400,'Invalid input data.')
 
     @asynchronous
     @coroutine
@@ -155,16 +155,16 @@ class OrganizationsHandler(BaseHandler):
                             self.finish(self.json_encode({'status':'success','message':'organization updated','data':output}))
                         except:
                             # duplicated index error
-                            self.dropError(409,'duplicated name for an organization')
+                            self.response(409,'Duplicated name for an organization.')
                     else:
-                        self.dropError(400,'No data provided to be updated')
+                        self.response(400,'No data provided to be updated.')
                 except:
                     # received data is invalid in some way
-                    self.dropError(400,'Invalid input data.')
+                    self.response(400,'Invalid input data.')
             else:
-                self.dropError(404,'organization not found')
+                self.response(404,'Organization not found.')
         else:
-            self.dropError(400,'Update requests (PUT) must have a resource ID and update pairs for key and value.')
+            self.response(400,'Update requests (PUT) must have a resource ID and update pairs for key and value.')
 
     @asynchronous
     @coroutine
@@ -190,13 +190,13 @@ class OrganizationsHandler(BaseHandler):
                 cvreqrc = yield self.settings['db'].cvrequests.update({'requesting_organization_iid':iid},{'$set':{'requesting_organization_iid':self.current_user['org_id'],'updated_at':datetime.now()}},multi=True)
                 try:
                     updobj = yield self.settings['db'].organizations.remove(query)
-                    self.setSuccess(200,'organization successfully deleted')
+                    self.response(200,'Organization successfully deleted.')
                 except:
-                    self.dropError(500,'fail to delete organization')
+                    self.response(500,'Fail to delete organization.')
             else:
-                self.dropError(404,'organization not found')
+                self.response(404,'Organization not found.')
         else:
-            self.dropError(400,'Remove requests (DELETE) must have a resource ID.')
+            self.response(400,'Remove requests (DELETE) must have a resource ID.')
 
     def list(self,objs):
         """ Implements the list output used for UI in the website

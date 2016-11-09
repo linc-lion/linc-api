@@ -47,7 +47,7 @@ class ImageSetsHandler(BaseHandler):
             try:
                 query = { '_id' : ObjId(imageset_id) }
             except:
-                self.dropError(400,'invalid id key')
+                self.response(400,'Invalid id key.')
                 return
         return query
 
@@ -56,13 +56,13 @@ class ImageSetsHandler(BaseHandler):
     @api_authenticated
     def get(self, imageset_id=None, param=None):
         if param == 'cvrequest':
-            self.dropError(400,'to request cv identification you must use POST method')
+            self.response(400,'To request cv identification you must use POST method.')
             return
         if imageset_id == 'list':
             # Show a list for the website
             # Get imagesets from the DB
             output = yield Task(self.list)
-            self.setSuccess(200,'imagesets list',output)
+            self.rsponse(200,'Imagesets list.',output)
         elif imageset_id and param == 'profile':
             query = self.query_id(imageset_id)
             imgset = yield self.settings['db'].imagesets.find_one(query)
@@ -81,7 +81,6 @@ class ImageSetsHandler(BaseHandler):
                 else:
                     output['organization'] = '-'
                     output['organization_id'] = '-'
-
                 # Check animal
                 if output['id'] in imgprim:
                     #it's a primary image set
@@ -151,10 +150,10 @@ class ImageSetsHandler(BaseHandler):
                 output[self.settings['animal']+'_id'] = output['animal_iid']
                 del output['animal_iid']
 
-                self.setSuccess(200,'imageset found',output)
+                self.response(200,'Imageset found.',output)
                 return
             else:
-                self.dropError(404,'imageset not found')
+                self.response(404,'Imageset not found.')
                 return
         elif imageset_id and param == 'gallery':
             query = self.query_id(imageset_id)
@@ -171,9 +170,9 @@ class ImageSetsHandler(BaseHandler):
                         imgout[suf[1:-4]] = self.settings['S3_URL'] + img['url'] + suf
                     imgout['cover'] = (img['iid'] == cover)
                     output['images'].append(imgout)
-                self.setSuccess(200,'gallery images for the image set '+str(imageset_id),output)
+                self.response(200,'Gallery images for the image set '+str(imageset_id)+'.',output)
             else:
-                self.dropError(404,'imageset not found')
+                self.response(404,'Imageset not found.')
             return
         else:
             if imageset_id:
@@ -212,7 +211,7 @@ class ImageSetsHandler(BaseHandler):
                     loutput = loutput[0]
                 self.finish(self.json_encode({'status':'success','data':loutput}))
             else:
-                self.dropError(404,'imageset id not found')
+                self.response(404,'Imageset id not found.')
 
     @asynchronous
     @coroutine
@@ -234,7 +233,7 @@ class ImageSetsHandler(BaseHandler):
             keys = list(self.input_data.keys())
             for field in fields_needed:
                 if field not in keys:
-                    self.dropError(400,'you must provide the key for '+field+' even it has the value = null')
+                    self.response(400,'You must provide the key for '+field+' even it has the value = null.')
                     return
             # check if date_stamp are valid
             if newobj['date_stamp']:
@@ -242,13 +241,13 @@ class ImageSetsHandler(BaseHandler):
                     dts = datetime.strptime(newobj['date_stamp'], "%Y-%m-%d").date()
                     newobj['date_stamp'] = str(dts)
                 except:
-                    self.dropError(400,'invalid date_stamp. you must provide it in format YYYY-MM-DD')
+                    self.response(400,'Invalid date_stamp. you must provide it in format YYYY-MM-DD.')
                     return
             if newobj['date_of_birth']:
                 try:
                     newobj['date_of_birth'] = datetime.strptime(newobj['date_of_birth'], "%Y-%m-%d")
                 except:
-                    self.dropError(400,'invalid date_of_birth. you must provide it in format YYYY-MM-DD')
+                    self.response(400,'Invalid date_of_birth. you must provide it in format YYYY-MM-DD.')
                     return
             # check if user exists
             useriid = self.input_data['uploading_user_id']
@@ -256,7 +255,7 @@ class ImageSetsHandler(BaseHandler):
             if userexists:
                 newobj['uploading_user_iid'] = useriid
             else:
-                self.dropError(409,"uploading user id referenced doesn't exist")
+                self.response(409,"Uploading user id referenced doesn't exist.")
                 return
             # check if organizations exists
             orgiid = self.input_data['uploading_organization_id']
@@ -264,14 +263,14 @@ class ImageSetsHandler(BaseHandler):
             if orgexists:
                 newobj['uploading_organization_iid'] = orgiid
             else:
-                self.dropError(409,"uploading organization id referenced doesn't exist")
+                self.response(409,"Uploading organization id referenced doesn't exist.")
                 return
             oorgiid = self.input_data['owner_organization_id']
             oorgexists = yield self.settings['db'].organizations.find_one({'iid':oorgiid})
             if oorgexists['iid'] == orgiid:
                 newobj['owner_organization_iid'] = oorgiid
             else:
-                self.dropError(409,"owner organization id referenced doesn't exist")
+                self.response(409,"Owner organization id referenced doesn't exist.")
                 return
             if 'latitude' in self.input_data.keys() and self.input_data['latitude'] and \
               'longitude' in self.input_data.keys() and self.input_data['longitude']:
@@ -299,7 +298,7 @@ class ImageSetsHandler(BaseHandler):
                 self.set_status(200)
                 self.finish(self.json_encode({'status':'success','message':'new image set added','data':output}))
             except ValidationError as e:
-                self.dropError(400,"Invalid input data. Error: "+str(e))
+                self.response(400,"Invalid input data. Error: "+str(e)+'.')
                 return
         else:
             query = self.query_id(imageset_id)
@@ -307,10 +306,10 @@ class ImageSetsHandler(BaseHandler):
             if imgchk:
                 cvreqchk = yield self.settings['db'].cvrequests.find_one({'image_set_iid':imgchk['iid']})
                 if cvreqchk:
-                    self.dropError(400,'a request for indentification of this imageset already exists in the database')
+                    self.response(400,'A request for indentification of this imageset already exists in the database.')
                     return
                 if not self.settings['animals'] in self.input_data.keys():
-                    self.dropError(400,'the cvrequest needs a list of '+self.settings['animals']+' id like: { "'+self.settings['animals']+'" : [<id>,...] }')
+                    self.response(400,'The cvrequest needs a list of '+self.settings['animals']+' id like: { "'+self.settings['animals']+'" : [<id>,...] }.')
                     return
                 if cvrequest:
                     # Send a request for identification in the CV Server
@@ -333,7 +332,7 @@ class ImageSetsHandler(BaseHandler):
                     animals = self.input_data[self.settings['animals']]
                     animalscheck = yield self.settings['db'][self.settings['animals']].find({'iid' : { '$in' : animals }}).to_list(None)
                     if not animalscheck:
-                        self.dropError(400,'no id valid in the list of '+self.settings['animals']+' passed')
+                        self.response(400,'No id valid in the list of '+self.settings['animals']+' passed.')
                         return
                     lanimals = list()
                     for animal in animalscheck:
@@ -373,9 +372,9 @@ class ImageSetsHandler(BaseHandler):
                         self.set_status(500)
                         self.finish({'status':'error','message':'Fail to execute the request for identification. Errors: '+str(e)})
                 else:
-                    self.dropError(400,'bad request')
+                    self.response(400,'Bad request.')
             else:
-                self.dropError(404,'imageset id not found')
+                self.response(404,'Imageset id not found.')
 
     @asynchronous
     @coroutine
@@ -423,7 +422,7 @@ class ImageSetsHandler(BaseHandler):
                                         objimgset['date_of_birth'] = dts
                                         continue
                                 except:
-                                    self.dropError(400,'invalid '+field)
+                                    self.response(400,'Invalid '+field+'.')
                                     return
                         elif field in ['latitude','longitude']:
                             if 'latitude' in update_data.keys() and update_data['latitude'] and \
@@ -446,23 +445,23 @@ class ImageSetsHandler(BaseHandler):
                 useriid = objimgset['uploading_user_iid']
                 userexists = yield self.settings['db'].users.find_one({'iid':useriid})
                 if not userexists:
-                    self.dropError(409,"uploading user id referenced doesn't exist")
+                    self.response(409,"Uploading user id referenced doesn't exist.")
                     return
                 # check if organizations exists
                 orgiid = objimgset['uploading_organization_iid']
                 orgexists = yield self.settings['db'].organizations.find_one({'iid':orgiid})
                 if not orgexists:
-                    self.dropError(409,"uploading organization id referenced doesn't exist")
+                    self.response(409,"Uploading organization id referenced doesn't exist.")
                     return
                 oorgiid = objimgset['owner_organization_iid']
                 oorgexists = yield self.settings['db'].organizations.find_one({'iid':oorgiid})
                 if oorgexists['iid'] != oorgiid:
-                    self.dropError(409,"owner organization id referenced doesn't exist")
+                    self.response(409,"Owner organization id referenced doesn't exist.")
                     return
                 if objimgset['animal_iid']:
                     aniexists = yield self.settings['db'][self.settings['animals']].find_one({'iid':objimgset['animal_iid']})
                     if aniexists['iid'] != objimgset['animal_iid']:
-                        self.dropError(409,'the '+self.settings['animal']+" id sent doesn't exist")
+                        self.response(409,'The '+self.settings['animal']+" id sent doesn't exist.")
                         return
                 try:
                     imgid = ObjId(objimgset['_id'])
@@ -491,12 +490,12 @@ class ImageSetsHandler(BaseHandler):
                     self.set_status(200)
                     self.finish(self.json_encode({'status':'success','message':'image set updated','data':output}))
                 except ValidationError as e:
-                    self.dropError(400,"Invalid input data. Error: "+str(e))
+                    self.response(400,"Invalid input data. Error: "+str(e)+'.')
                     return
             else:
-                self.dropError(404,'imageset id not found')
+                self.response(404,'Imageset id not found.')
         else:
-            self.dropError(400,'Update requests (PUT) must have a resource ID and update pairs for key and value.')
+            self.response(400,'Update requests (PUT) must have a resource ID and update pairs for key and value.')
 
     @asynchronous
     @coroutine
@@ -523,7 +522,7 @@ class ImageSetsHandler(BaseHandler):
                         for suf in ['_full.jpg','_icon.jpg','_medium.jpg','_thumbnail.jpg']:
                             rmlist.append(srcurl+suf)
                     except Exception as e:
-                        self.setSuccess(500,'Fail to delete image in S3. Errors: '+str(e))
+                        self.response(500,'Fail to delete image in S3. Errors: '+str(e)+'.')
                         return
                 if len(rmlist) > 0:
                     rmladd = yield self.settings['db'].dellist.insert({'list':rmlist,'ts':datetime.now()})
@@ -539,9 +538,9 @@ class ImageSetsHandler(BaseHandler):
                     rmved = yield self.settings['db'].cvrequests.remove({'_id':cvreq['_id']})
                     info(str(rmved))
             else:
-                self.dropError(404,'image set not found')
+                self.response(404,'Image set not found.')
         else:
-            self.dropError(400,'Remove requests (DELETE) must have a resource ID.')
+            self.response(400,'Remove requests (DELETE) must have a resource ID.')
 
     @asynchronous
     @engine

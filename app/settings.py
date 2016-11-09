@@ -80,8 +80,6 @@ api = {}
 api['debug'] = options.debug
 api['xsrf_cookies'] = False
 api['app_path'] = appdir
-api['default_handler_class'] = ErrorHandler
-api['default_handler_args'] = dict(status_code=404)
 api['version'] = 'api version v1.0.0 - 20160117'
 api['template_path'] = os.path.join(appdir,"templates")
 api['static_path'] = os.path.join(appdir, "static")

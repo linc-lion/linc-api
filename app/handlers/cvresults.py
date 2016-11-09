@@ -44,7 +44,7 @@ class CVResultsHandler(BaseHandler):
             try:
                 query = { '_id' : ObjId(res_id) }
             except:
-                self.dropError(400,'invalid id key')
+                self.response(400,'Invalid id key.')
                 return
         return query
 
@@ -155,11 +155,11 @@ class CVResultsHandler(BaseHandler):
 
     @api_authenticated
     def post(self):
-        self.dropError(400,"CV Results objects are created automatically, you can't POST to create them.")
+        self.response(400,"CV Results objects are created automatically, you can't POST to create them.")
 
     @api_authenticated
     def put(self, res_id=None):
-        self.dropError(400,"CV Results objects are updated automatically, you can't PUT to update them.")
+        self.response(400,"CV Results objects are updated automatically, you can't PUT to update them.")
 
     @asynchronous
     @coroutine
@@ -177,13 +177,13 @@ class CVResultsHandler(BaseHandler):
                     del updobj['_id']
                     newhres = yield self.settings['db'].cvresults_history.insert(updobj)
                     cvres = yield self.settings['db'].cvresults.remove({'_id':idcvres})
-                    self.setSuccess(200,'cvresult successfully deleted')
+                    self.response(200,'CVresult successfully deleted.')
                 except:
-                    self.dropError(500,'fail to delete cvresult')
+                    self.response(500,'Fail to delete cvresult.')
             else:
-                self.dropError(404,'cvresult not found')
+                self.response(404,'CVresult not found.')
         else:
-            self.dropError(400,'Remove requests (DELETE) must have a resource ID.')
+            self.response(400,'Remove requests (DELETE) must have a resource ID.')
 
     def list(self,objs):
         """ Implements the list output used for UI in the website
