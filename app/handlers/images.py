@@ -65,7 +65,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
             try:
                 query = { '_id' : ObjId(image_id) }
             except:
-                self.dropError(400,'invalid id key')
+                self.response(400,'Invalid id key.')
                 return
         return query
 
@@ -81,10 +81,10 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                 s3url = self.settings['S3_URL']
                 suf = '_full.jpg'
                 urls = [ s3url+x['url']+suf for x in limgs]
-                self.setSuccess(200,'links for the requested images with id='+download,urls)
+                self.response(200,'Links for the requested images with id='+download+'.',urls)
                 return
             else:
-                self.dropError(400,"you need to pass image's ids separated by commas")
+                self.response(400,"you need to pass image's ids separated by commas")
                 return
         else:
             info(image_id)
@@ -139,14 +139,14 @@ class ImagesHandler(BaseHandler, ProcessMixin):
         # Checking everything
         ########################################################################
         if not updopt:
-            self.dropError(400,'Uploads must be requested calling /images/upload.')
+            self.response(400,'Uploads must be requested calling /images/upload.')
             return
         if not self.s3con:
-            self.dropError(500,'Fail to connect to S3. You must request support.')
+            self.response(500,'Fail to connect to S3. You must request support.')
             return
         # Check if file was sent and if its hash md5 already exists
         if 'image' not in self.input_data.keys():
-            self.dropError(400,'The request to add image require the key "image" with the file encoded with base64.')
+            self.response(400,'The request to add image require the key "image" with the file encoded with base64.')
             return
         # Check if its a valid image
         dirfs = dirname(realpath(__file__))
@@ -157,7 +157,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
             fh.close()
         except:
             self.remove_file(imgname)
-            self.dropError(400,'The encoded image is invalid, you must remake the encode using base64.')
+            self.response(400,'The encoded image is invalid, you must remake the encode using base64.')
             return
         # Ok, image is valid
         # Now, check if it already exists in the database
@@ -167,7 +167,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
         if imgaexists:
             self.remove_file(imgname)
             info('File already exists!')
-            self.dropError(409,'The file already exists in the system.')
+            self.response(409,'The file already exists in the system.')
             return
         #####
         # everything checked, so good to go.
@@ -184,7 +184,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
         for field in fields_needed:
             if field not in self.input_data.keys():
                 self.remove_file(imgname)
-                self.dropError(400,'you need to provide the field '+field)
+                self.response(400,'you need to provide the field '+field)
                 return
             else:
                 newobj[field] = self.input_data[field]
@@ -196,7 +196,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
             del newobj['image_set_id']
         else:
             self.remove_file(imgname)
-            self.dropError(400,"image set id referenced doesn't exist")
+            self.response(400,"image set id referenced doesn't exist")
             return
         try:
             folder_name = 'imageset_'+str(isexists['iid'])+'_'+str(isexists['_id'])
@@ -229,14 +229,14 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                 self.imgobjid = output['obj_id']
                 self.folder_name = folder_name
                 # Returning success
-                self.setSuccess(201,'New image saved. The image processing will start for this new image.',output)
+                self.response(201,'New image saved. The image processing will start for this new image.',output)
             except ValidationError as e:
                 self.remove_file(imgname)
-                self.dropError(400,'Fail to save image. Errors: '+str(e))
+                self.response(400,'Fail to save image. Errors: '+str(e)+'.')
         except ValidationError as e:
             self.remove_file(imgname)
             # received data is invalid in some way
-            self.dropError(400,'Invalid input data. Errors: '+str(e))
+            self.response(400,'Invalid input data. Errors: '+str(e)+'.')
 
     @asynchronous
     @coroutine
@@ -253,7 +253,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
             if imgset:
                 update_data['image_set_id'] = imgiid
             else:
-                self.dropError(409,"image set referenced doesn't exist")
+                self.response(409,"Image set referenced doesn't exist.")
                 return
         # validate the input for update
         update_ok = False
@@ -283,7 +283,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                         # copy image
                         # No need to specify the target bucket if we're copying inside the same bucket
                         if not self.s3con:
-                            self.dropError(500,'Fail to connect to S3')
+                            self.response(500,'Fail to connect to S3.')
                             return
                         oldimgset = yield self.settings['db'].imagesets.find_one({'iid':orig_imgset_id})
                         srcurl = self.settings['S3_FOLDER'] + '/imageset_'+str(oldimgset['iid'])+'_'+str(oldimgset['_id'])+'/'
@@ -324,17 +324,17 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                         del output['image_set_iid']
 
                         #self.finish(self.json_encode({'status':'success','message':'image updated','data':output}))
-                        self.setSuccess(200,'image id '+str(output['id'])+ ' updated successfully.',output)
+                        self.response(200,'Image id '+str(output['id'])+ ' updated successfully.',output)
                     except Exception as e:
                         # duplicated index error
-                        self.dropError(409,'key violation. Errors: '+str(e))
+                        self.response(409,'Key violation. Errors: '+str(e)+'.')
                 except ValidationError as e:
                     # received data is invalid in some way
-                    self.dropError(400,'Invalid input data. Errors: '+str(e))
+                    self.response(400,'Invalid input data. Errors: '+str(e)+'.')
             else:
-                self.dropError(404,'image not found')
+                self.response(404,'Image not found.')
         else:
-            self.dropError(400,'Update requests (PUT) must have a resource ID and update pairs for key and value.')
+            self.response(400,'Update requests (PUT) must have a resource ID and update pairs for key and value.')
 
     @asynchronous
     @coroutine
@@ -366,17 +366,17 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                             #self.s3con.delete(srcurl+suf,self.settings['S3_BUCKET'])
                             rmlist.append(srcurl+suf)
                     except Exception as e:
-                        self.setSuccess(200,'image successfully deleted but can\'t remove files from S3. Errors: '+str(e))
+                        self.response(200,'Image successfully deleted but can\'t remove files from S3. Errors: '+str(e)+'.')
                         return
                     if len(rmlist):
                         rmladd = yield self.settings['db'].dellist.insert({'list':rmlist,'ts':datetime.now()})
-                    self.setSuccess(200,'Image successfully deleted.')
+                    self.response(200,'Image successfully deleted.')
                 except Exception as e:
-                    self.dropError(500,'Fail to delete image. Errors: '+str(e))
+                    self.response(500,'Fail to delete image. Errors: '+str(e)+'.')
             else:
-                self.dropError(404,'Image not found')
+                self.response(404,'Image not found.')
         else:
-            self.dropError(400,'Remove requests (DELETE) must have a resource ID.')
+            self.response(400,'Remove requests (DELETE) must have a resource ID.')
 
     def list(self,objs,callback=None):
         """ Implements the list output used for UI in the website

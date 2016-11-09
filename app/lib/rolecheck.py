@@ -86,9 +86,9 @@ def api_authenticated(method):
     def wrapper(self, *args, **kwargs):
         if not self.current_user:
             if hasattr(self,'token_passed_but_invalid'):
-                self.dropError(401,'Authentication token passed is invalid. You must do login again.')
+                self.response(401,'Authentication token passed is invalid. You must do login again.')
             else:
-                self.dropError(401,'Authentication required.')
+                self.response(401,'Authentication required.')
             return
         return method(self, *args, **kwargs)
     return wrapper

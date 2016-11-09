@@ -63,7 +63,7 @@ class BaseHandler(RequestHandler):
                     if str(k) != str(self.request.body.decode("utf-8")):
                         self.input_data[k] = v[0].decode("utf-8")
             except ValueError:
-                self.dropError(400,'Fail to parse input data.')
+                self.response(400,'Fail to parse input data.')
 
     def get_current_user(self):
         max_days_valid=10
@@ -113,16 +113,30 @@ class BaseHandler(RequestHandler):
         obj['id'] = obj['iid']
         del obj['iid']
 
-    def setSuccess(self,code=200,message="",data=None):
-        output_response = {'status':'success','message':message}
+    # def setSuccess(self,code=200,message="",data=None):
+    #     output_response = {'status':'success','message':message}
+    #     if data:
+    #         output_response['data'] = loads(self.json_encode(data))
+    #     self.set_status(code)
+    #     self.finish(output_response)
+
+    def response(self,code,message="",data=None,headers=None):
+        output_response = {'status':None,'message':message}
         if data:
-            output_response['data'] = loads(self.json_encode(data))
+            output_response['data'] = data
+        if code < 300:
+            output_response['status'] = 'success'
+        elif code >= 300 and code < 400:
+            output_response['status'] = 'redirect'
+        elif code >= 400 and code < 500:
+            output_response['status'] = 'error'
+        else:
+            output_response['status'] = 'fail'
+        if headers and isinstance(headers,dict):
+            for k,v in headers.items():
+                self.add_header(k,v)
         self.set_status(code)
         self.finish(output_response)
-
-    def dropError(self,code=400,message=""):
-        self.set_status(code)
-        self.finish({'status':'error', 'message':message})
 
     def json_encode(self,value):
         return dumps(value,default=str).replace("</", "<\\/")
@@ -194,7 +208,7 @@ class BaseHandler(RequestHandler):
         except HTTPError as e:
             info('HTTTP error returned... ')
             info("Code: "+str(e.code))
-            info("Message: "+str(e.message))
+            info("Message: "+str(e.log_message))
             if e.response:
                 info('URL: '+str(e.response.effective_url))
                 info('Reason: '+str(e.response.reason))
@@ -208,9 +222,18 @@ class BaseHandler(RequestHandler):
             response = e
         callback(response)
 
+    def write_error(self, status_code, **kwargs):
+        if status_code == 404:
+            self.response(status_code,'Resource not found. Check the URL.')
+        elif status_code == 405:
+            self.response(status_code,'Method not allowed in this resource. Check your verb (GET,POST,PUT and DELETE)')
+        else:
+            info(kwargs)
+            self.response(status_code,'Error: '+str(kwargs))
+
 class VersionHandler(BaseHandler):
     def get(self):
-        self.setSuccess(200,self.settings['version']+' - animal defined: '+self.settings['animal'])
+        self.response(200,self.settings['version']+' - animal defined: '+self.settings['animal'])
 
 class DocHandler(BaseHandler):
     def get(self):
@@ -220,4 +243,4 @@ class DocHandler(BaseHandler):
 class LogInfoHandler(BaseHandler):
     def put(self):
         output = [ self.settings['attempts'],self.settings['wait_list'],self.settings['tokens']]
-        self.setSuccess(200,'log info',output)
+        self.response(200,'Log info.',output)

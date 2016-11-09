@@ -72,9 +72,9 @@ class AnimalsHandler(BaseHandler):
                     orgnames[org['iid']] = org['name']
                 if len(objs) > 0:
                     output = yield Task(self.list,objs,orgnames)
-                    self.setSuccess(200,'success',output)
+                    self.response(200,'Success.',output)
                 else:
-                    self.dropError(404,'not found')
+                    self.response(404,'Not found.')
                 return
                 #self.set_status(200)
                 #self.finish(self.json_encode({'status':'success','data':output}))
@@ -148,16 +148,16 @@ class AnimalsHandler(BaseHandler):
                     else:
                         output['is_verified'] = False
 
-                    self.setSuccess(200,self.settings['animal']+' found',output)
+                    self.response(200,self.settings['animal']+' found',output)
                     return
                 else:
-                    self.dropError(404,'No '+self.settings['animal']+' can be found with the id = '+animal_id)
+                    self.response(404,'No '+self.settings['animal']+' can be found with the id = '+animal_id+'.')
                     return
             elif animal_id and xurl == 'locations':
                 try:
                     iid = int(animal_id)
                 except:
-                    self.dropError(400,'requests about locations only accept integer id for the '+self.settings['animals'])
+                    self.response(400,'Requests about locations only accept integer id for the '+self.settings['animals']+'.')
                     return
                 cursor = self.settings['db'].imagesets.find({'animal_iid':iid},{'iid':1,'location':1,'updated_at':1})
                 cursor.sort('updated_at',DESCENDING)
@@ -168,7 +168,7 @@ class AnimalsHandler(BaseHandler):
                     for i in imgsets:
                         if i['location']:
                             locations.append({'id':i['iid'],'label':'Image Set '+str(i['iid']),'latitude':i['location'][0][0],'longitude':i['location'][0][1],'updated_at':i['updated_at'].date().isoformat()})
-                self.setSuccess(200,'location list',{'count':litems,'locations':locations})
+                self.response(200,'Location list.',{'count':litems,'locations':locations})
                 return
             else:
                 # return a specific animal accepting as id the integer id, hash and name
@@ -190,7 +190,7 @@ class AnimalsHandler(BaseHandler):
                     self.finish(self.json_encode(objanimal))
                 else:
                     self.set_status(404)
-                    self.finish(self.json_encode({'status':'error','message':'not found'}))
+                    self.finish(self.json_encode({'status':'error','message':'Not found.'}))
         else:
             # return a list of animals
             queryfilter = dict()
@@ -211,7 +211,7 @@ class AnimalsHandler(BaseHandler):
                         queryfilter['date_of_birth']['$lte'] = datetime.combine(datetime.strptime(queryfilter['dob_end'], "%Y-%m-%d").date(),time.min)
                         del queryfilter['dob_end']
             except:
-                self.dropError(400,'invalid value for dob_start/dob_end')
+                self.response(400,'Invalid value for dob_start/dob_end.')
                 return
             objs = yield self.settings['db'].imagesets.find(queryfilter).to_list(None)
             iids = [x['animal_iid'] for x in objs]
@@ -255,14 +255,14 @@ class AnimalsHandler(BaseHandler):
             newobj['primary_image_set_iid'] = self.input_data['primary_image_set_id']
             check_org = yield self.settings['db'].organizations.find_one({'iid':newobj['organization_iid']})
             if not check_org:
-                self.dropError(409,'invalid organization_id')
+                self.response(409,'Invalid organization_id.')
                 return
             check_imageset = yield self.settings['db'].imagesets.find_one({'iid':newobj['primary_image_set_iid']})
             if not check_imageset:
-                self.dropError(409,'invalid primary_image_set_id')
+                self.response(409,'Invalid primary_image_set_id.')
                 return
         else:
-            self.dropError(400,'You must define name, organization_id and primary_image_set_id for the new lion.')
+            self.response(400,'You must define name, organization_id and primary_image_set_id for the new lion.')
         try:
             newanimal = Animal(newobj)
             newanimal.collection(self.settings['animals'])
@@ -280,10 +280,10 @@ class AnimalsHandler(BaseHandler):
                 self.finish(self.json_encode({'status':'success','message':'new '+self.settings['animal']+' saved','data':output}))
             except:
                 # duplicated index error
-                self.dropError(409,'Key violation. Check if you are using a name from a lion that already exists in the database.')
+                self.response(409,'Key violation. Check if you are using a name from a lion that already exists in the database.')
         except ValidationError as e:
             # received data is invalid in some way
-            self.dropError(400,'Invalid input data. Errors: '+str(e))
+            self.response(400,'Invalid input data. Errors: '+str(e))
 
     @asynchronous
     @coroutine
@@ -298,14 +298,14 @@ class AnimalsHandler(BaseHandler):
             del self.input_data['organization_id']
             check_org = yield self.settings['db'].organizations.find_one({'iid':update_data['organization_iid']})
             if not check_org:
-                self.dropError(409,'invalid organization_id')
+                self.response(409,'Invalid organization_id.')
                 return
         if 'primary_image_set_id' in self.input_data.keys():
             update_data['primary_image_set_iid'] = self.input_data['primary_image_set_id']
             del self.input_data['primary_image_set_id']
             check_imageset = yield self.settings['db'].imagesets.find_one({'iid':update_data['primary_image_set_iid']})
             if not check_imageset:
-                self.dropError(409,'invalid primary_image_set_id')
+                self.response(409,'Invalid primary_image_set_id.')
                 return
         # validate the input for update
         update_ok = False
@@ -342,14 +342,14 @@ class AnimalsHandler(BaseHandler):
                         self.finish(self.json_encode({'status':'success','message':self.settings['animal']+' updated','data':output}))
                     except:
                         # duplicated index error
-                        self.dropError(409,'duplicated name for '+self.settings['animal'])
+                        self.response(409,'Duplicated name for '+self.settings['animal']+'.')
                 except ValidationError as e:
                     # received data is invalid in some way
-                    self.dropError(400,'Invalid input data. Errors: '+str(e))
+                    self.response(400,'Invalid input data. Errors: '+str(e)+'.')
             else:
-                self.dropError(404,self.settings['animal']+' not found')
+                self.response(404,self.settings['animal']+' not found.')
         else:
-            self.dropError(400,'Update requests (PUT) must have a resource ID and update pairs for key and value.')
+            self.response(400,'Update requests (PUT) must have a resource ID and update pairs for key and value.')
 
     @asynchronous
     @coroutine
@@ -364,7 +364,7 @@ class AnimalsHandler(BaseHandler):
                 rem_pis = animobj['primary_image_set_iid']
                 rem_pis_obj = yield self.settings['db'].imagesets.find_one({'iid':rem_pis})
                 if not rem_pis_obj:
-                    self.dropError(500,'Fail to find the object for the primary image set.')
+                    self.response(500,'Fail to find the object for the primary image set.')
                     return
                 # 1 - Remove animal
                 rmved = yield self.settings['db'][self.settings['animals']].remove({'iid':rem_iid})
@@ -382,7 +382,7 @@ class AnimalsHandler(BaseHandler):
                         for suf in ['_full.jpg','_icon.jpg','_medium.jpg','_thumbnail.jpg']:
                             rmlist.append(srcurl+suf)
                     except Exception as e:
-                        self.setSuccess(500,'Fail to delete image in S3. Errors: '+str(e))
+                        self.response(500,'Fail to delete image in S3. Errors: '+str(e)+'.')
                         return
                 if len(rmlist) > 0:
                     rmladd = yield self.settings['db'].dellist.insert({'list':rmlist,'ts':datetime.now()})
@@ -407,9 +407,9 @@ class AnimalsHandler(BaseHandler):
                     if rmup:
                         updcvr = yield self.settings['db'].cvresults.update({'_id':doc['_id']},{'$set':{'match_probability':dumps(rmupl)}})
             else:
-                self.dropError(404,self.settings['animal']+' not found.')
+                self.response(404,self.settings['animal']+' not found.')
         else:
-            self.dropError(400,'Remove requests (DELETE) must have a resource ID.')
+            self.response(400,'Remove requests (DELETE) must have a resource ID.')
 
     @asynchronous
     @engine

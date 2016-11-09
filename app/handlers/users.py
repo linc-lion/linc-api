@@ -76,7 +76,8 @@ class UsersHandler(BaseHandler):
                         rm.append(k)
                 for k in rm:
                     del orglist[k]
-                self.setSuccess(200,'Ok, works',orglist)
+                self.response(200,'Ok, it works.',orglist)
+                return
             else:
                 # return a specific user accepting as id the integer id, hash and name
                 query = self.query_id(user_id)
@@ -129,7 +130,7 @@ class UsersHandler(BaseHandler):
         if orgexists:
             newobj['organization_iid'] = orgiid
         else:
-            self.dropError(409,"organization referenced doesn't exist")
+            self.response(409,"Organization referenced doesn't exist.")
             return
         try:
             newuser = User(newobj)
@@ -146,10 +147,10 @@ class UsersHandler(BaseHandler):
                 self.finish(self.json_encode({'status':'success','message':'new user saved','data':output}))
             except:
                 # duplicated index error
-                self.dropError(409,'key violation')
+                self.response(409,'Key violation.')
         except ValidationError as e:
             # received data is invalid in some way
-            self.dropError(400,'Invalid input data. Errors: '+str(e))
+            self.response(400,'Invalid input data. Errors: '+str(e)+'.')
 
     @asynchronous
     @coroutine
@@ -166,7 +167,7 @@ class UsersHandler(BaseHandler):
             if orgexists:
                 update_data['organization_iid'] = orgiid
             else:
-                self.dropError(409,"organization referenced doesn't exist")
+                self.response(409,"Organization referenced doesn't exist.")
                 return
         # validate the input for update
         update_ok = False
@@ -205,14 +206,14 @@ class UsersHandler(BaseHandler):
                         self.finish(self.json_encode({'status':'success','message':'user updated','data':output}))
                     except:
                         # duplicated index error
-                        self.dropError(409,'invalid data for update')
+                        self.response(409,'Invalid data for update.')
                 except ValidationError as e:
                     # received data is invalid in some way
-                    self.dropError(400,'Invalid input data. Errors: '+str(e))
+                    self.response(400,'Invalid input data. Errors: '+str(e)+'.')
             else:
-                self.dropError(404,'user not found')
+                self.response(404,'User not found.')
         else:
-            self.dropError(400,'Update requests (PUT) must have a resource ID and update pairs for key and value.')
+            self.response(400,'Update requests (PUT) must have a resource ID and update pairs for key and value.')
 
     @asynchronous
     @coroutine
@@ -230,13 +231,13 @@ class UsersHandler(BaseHandler):
                 imgsetrc = yield self.settings['db'].imagesets.update({'uploading_user_iid':iid},{'$set':{'uploading_user_iid':self.current_user['id'],'updated_at':datetime.now()}},multi=True)
                 try:
                     updobj = yield self.settings['db'].users.remove(query)
-                    self.setSuccess(200,'user successfully deleted')
+                    self.response(200,'User successfully deleted.')
                 except:
-                    self.dropError(500,'fail to delete user')
+                    self.response(500,'Fail to delete user.')
             else:
-                self.dropError(404,'user not found')
+                self.response(404,'User not found.')
         else:
-            self.dropError(400,'Remove requests (DELETE) must have a resource ID.')
+            self.response(400,'Remove requests (DELETE) must have a resource ID.')
 
     def list(self,objs,orgnames=None):
         """ Implements the list output used for UI in the website

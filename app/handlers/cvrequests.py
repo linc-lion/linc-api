@@ -41,7 +41,7 @@ class CVRequestsHandler(BaseHandler):
             try:
                 query = { '_id' : ObjId(req_id) }
             except:
-                self.dropError(400,'invalid id key')
+                self.response(400,'Invalid id key.')
                 return
         return query
 
@@ -91,11 +91,11 @@ class CVRequestsHandler(BaseHandler):
 
     @api_authenticated
     def post(self,*kwargs):
-        self.dropError(400,'To create a CV Request you must POST to /imagesets/:id/cvrequest.')
+        self.response(400,'To create a CV Request you must POST to /imagesets/:id/cvrequest.')
 
     @api_authenticated
     def put(self, req_id=None):
-        self.dropError(400,'CV Requests are created and updated automatically.')
+        self.response(400,'CV Requests are created and updated automatically.')
 
     @asynchronous
     @coroutine
@@ -121,13 +121,13 @@ class CVRequestsHandler(BaseHandler):
                     del updobj['_id']
                     newhreq = yield self.settings['db'].cvrequests_history.insert(updobj)
                     cvreq = yield self.settings['db'].cvrequests.remove(query)
-                    self.setSuccess(200,'cvrequest successfully deleted')
+                    self.response(200,'CVrequest successfully deleted.')
                 except:
-                    self.dropError(500,'fail to delete cvrequest')
+                    self.response(500,'Fail to delete cvrequest.')
             else:
-                self.dropError(404,'cvrequest not found')
+                self.response(404,'CVrequest not found.')
         else:
-            self.dropError(400,'Remove requests (DELETE) must have a resource ID.')
+            self.response(400,'Remove requests (DELETE) must have a resource ID.')
 
     @asynchronous
     @engine
