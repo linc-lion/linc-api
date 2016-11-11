@@ -32,8 +32,8 @@ from motor import MotorClient as connect
 from lib.check_cv import checkresults
 from lib.check_s3 import checkS3
 from apscheduler.schedulers.tornado import TornadoScheduler
-
 from pymongo import MongoClient
+from logging import info
 
 # Adjusting path for the app
 
@@ -126,7 +126,6 @@ api['S3_ACCESS_KEY'] = os.environ.get('S3_ACCESS_KEY','')
 api['S3_SECRET_KEY'] = os.environ.get('S3_SECRET_KEY','')
 
 api['url'] = os.environ.get('API_URL','')
-
 api['scheduler'] = TornadoScheduler()
 api['scheduler'].start()
 # Check CV Server results - every 30 seconds
