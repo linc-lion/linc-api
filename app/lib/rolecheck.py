@@ -31,15 +31,12 @@ def _checkRole(role, roles):
             if r == role:
                 found = True
                 break
-
         if found == True:
             return True
-
     # Role is a single string
     else:
         if role == roles:
             return True
-
     return False
 
 def allowedRole(roles = None):
@@ -50,13 +47,11 @@ def allowedRole(roles = None):
             if user is None:
                 raise Exception('Cannot proceed role check: user not found')
             role = user[_userRolePropertyName]
-
             if _checkRole(role, roles) == False:
                 self.set_status(403)
                 self._transforms = []
                 self.finish({'status':'error','message':'endpoint not allowed for the current user role'})
                 return None
-
             return func(self, *args, **kwargs)
         return decorated
     return decorator
@@ -68,15 +63,12 @@ def refusedRole(roles = None):
             # User is refused
             if user is None:
                 raise Exception('Cannot proceed role check: user not found')
-
             role = user[_userRolePropertyName]
-
             if _checkRole(role, roles) == True:
                 self.set_status(403)
                 self._transforms = []
                 self.finish({'status':'error','message':'endpoint not allowed for the current user role'})
                 return None
-
             return func(self, *args, **kwargs)
         return decorated
     return decorator

@@ -108,7 +108,7 @@ class AnimalsHandler(BaseHandler):
                         else:
                             objimgset = ImageSet().to_native()
                     exclude = ['_id','iid','animal_iid']
-                    for k,v in objimgset.iteritems():
+                    for k,v in objimgset.items():
                         if k not in exclude:
                             output[k] = v
                     if 'date_of_birth' in output.keys() and output['date_of_birth']:
@@ -147,7 +147,6 @@ class AnimalsHandler(BaseHandler):
                         output['is_verified'] = True
                     else:
                         output['is_verified'] = False
-
                     self.response(200,self.settings['animal']+' found',output)
                     return
                 else:

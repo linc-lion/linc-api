@@ -56,7 +56,6 @@ class LoginHandler(BaseHandler):
             wlist = self.settings['wait_list']
             count = self.settings['attempts']
             ouser = yield self.settings['db'].users.find_one({'email':username})
-            info(ouser)
             if username in wlist.keys():
                 dt = wlist[username]
                 if datetime.now() < dt + timedelta(minutes=30):
@@ -77,16 +76,16 @@ class LoginHandler(BaseHandler):
                     orgname = ''
                     if org:
                          orgname = org['name']
-                    token = gen_token()
+                    token = gen_token(24)
                     objuser = { 'id': ouser['iid'],
                                 'username':ouser['email'],
                                 'orgname':orgname,
                                 'org_id':ouser['organization_iid'],
                                 'role': role,
-                                'token': gen_token(36),
+                                'token': token,
                                 'ip':remote_ip,
                                 'timestamp':datetime.now().isoformat()}
-                    # update user info about te login
+                    # update user info about the login
                     datupd = {'$set':{'updated_at':datetime.now(),
                                       'sign_in_count':int(ouser['sign_in_count'])+1,
                                       'last_sign_in_ip':ouser['current_sign_in_ip'],
@@ -101,15 +100,14 @@ class LoginHandler(BaseHandler):
                         del wlist[username]
                     if username in count.keys():
                         del count[username]
-                    self.settings['tokens'][username] = { 'token' : authtoken, 'dt' : datetime.now() }
+                    self.settings['tokens'][username] = { 'token' : token, 'dt' : datetime.now() }
                     # Encode to output
                     outputtoken = token_encode(authtoken,self.settings['token_secret'])
                     # Output Response
-                    outputdata = {'token':outputtoken.decode('utf-8'),
+                    outputdata = {'token':outputtoken,
                                   'role':role,'orgname':orgname,
                                   'id': ouser['iid'],
                                   'organization_id': ouser['organization_iid']}
-                    info(outputdata)
                     self.response(200,'Authentication OK.',outputdata,{'Linc-Api-AuthToken':outputtoken})
                     return
                 else:
@@ -142,7 +140,6 @@ class LogoutHandler(BaseHandler):
             self.response(400,'Authentication token invalid. User already logged off.')
 
 class RestorePassword(BaseHandler):
-
     @asynchronous
     @coroutine
     def post(self):

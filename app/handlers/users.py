@@ -71,7 +71,7 @@ class UsersHandler(BaseHandler):
                         if user['organization_iid'] == org['iid']:
                             orglist[org['name']].append(user['email'])
                 rm = list()
-                for k,v in orglist.iteritems():
+                for k,v in orglist.items():
                     if len(v) == 0:
                         rm.append(k)
                 for k in rm:

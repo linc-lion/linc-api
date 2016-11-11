@@ -80,15 +80,13 @@ class BaseHandler(RequestHandler):
             # Decode to test
             try:
                 token = token_decode(token,self.settings['token_secret'])
-                # Check token and it will validate if it ir younger that 10 days
                 vtoken = web.decode_signed_value(self.settings["cookie_secret"],'authtoken',token,max_age_days=max_days_valid)
             except:
                 vtoken = None
             if vtoken:
-                dtoken = loads(vtoken)
-                # Check if the Tornado signed_value cookie functions
+                dtoken = loads(vtoken.decode('utf-8'))
                 if dtoken['username'] in self.settings['tokens'].keys() and \
-                    self.settings['tokens'][dtoken['username']]['token'] == token:
+                    self.settings['tokens'][dtoken['username']]['token'] == dtoken['token']:
                     res = dtoken
             else:
                 # Validation error
@@ -136,7 +134,8 @@ class BaseHandler(RequestHandler):
             for k,v in headers.items():
                 self.add_header(k,v)
         self.set_status(code)
-        self.finish(output_response)
+        self.write(self.json_encode(output_response))
+        self.finish()
 
     def json_encode(self,value):
         return dumps(value,default=str).replace("</", "<\\/")
@@ -188,7 +187,7 @@ class BaseHandler(RequestHandler):
         http_client = AsyncHTTPClient()
         dictheaders = {"content-type": "application/json"}
         if headers:
-            for k,v in headers.iteritems():
+            for k,v in headers.items():
                 dictheaders[k] = v
         h = HTTPHeaders(dictheaders)
         params={
