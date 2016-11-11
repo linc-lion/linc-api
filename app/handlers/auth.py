@@ -29,6 +29,10 @@ from lib.rolecheck import api_authenticated
 from tornado.escape import utf8
 from tornado import web
 from json import dumps
+from logging import info
+from bson import ObjectId as ObjId
+from schematics.exceptions import ValidationError
+from models.user import User
 
 class CheckAuthHandler(BaseHandler):
     @api_authenticated
@@ -47,11 +51,12 @@ class LoginHandler(BaseHandler):
     def post(self):
         if 'username' in self.input_data.keys() and \
            'password' in self.input_data.keys():
-            username = utf8(self.input_data['username'])
-            password = utf8(self.input_data['password'])
+            username = self.input_data['username']
+            password = self.input_data['password']
             wlist = self.settings['wait_list']
             count = self.settings['attempts']
             ouser = yield self.settings['db'].users.find_one({'email':username})
+            info(ouser)
             if username in wlist.keys():
                 dt = wlist[username]
                 if datetime.now() < dt + timedelta(minutes=30):
@@ -100,13 +105,13 @@ class LoginHandler(BaseHandler):
                     # Encode to output
                     outputtoken = token_encode(authtoken,self.settings['token_secret'])
                     # Output Response
-                    self.set_header('Linc-Api-AuthToken',outputtoken)
-                    self.set_status(200)
-                    outputdata = {'status':'success','message':'Autentication OK.','token':outputtoken,
+                    outputdata = {'token':outputtoken.decode('utf-8'),
                                   'role':role,'orgname':orgname,
                                   'id': ouser['iid'],
                                   'organization_id': ouser['organization_iid']}
-                    self.finish(outputdata)
+                    info(outputdata)
+                    self.response(200,'Authentication OK.',outputdata,{'Linc-Api-AuthToken':outputtoken})
+                    return
                 else:
                     # wrong password
                     if username in count.keys() and datetime.now() < count[username]['d'] + timedelta(minutes=30):
@@ -135,3 +140,42 @@ class LogoutHandler(BaseHandler):
             self.response(200,'Logout OK.')
         else:
             self.response(400,'Authentication token invalid. User already logged off.')
+
+class RestorePassword(BaseHandler):
+
+    @asynchronous
+    @coroutine
+    def post(self):
+        if 'email' in self.input_data.keys():
+            email = self.input_data['email']
+            ouser = yield self.settings['db'].users.find_one({'email':email})
+            if ouser:
+                info(ouser)
+                newpass = gen_token(10)
+                info(newpass)
+                encpass = self.encryptPassword(newpass)
+                ouser['encrypted_password'] = encpass
+                ouser['updated_at'] = datetime.now()
+                updid = ObjId(ouser['_id'])
+                del ouser['_id']
+                try:
+                    updobj = User(ouser)
+                    updobj.validate()
+                    info(updobj)
+                    # the object is valid, so try to save
+                    try:
+                        updobj = updobj.to_native()
+                        updobj['_id'] = updid
+                        saved = yield self.settings['db'].users.update({'_id':updid},updobj)
+                        self.response(200,'A new password was sent to the user')
+                        return
+                    except:
+                        # duplicated index error
+                        self.response(400,'Fail to generate new password.')
+                except ValidationError as e:
+                    # received data is invalid in some way
+                    self.response(400,'Invalid input data. Errors: '+str(e)+'.')
+            else:
+                self.response(404,'No user found with email: '+email)
+        else:
+            self.response(400,'An email is required to restart user\'s passwords.')

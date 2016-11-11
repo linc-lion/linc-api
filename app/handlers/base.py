@@ -152,10 +152,10 @@ class BaseHandler(RequestHandler):
             return "-"
 
     def encryptPassword(self,password):
-        return bcrypt.hashpw(utf8(password), bcrypt.gensalt())
+        return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
     def checkPassword(self,password,hashed):
-        return bcrypt.hashpw(utf8(password), utf8(hashed)) == utf8(hashed)
+        return bcrypt.hashpw(password,hashed) == hashed
 
     def imgurl(self,urlpath,imgtype='thumbnail'):
         # type can be: full,medium,thumbnail and icon
