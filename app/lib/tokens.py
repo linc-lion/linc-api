@@ -28,6 +28,9 @@ from logging import info
 
 safechars = ''.join(sorted(set(printable) - set(whitespace)))
 
+# Stupid XOR demo
+from itertools import cycle
+
 def gen_token(token_size=100):
     token = ''.join(choice(ascii_letters + digits) for x in range(token_size))
     return token
@@ -35,19 +38,17 @@ def gen_token(token_size=100):
 def mksecret(length=50):
     return ''.join(choice(safechars) for i in range(length))
 
-def nxor(w1, w2):
-    return ''.join(chr(ord(c1)^ord(c2)) for c1, c2 in zip(w1, cycle(w2)))
+def str_xor(word, secret):
+    if isinstance(word,bytes):
+        word = word.decode('utf-8')
+    return ''.join(chr(ord(c)^ord(k)) for c,k in zip(word, cycle(secret)))
 
 def token_encode(word, secret):
-    w = len(word)
-    s = len(secret)
-    base = "%.3d%s%s" % (w, secret[-1], word)
-    b = len(base)
-    if b < s:
-        base += mksecret(s-b)
     altchars = bytearray('-_'.encode('utf-8'))
-    return b64encode(bytearray(nxor(base, secret).encode('utf-8')),altchars)
+    encoded = str_xor(word, secret)
+    return b64encode(bytearray(encoded.encode('utf-8')),altchars).decode('utf-8')
 
 def token_decode(word, secret):
-    base = xor(b64decode(word, '-_'), secret)
-    return base[4:int(base[:3], 10)+4]
+    altchars = bytearray('-_'.encode('utf-8'))
+    decoded = str_xor(b64decode(word,altchars),secret)
+    return decoded
