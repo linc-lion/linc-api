@@ -62,7 +62,7 @@ class ImageSetsHandler(BaseHandler):
             # Show a list for the website
             # Get imagesets from the DB
             output = yield Task(self.list)
-            self.rsponse(200,'Imagesets list.',output)
+            self.response(200,'Imagesets list.',output)
         elif imageset_id and param == 'profile':
             query = self.query_id(imageset_id)
             imgset = yield self.settings['db'].imagesets.find_one(query)
