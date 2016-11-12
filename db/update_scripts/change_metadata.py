@@ -26,5 +26,5 @@ for obj in db.imagesets.find({}):
     print(tags)
     print(ntags)
     print('=====================')
-    res = db.imagesets.update({'_id':objid},{'$set':{'tags':dumps(ntags)}},upsert=False)
+    res = db.imagesets.update({'_id':objid},{'$set':{'tags':dumps(list(set(ntags)))}},upsert=False)
     print(res)
