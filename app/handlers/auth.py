@@ -21,7 +21,7 @@
 # For more information or to contact visit linclion.org or email tech@linclion.org
 
 from tornado.web import asynchronous
-from tornado.gen import coroutine
+from tornado.gen import coroutine,Task
 from handlers.base import BaseHandler
 from datetime import datetime,timedelta
 from lib.tokens import gen_token,token_encode,token_decode
@@ -33,6 +33,7 @@ from logging import info
 from bson import ObjectId as ObjId
 from schematics.exceptions import ValidationError
 from models.user import User
+from tornado.httpclient import AsyncHTTPClient
 
 class CheckAuthHandler(BaseHandler):
     @api_authenticated
@@ -147,9 +148,7 @@ class RestorePassword(BaseHandler):
             email = self.input_data['email']
             ouser = yield self.settings['db'].users.find_one({'email':email})
             if ouser:
-                info(ouser)
                 newpass = gen_token(10)
-                info(newpass)
                 encpass = self.encryptPassword(newpass)
                 ouser['encrypted_password'] = encpass
                 ouser['updated_at'] = datetime.now()
@@ -164,10 +163,46 @@ class RestorePassword(BaseHandler):
                         updobj = updobj.to_native()
                         updobj['_id'] = updid
                         saved = yield self.settings['db'].users.update({'_id':updid},updobj)
-                        self.response(200,'A new password was sent to the user')
+                        emails = [email]
+                        admin_emails = yield self.settings['db'].users.find({'admin':True}).to_list(None)
+                        for i in admin_emails:
+                            emails.append(i['email'])
+                        emails = list(set(emails))
+                        # DEPLOY = This will be removed
+                        info(emails)
+                        emails = [email]
+                        # DEPLOY = end
+                        # -- Send email
+                        pemail = False
+                        for email_address in emails:
+                            emailmsg = dict()
+                            emailmsg['html'] = 'A password recovery was requested for the email '+email+'.<br>\nYou can use the credentials:<br>\nUsername: '+email+'<br>\nPassword: '+newpass+'<br><br>\n\nto log-in the system https://linc.linclion.org/ <br><br>\n\nLinc Lion Team\n<br>'
+
+                            emailmsg['text'] = 'A password recovery was requested for the email '+email+'.\nYou can use the credentials:\nUsername: '+email+'\nPassword: '+newpass+'\n\nto log-in the system in https://linc.linclion.org/ \n\nLinc Lion Team\n'
+
+                            emailmsg['subject'] = "LINC Lion: Password recovery"
+                            emailmsg['from_email'] = "suporte@venidera.net"
+                            emailmsg['from_name'] = "LINC Lion"
+                            emailmsg['to'] = [{"email": email_address,"name": email_address}]
+
+                            http_client = AsyncHTTPClient()
+                            mail_url = 'http://labs.venidera.com:12800/messages/send.json'
+                            mail_data = {
+                                "key": 'dyNJmiW2RPxZoKqi1u-bXw',
+                                "message": emailmsg,
+                                "exception": True
+                            }
+                            body = self.json_encode(mail_data)
+                            response = yield Task(http_client.fetch, mail_url, method='POST', body=body)
+                            if 200 <= response.code < 300:
+                                if email == email_address:
+                                    pemail = True
+                        if pemail:
+                            self.response(200,'A new password was sent to the user.')
+                        else:
+                            self.response(400,'The system can\'t generate a new password for the user. Ask for support in suporte@venidera.com')
                         return
                     except:
-                        # duplicated index error
                         self.response(400,'Fail to generate new password.')
                 except ValidationError as e:
                     # received data is invalid in some way
