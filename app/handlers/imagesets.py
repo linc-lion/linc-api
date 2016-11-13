@@ -92,9 +92,13 @@ class ImageSetsHandler(BaseHandler):
                 animalobj = yield self.settings['db'][self.settings['animals']].find_one(queryani)
                 if animalobj:
                     output['name'] = animalobj['name']
+                    if 'dead' in animalobj.keys():
+                        output['dead'] = animalobj['dead']
+                    else:
+                        output['dead'] = False
                 else:
                     output['name'] = '-'
-
+                    output['dead'] = None
                 if 'date_of_birth' in output.keys() and output['date_of_birth']:
                     output['age'] = str(self.age(output['date_of_birth']))
                 else:
@@ -555,25 +559,31 @@ class ImageSetsHandler(BaseHandler):
         animals = yield self.settings['db'][self.settings['animals']].find().to_list(None)
         primary_imgsets_list = list()
         animals_names = dict()
+        dead_dict = dict()
         for x in animals:
             animals_names[x['iid']] = x['name']
             if x['primary_image_set_iid']:
                 primary_imgsets_list.append(x['primary_image_set_iid'])
+            if 'dead' in x.keys():
+                dead_dict[x['iid']] = x['dead']
+            else:
+                dead_dict[x['iid']] = False
         output = list()
         for obj in objs_imgsets:
             imgset_obj = dict()
             imgset_obj['obj_id'] = str(obj['_id'])
             imgset_obj['id'] = obj['iid']
-
             imgset_obj[self.settings['animals']+'_org_id'] = ''
             if obj['animal_iid']:
                 imgset_obj['name'] = animals_names[obj['animal_iid']]
+                imgset_obj['dead'] = dead_dict[obj['animal_iid']]
                 imgset_obj[self.settings['animal']+'_id'] = obj['animal_iid']
                 animal_org_iid = yield self.settings['db'][self.settings['animals']].find_one({'iid':obj['animal_iid']})
                 if animal_org_iid:
                     imgset_obj[self.settings['animals']+'_org_id'] = animal_org_iid['organization_iid']
             else:
                 imgset_obj['name'] = '-'
+                imgset_obj['dead'] = None
                 imgset_obj[self.settings['animal']+'_id'] = None
 
             obji = yield self.settings['db'].images.find_one({'iid':obj['main_image_iid']})
