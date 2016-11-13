@@ -503,11 +503,15 @@ class ImageSetsHandler(BaseHandler):
     def delete(self, imageset_id=None):
         # delete an imageset
         if imageset_id:
-            # check if it's a primary image set
-            #
             query = self.query_id(imageset_id)
             imgobj = yield self.settings['db'].imagesets.find_one(query)
             if imgobj:
+                # check if it's a primary image set
+                imgprim = yield self.settings['db'][self.settings['animals']].find({},{'primary_image_set_iid':1}).to_list(None)
+                imgprim = [int(x['primary_image_set_iid']) for x in imgprim]
+                if int(imageset_id) in imgprim:
+                    self.response(400,'The image set '+str(imageset_id)+' is a primary one, it must be deleted through its '+self.settings['animal']+'.')
+                    return
                 # 1 - Remove imaget set
                 rmved = yield self.settings['db'].imagesets.remove({'iid':imgobj['iid']})
                 info(str(rmved))
