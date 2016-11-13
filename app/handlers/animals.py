@@ -91,7 +91,8 @@ class AnimalsHandler(BaseHandler):
                     del output['organization_iid']
                     output['primary_image_set_id'] = output['primary_image_set_iid']
                     del output['primary_image_set_iid']
-
+                    if 'dead' not in output.keys():
+                        output['dead'] = False
                     # Get organization name
                     org = yield self.settings['db'].organizations.find_one({'iid':output['organization_id']})
                     if org:
@@ -174,6 +175,8 @@ class AnimalsHandler(BaseHandler):
                 query = self.query_id(animal_id)
                 objs = yield self.settings['db'][self.settings['animals']].find_one(query)
                 if objs:
+                    if 'dead' not in objs.keys():
+                        objs['dead'] = False
                     if apiout:
                         objanimal = objs
                         self.switch_iid(objanimal)
@@ -218,6 +221,8 @@ class AnimalsHandler(BaseHandler):
             objs = yield self.settings['db'][self.settings['animals']].find({'iid': { '$in' : iids }}).to_list(None)
             output = list()
             for x in objs:
+                if 'dead' not in x.keys():
+                    x['dead'] = False
                 if apiout:
                     obj = dict(x)
                     obj['obj_id'] = str(x['_id'])
@@ -291,7 +296,7 @@ class AnimalsHandler(BaseHandler):
         # update an animal
         # parse data recept by PUT and get only fields of the object
         update_data = self.parseInput(Animal)
-        fields_allowed_to_be_update = ['name','organization_iid','primary_image_set_iid']
+        fields_allowed_to_be_update = ['name','organization_iid','primary_image_set_iid','dead']
         if 'organization_id' in self.input_data.keys():
             update_data['organization_iid'] = self.input_data['organization_id']
             del self.input_data['organization_id']
@@ -427,6 +432,10 @@ class AnimalsHandler(BaseHandler):
             else:
                 obj['organization'] = '-'
                 obj['organization_id'] = '-'
+            if 'dead' in x.keys():
+                obj['dead'] = x['dead']
+            else:
+                obj['dead'] = False
             obj['age'] = None
             obj['gender'] = None
             ivcquery = {'animal_iid':x['iid'],'is_verified':False,'iid':{"$ne":x['primary_image_set_iid']}}
@@ -474,6 +483,10 @@ class AnimalsHandler(BaseHandler):
         objanimal['name'] = objs['name']
         objanimal['organization_id'] = objs['organization_iid']
         objanimal['primary_image_set_id'] = objs['primary_image_set_iid']
+        if 'dead' in objs.keys():
+            objanimal['dead'] = objs['dead']
+        else:
+            objanimal['dead'] = False
         # Get imagesets for the animal
         imgsets = yield self.settings['db'].imagesets.find({'animal_iid':objanimal['id']}).to_list(None)
         imgsets_output = list()

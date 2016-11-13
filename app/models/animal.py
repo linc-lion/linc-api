@@ -29,6 +29,7 @@ class Animal(Model):
     iid = IntType(required=True)
     organization_iid = IntType(required=True)
     primary_image_set_iid = IntType(required=False,default=None)
+    dead = BooleanType(required=False,default=False)
     created_at = DateTimeType(required=True,default=datetime.now())
     updated_at = DateTimeType(required=True,default=datetime.now())
 
