@@ -115,8 +115,10 @@ class ImageSetsHandler(BaseHandler):
                 img = yield self.settings['db'].images.find_one({'iid':output['main_image_id']})
                 if img:
                     output['image'] = self.settings['S3_URL'] + img['url'] + '_thumbnail.jpg'
+                    output['thumbnail'] = self.settings['S3_URL'] + img['url']+'_icon.jpg'
                 else:
                     output['image'] = ''
+                    output['thumbnail'] = ''
 
                 if output['location']:
                     output['latitude'] = output['location'][0][0]
