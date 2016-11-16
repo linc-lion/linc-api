@@ -123,10 +123,29 @@ class ImageSetsHandler(BaseHandler):
                 img = yield self.settings['db'].images.find_one({'iid':output['main_image_id']})
                 if img:
                     output['image'] = self.settings['S3_URL'] + img['url'] + '_thumbnail.jpg'
-                    output['thumbnail'] = self.settings['S3_URL'] + img['url']+'_icon.jpg'
+                    output['thumbnail'] = self.settings['S3_URL'] + img['url'] + '_icon.jpg'
                 else:
-                    output['image'] = ''
-                    output['thumbnail'] = ''
+                    img = yield self.settings['db'].images.find({'image_set_iid':output['id']}).to_list(None)
+                    if len(img) > 0:
+                        output['image'] = self.settings['S3_URL']+ img[0]['url'] + '_thumbnail.jpg'
+                        output['thumbnail'] = self.settings['S3_URL']+ img[0]['url'] + '_icon.jpg'
+                    else:
+                        output['image'] = ''
+                        output['thumbnail'] = ''
+
+                # obji = yield self.settings['db'].images.find_one({'iid':obj['main_image_iid']})
+                # if obji:
+                #     imgset_obj['thumbnail'] = self.settings['S3_URL']+obji['url']+'_icon.jpg'
+                #     imgset_obj['image'] = self.settings['S3_URL']+obji['url']+'_medium.jpg'
+                # else:
+                #     obji = yield self.settings['db'].images.find({'image_set_iid':obj['iid']}).to_list(None)
+                #     if len(obji) > 0:
+                #         imgset_obj['thumbnail'] = self.settings['S3_URL']+obji[0]['url']+'_icon.jpg'
+                #         imgset_obj['image'] = self.settings['S3_URL']+obji[0]['url']+'_medium.jpg'
+                #     else:
+                #         imgset_obj['thumbnail'] = ''
+                #         imgset_obj['image'] = ''
+
 
                 if output['location']:
                     output['latitude'] = output['location'][0][0]
