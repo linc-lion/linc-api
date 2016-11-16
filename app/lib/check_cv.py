@@ -79,7 +79,7 @@ def checkresults(db,api):
             mresult = dumps(rbody['identification']['lions'])
             info(rbody)
             info('CV Req Status: '+nstatus)
-            #print 'match_probability: '+mresult
+            #info('match_probability: '+mresult)
             db.cvrequests.update({'_id':cvreq['_id']},{'$set':{'status':nstatus,'updated_at':dt}})
             db.cvresults.update({'cvrequest_iid':cvreq['iid']},{'$set':{'match_probability':mresult,'updated_at':dt}})
         except HTTPError as e:

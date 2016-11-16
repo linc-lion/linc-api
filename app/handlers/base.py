@@ -47,7 +47,7 @@ class BaseHandler(RequestHandler):
         try:
             conn = s3con(S3_ACCESS_KEY,S3_SECRET_KEY,default_bucket=S3_BUCKET)
         except:
-            print('\n\nFail to connect to S3')
+            info('\nFail to connect to S3')
         return conn
 
     def prepare(self):
@@ -217,7 +217,7 @@ class BaseHandler(RequestHandler):
                 responde = e
         except Exception as e:
             # Other errors are possible, such as IOError.
-            print("Other Errors: " + str(e))
+            info("Other Errors: " + str(e))
             response = e
         callback(response)
 
@@ -227,8 +227,7 @@ class BaseHandler(RequestHandler):
         elif status_code == 405:
             self.response(status_code,'Method not allowed in this resource. Check your verb (GET,POST,PUT and DELETE)')
         else:
-            info(kwargs)
-            self.response(status_code,'Error: '+str(kwargs))
+            self.response(status_code,'Internal server error.')
 
 class VersionHandler(BaseHandler):
     def get(self):

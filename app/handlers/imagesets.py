@@ -133,9 +133,9 @@ class ImageSetsHandler(BaseHandler):
                 del output['location']
 
                 # Getting cvrequest for this imageset
-                print(output['id'])
+                info(output['id'])
                 cvreq = yield self.settings['db'].cvrequests.find_one({'image_set_iid':output['id']})
-                print(cvreq)
+                info(cvreq)
                 if cvreq:
                     output['cvrequest'] = str(cvreq['_id'])
                     output['req_status'] = cvreq['status']
@@ -347,7 +347,7 @@ class ImageSetsHandler(BaseHandler):
                     body['identification']['images'] = limgs
                     body['identification'][self.settings['animals']] = lanimals
                     sbody = dumps(body)
-                    #print(sbody)
+                    #info(sbody)
                     try:
                         response = yield Task(self.api,url=self.settings['CVSERVER_URL_IDENTIFICATION'],method='POST', \
                                             body=sbody,auth_username=self.settings['CV_USERNAME'],auth_password=self.settings['CV_PASSWORD'])
@@ -420,7 +420,7 @@ class ImageSetsHandler(BaseHandler):
                             if update_data[field]:
                                 try:
                                     dts = datetime.strptime(update_data[field], "%Y-%m-%d")
-                                    print(dts)
+                                    info(dts)
                                     if field == 'date_stamp':
                                         objimgset['date_stamp'] = str(dts.date())
                                         continue
@@ -433,7 +433,7 @@ class ImageSetsHandler(BaseHandler):
                         elif field in ['latitude','longitude']:
                             if 'latitude' in update_data.keys() and update_data['latitude'] and \
                                'longitude' in update_data.keys() and update_data['longitude']:
-                                print(update_data[field])
+                                info(update_data[field])
                                 objimgset['location'] = [[0,0]]
                                 objimgset['location'][0][0] = float(update_data['latitude'])
                                 objimgset['location'][0][1] = float(update_data['longitude'])
@@ -472,13 +472,13 @@ class ImageSetsHandler(BaseHandler):
                 try:
                     imgid = ObjId(objimgset['_id'])
                     del objimgset['_id']
-                    print(objimgset)
+                    info(objimgset)
                     objimgset = ImageSet(objimgset)
                     objimgset.validate()
                     objimgset = objimgset.to_native()
                     #objimgset['_id'] = imgid
                     updnobj = yield self.settings['db'].imagesets.update({'_id':imgid},{'$set' : objimgset},upsert=True)
-                    print(updnobj)
+                    info(updnobj)
                     output = objimgset
                     self.switch_iid(output)
                     output['obj_id'] = str(imgid)

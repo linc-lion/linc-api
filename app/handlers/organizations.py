@@ -103,7 +103,7 @@ class OrganizationsHandler(BaseHandler):
             try:
                 newsaved = yield self.settings['db'].organizations.insert(neworg.to_native())
                 output = neworg.to_native()
-                print(output)
+                info(output)
                 output['obj_id'] = str(newsaved)
                 # Change iid to id in the output
                 self.switch_iid(output)

@@ -29,7 +29,7 @@ def generate_images(fn):
     # Crop 1:1
     im = Image.open(fn)
     width, height = im.size
-    print(im.size)
+    info(im.size)
     nheight = height
     nwidth = width
     if width < height:
@@ -69,7 +69,7 @@ def generate_images(fn):
 
     if msize[0] == 0 or msize[1] == 0:
         msize = newsize,newsize
-    print(msize)
+    info(msize)
     im.thumbnail(msize)
     im.save(fn[:-4]+'_medium.jpg',"JPEG")
     im.close()
