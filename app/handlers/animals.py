@@ -116,6 +116,7 @@ class AnimalsHandler(BaseHandler):
                         output['age'] = str(self.age(output['date_of_birth']))
                     else:
                         output['age'] = '-'
+
                     output['uploading_organization_id'] = output['uploading_user_iid']
                     del output['uploading_user_iid']
                     output['uploading_organization_id'] = output['uploading_organization_iid']
@@ -140,6 +141,10 @@ class AnimalsHandler(BaseHandler):
                         output['latitude'] = None
                         output['longitude'] = None
                     del output['location']
+
+                    # Geo Position Private
+                    if 'geopos_private' not in output.keys():
+                        output['geopos_private'] = False
 
                     # Check verified
                     ivcquery = {'animal_iid':output['id'],'is_verified':False,'iid':{"$ne":output['primary_image_set_id']}}
@@ -459,6 +464,11 @@ class AnimalsHandler(BaseHandler):
                         obj['tags'] = imgset['tags']
                     else:
                         obj['tags'] = None
+
+                    if 'geopos_private' in imgset.keys():
+                        obj['geopos_private'] = imgset['geopos_private']
+                    else:
+                        obj['geopos_private'] = False
 
                     if imgset['location']:
                         obj['latitude'] = imgset['location'][0][0]
