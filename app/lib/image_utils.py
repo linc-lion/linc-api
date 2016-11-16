@@ -19,6 +19,7 @@
 
 from PIL import Image
 from os import remove
+from logging import info
 
 def generate_images(fn):
     if '.jpeg' in fn:

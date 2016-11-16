@@ -29,7 +29,7 @@ from models.imageset import ImageSet,Image
 from models.cv import CVRequest,CVResult
 from bson import ObjectId as ObjId
 from datetime import datetime
-from json import dumps
+from json import dumps,loads
 from tornado.escape import json_decode
 from schematics.exceptions import ValidationError
 from lib.rolecheck import allowedRole, refusedRole, api_authenticated
@@ -195,6 +195,18 @@ class ImageSetsHandler(BaseHandler):
                 output['images'] = list()
                 for img in images:
                     imgout = {'id':img['iid'],'type':img['image_type'],'is_public':img['is_public']}
+                    if 'filename' in img.keys():
+                        imgout['filename'] = img['filename']
+                    else:
+                        imgout['filename'] = 'noname'
+                    imgout['imgset_date_stamp'] = objimgset['date_stamp']
+                    imgout['img_updated_at'] = img['updated_at'].date().isoformat()
+                    imgout['img_date_stamp'] = None
+                    if 'exif_data' in img.keys():
+                        exifd = loads(img['exif_data'])
+                        info(exifd)
+                        if 'date_stamp' in exifd.keys():
+                            imgout['img_date_stamp'] = datetime.strptime(exifd['date_stamp'],'%Y-%m-%dT%H:%M:%S').date().isoformat()
                     for suf in ['_icon.jpg','_medium.jpg','_thumbnail.jpg']:
                         imgout[suf[1:-4]] = self.settings['S3_URL'] + img['url'] + suf
                     imgout['cover'] = (img['iid'] == cover)
