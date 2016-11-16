@@ -112,10 +112,10 @@ class CVRequestsHandler(BaseHandler):
                     # get cvresult if it exists
                     cvres = yield self.settings['db'].cvresults.find_one({'cv_request_iid':req_id})
                     if cvres:
-                        print(cvres)
+                        info(cvres)
                         idcvres = ObjId(cvres['_id'])
                         del cvres['_id']
-                        print(cvres)
+                        info(cvres)
                         newhres = yield self.settings['db'].cvresults_history.insert(cvres)
                         cvres = yield self.settings['db'].cvresults.remove({'_id':idcvres})
                     del updobj['_id']

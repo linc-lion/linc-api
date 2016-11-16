@@ -52,9 +52,9 @@ class Application(tornado.web.Application):
 # Run server
 def main():
     app = Application()
-    print('API handlers:')
+    logging.info('API handlers:')
     for h in url_routes:
-        print(h)
+        logging.info(h)
     httpserver = tornado.httpserver.HTTPServer(app)
     #httpserver.listen(options.port)
     httpserver.listen(os.environ.get("PORT",options.port))

@@ -131,9 +131,9 @@ class LoginHandler(BaseHandler):
 class LogoutHandler(BaseHandler):
     @api_authenticated
     def post(self):
-        print(self.settings['attempts'])
-        print(self.settings['tokens'])
-        print(self.settings['wait_list'])
+        info(self.settings['attempts'])
+        info(self.settings['tokens'])
+        info(self.settings['wait_list'])
         if self.current_user['username'] in self.settings['tokens'].keys():
             del self.settings['tokens'][self.current_user['username']]
             self.response(200,'Logout OK.')
