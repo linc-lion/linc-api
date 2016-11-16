@@ -70,6 +70,10 @@ class ImageSetsHandler(BaseHandler):
                 imgprim = yield self.settings['db'][self.settings['animals']].find({},{'primary_image_set_iid':1}).to_list(None)
                 imgprim = [x['primary_image_set_iid'] for x in imgprim]
                 output = imgset
+                if 'geopos_private' in output.keys():
+                    output['geopos_private'] = imgset['geopos_private']
+                else:
+                    output['geopos_private'] = False
                 output['obj_id'] = str(imgset['_id'])
                 del output['_id']
                 self.switch_iid(output)
@@ -205,6 +209,10 @@ class ImageSetsHandler(BaseHandler):
                         output['latitude'] = None
                         output['longitude'] = None
                     del output['location']
+                    if 'geopos_private' in objimgset.keys():
+                        output['geopos_private'] = objimgset['geopos_private']
+                    else:
+                        output['geopos_private'] = False
                     output['obj_id'] = str(objimgset['_id'])
                     del output['_id']
                     output[self.settings['animal']+'_id'] = objimgset['animal_iid']
@@ -235,7 +243,7 @@ class ImageSetsHandler(BaseHandler):
             # validate the input
             fields_needed = ['uploading_user_id','uploading_organization_id','owner_organization_id',
                              'is_verified','gender','date_of_birth',
-                             'tags','date_stamp','notes',self.settings['animal']+'_id','main_image_id']
+                             'tags','date_stamp','notes',self.settings['animal']+'_id','main_image_id','geopos_private']
             keys = list(self.input_data.keys())
             for field in fields_needed:
                 if field not in keys:
@@ -397,7 +405,7 @@ class ImageSetsHandler(BaseHandler):
                 # validate the input
                 fields_allowed = ['uploading_user_id','uploading_organization_id','owner_organization_id',
                                  'is_verified','latitude','longitude','gender','date_of_birth',
-                                 'tags','date_stamp','notes',self.settings['animal']+'_id','main_image_id']
+                                 'tags','date_stamp','notes',self.settings['animal']+'_id','main_image_id','geopos_private']
                 update_data = dict()
                 for k,v in self.input_data.items():
                     if k in fields_allowed:
@@ -613,6 +621,11 @@ class ImageSetsHandler(BaseHandler):
                 imgset_obj['tags'] = obj['tags']
             else:
                 imgset_obj['tags'] = None
+
+            if 'geopos_private' in obj.keys():
+                imgset_obj['geopos_private'] = obj['geopos_private']
+            else:
+                imgset_obj['geopos_private'] = False
 
             if obj['location']:
                 imgset_obj['latitude'] = obj['location'][0][0]
