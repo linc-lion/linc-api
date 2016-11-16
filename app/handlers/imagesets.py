@@ -500,7 +500,6 @@ class ImageSetsHandler(BaseHandler):
                     del output['main_image_iid']
                     output[self.settings['animal']+'_id'] = output['animal_iid']
                     del output['animal_iid']
-
                     self.set_status(200)
                     self.finish(self.json_encode({'status':'success','message':'image set updated','data':output}))
                 except ValidationError as e:
