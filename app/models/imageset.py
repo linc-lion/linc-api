@@ -40,6 +40,7 @@ class ImageSet(Model):
     tags = StringType(required=False,default='[]')
     date_stamp = StringType(required=False,default=None)
     notes = StringType(required=False)
+    geopos_private = BooleanType(required=False,default=False)
     created_at = DateTimeType(required=True,default=datetime.now())
     updated_at = DateTimeType(required=True,default=datetime.now())
 
