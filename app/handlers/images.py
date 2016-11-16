@@ -36,6 +36,8 @@ from logging import info
 from uuid import uuid4
 from hashlib import md5
 from tornadoist import ProcessMixin
+from base64 import b64decode
+from json import dumps
 
 class ImagesHandler(BaseHandler, ProcessMixin):
     """A class that handles requests about images informartion
@@ -153,7 +155,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
         imgname = dirfs+'/'+str(uuid4())+'.img'
         try:
             fh = open(imgname, 'wb')
-            fh.write(self.input_data['image'].decode('base64'))
+            fh.write(b64decode(self.input_data['image']))
             fh.close()
         except:
             self.remove_file(imgname)
@@ -161,7 +163,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
             return
         # Ok, image is valid
         # Now, check if it already exists in the database
-        image_file = open(imgname).read()
+        image_file = open(imgname,'rb').read()
         filehash = md5(image_file).hexdigest()
         imgaexists = yield self.settings['db'].images.find_one({'hashcheck':filehash})
         if imgaexists:
@@ -188,7 +190,6 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                 return
             else:
                 newobj[field] = self.input_data[field]
-        info(newobj)
         imgsetid = self.input_data['image_set_id']
         isexists = yield self.settings['db'].imagesets.find_one({'iid':imgsetid})
         if isexists:
@@ -204,6 +205,12 @@ class ImagesHandler(BaseHandler, ProcessMixin):
             newobj['url'] = url
             # adding the hash pre calculed
             newobj['hashcheck'] = filehash
+            info(newobj)
+            if 'exif_data' in newobj.keys() and isinstance(newobj['exif_data'],dict):
+                newobj['exif_data'] = dumps(newobj['exif_data'])
+            else:
+                info('No exif data found.')
+                newobj['exif_data'] = '{}'
             info(newobj)
             newimage = Image(newobj)
             newimage.validate()
