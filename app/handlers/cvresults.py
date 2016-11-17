@@ -119,6 +119,10 @@ class CVResultsHandler(BaseHandler):
                                         objres['organization'] = org['name']
 
                             objres['cv'] = i['confidence']
+                            if 'classifier' not in i.keys():
+                                objres['cn'] = None
+                            else:
+                                objres['cn'] = i['classifier']
                             output.append(objres)
                         cvreq = yield self.settings['db'].cvrequests.find_one({'iid':objs['cvrequest_iid']})
                         assoc = {'id': None,'name':None }

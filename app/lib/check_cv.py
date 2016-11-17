@@ -73,10 +73,11 @@ def checkresults(db,api):
             rbody = json_decode(response.body)
             rbody['code'] = response.code
             rbody['reason'] = response.reason
-            nstatus = rbody['identification']['status']
+            #nstatus = rbody['identification']['status']
+            nstatus = rbody['status']
             if nstatus == 'done':
                 nstatus = 'finished'
-            mresult = dumps(rbody['identification']['lions'])
+            mresult = dumps(rbody['match_probability'])
             info(rbody)
             info('CV Req Status: '+nstatus)
             #info('match_probability: '+mresult)
