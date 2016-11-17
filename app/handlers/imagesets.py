@@ -200,6 +200,7 @@ class ImageSetsHandler(BaseHandler):
                     else:
                         imgout['filename'] = 'noname'
                     imgout['imgset_date_stamp'] = objimgset['date_stamp']
+                    imgout['imgset_updated_at'] = objimgset['updated_at'].date().isoformat()
                     imgout['img_updated_at'] = img['updated_at'].date().isoformat()
                     imgout['img_date_stamp'] = None
                     if 'exif_data' in img.keys():
