@@ -82,7 +82,14 @@ class ImagesHandler(BaseHandler, ProcessMixin):
             if len(limgs) > 0:
                 s3url = self.settings['S3_URL']
                 suf = '_full.jpg'
-                urls = [ s3url+x['url']+suf for x in limgs]
+                urls = list()
+                for x in limgs:
+                    iurl = s3url+x['url']+suf
+                    if 'filename' not in x.keys() or x['filename'] == '':
+                        fname = 'imageset_'+str(x['image_set_iid'])+'_image_'+str(x['iid'])+'.jpg'
+                    else:
+                        fname = x['filename']
+                    urls.append({'url':iurl ,'filename':fname})
                 self.response(200,'Links for the requested images with id='+download+'.',urls)
                 return
             else:
