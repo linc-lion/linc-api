@@ -206,7 +206,7 @@ class ImageSetsHandler(BaseHandler):
                     if 'exif_data' in img.keys():
                         exifd = loads(img['exif_data'])
                         info(exifd)
-                        if 'date_stamp' in exifd.keys():
+                        if 'date_stamp' in exifd.keys() and exifd['date_stamp']:
                             imgout['img_date_stamp'] = datetime.strptime(exifd['date_stamp'],'%Y-%m-%dT%H:%M:%S').date().isoformat()
                     for suf in ['_icon.jpg','_medium.jpg','_thumbnail.jpg']:
                         imgout[suf[1:-4]] = self.settings['S3_URL'] + img['url'] + suf

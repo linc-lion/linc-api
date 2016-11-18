@@ -66,7 +66,7 @@ class BaseHandler(RequestHandler):
                 self.response(400,'Fail to parse input data.')
 
     def get_current_user(self):
-        max_days_valid=10
+        max_days_valid=365
         # check for https comunication
         using_ssl = (self.request.headers.get('X-Scheme', 'http') == 'https')
         if not using_ssl:
