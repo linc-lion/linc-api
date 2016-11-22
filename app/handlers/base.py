@@ -25,7 +25,7 @@ from tornado.gen import engine,coroutine
 from tornado import web
 from tornado.escape import utf8
 import string,os
-from datetime import date
+from datetime import date,datetime
 from logging import info
 import bcrypt
 from json import load,loads,dumps,dump
@@ -34,6 +34,9 @@ from os import remove
 from tornado.httpclient import AsyncHTTPClient,HTTPRequest,HTTPError
 from tornado.httputil import HTTPHeaders
 from tinys3 import Connection as s3con
+from bson import ObjectId as ObjId
+from schematics.exceptions import ValidationError
+from models.user import User
 
 class BaseHandler(RequestHandler):
     """A class to collect common handler methods - all other handlers should
@@ -228,6 +231,29 @@ class BaseHandler(RequestHandler):
             self.response(status_code,'Method not allowed in this resource. Check your verb (GET,POST,PUT and DELETE)')
         else:
             self.response(status_code,'Internal server error.')
+
+    @asynchronous
+    @engine
+    def changePassword(self,ouser,newpass,callback=None):
+        encpass = self.encryptPassword(newpass)
+        ouser['encrypted_password'] = encpass
+        ouser['updated_at'] = datetime.now()
+        updid = ObjId(ouser['_id'])
+        del ouser['_id']
+        try:
+            updobj = User(ouser)
+            updobj.validate()
+            # the object is valid, so try to save
+            try:
+                updobj = updobj.to_native()
+                updobj['_id'] = updid
+                saved = yield self.settings['db'].users.update({'_id':updid},updobj)
+                resp = [200,'Password changed successfully.']
+            except:
+                resp = [400,'Fail to update password.']
+        except ValidationError as e:
+            resp = [400,'Invalid input data. Errors: '+str(e)+'.']
+        callback(resp)
 
 class VersionHandler(BaseHandler):
     def get(self):
