@@ -34,7 +34,7 @@ from bson import ObjectId as ObjId
 from schematics.exceptions import ValidationError
 from models.user import User
 from tornado.httpclient import AsyncHTTPClient
-import bcrypt
+import smtplib
 
 class CheckAuthHandler(BaseHandler):
     @api_authenticated
@@ -179,35 +179,13 @@ class RestorePassword(BaseHandler):
                     for i in admin_emails:
                         emails.append(i['email'])
                     emails = list(set(emails))
-                    # DEPLOY = This will be removed
-                    info(emails)
-                    emails = [email]
-                    # DEPLOY = end
-                    # -- Send email
-                    pemail = False
-                    for email_address in emails:
-                        emailmsg = dict()
-                        emailmsg['html'] = 'A password recovery was requested for the email '+email+'.<br>\nYou can use the credentials:<br>\nUsername: '+email+'<br>\nPassword: '+newpass+'<br><br>\n\nto log-in the system https://linc.linclion.org/ <br><br>\n\nLinc Lion Team\n<br>'
+                    msg = """From: %s\nTo: %s\nSubject: LINC Lion: Password recovery\n
 
-                        emailmsg['text'] = 'A password recovery was requested for the email '+email+'.\nYou can use the credentials:\nUsername: '+email+'\nPassword: '+newpass+'\n\nto log-in the system in https://linc.linclion.org/ \n\nLinc Lion Team\n'
+A password recovery was requested for the email %s.\nYou can use the credentials:\n\nUsername: %s\nPassword: %s\n\nto log-in the system in https://linc.linclion.org/ \n\nLinc Lion Team\n
 
-                        emailmsg['subject'] = "LINC Lion: Password recovery"
-                        emailmsg['from_email'] = "suporte@venidera.net"
-                        emailmsg['from_name'] = "LINC Lion"
-                        emailmsg['to'] = [{"email": email_address,"name": email_address}]
-
-                        http_client = AsyncHTTPClient()
-                        mail_url = 'http://labs.venidera.com:12800/messages/send.json'
-                        mail_data = {
-                            "key": 'dyNJmiW2RPxZoKqi1u-bXw',
-                            "message": emailmsg,
-                            "exception": True
-                        }
-                        body = self.json_encode(mail_data)
-                        response = yield Task(http_client.fetch, mail_url, method='POST', body=body)
-                        if 200 <= response.code < 300:
-                            if email == email_address:
-                                pemail = True
+                    """
+                    msg = msg % (self.settings['EMAIL_FROM'],email,email,email,newpass)
+                    pemail = yield Task(self.sendEmail,emails,msg)
                     if pemail:
                         self.response(200,'A new password was sent to the user.')
                     else:
@@ -219,3 +197,30 @@ class RestorePassword(BaseHandler):
                 self.response(404,'No user found with email: '+email)
         else:
             self.response(400,'An email is required to restart user\'s passwords.')
+
+    @asynchronous
+    @engine
+    def sendEmail(self,emails,msg,callback):
+        resp = True
+        try:
+            fromaddr = self.settings['EMAIL_FROM']
+            smtp_server = self.settings['SMTP_SERVER']
+            smtp_username = self.settings['SMTP_USERNAME']
+            smtp_password = self.settings['SMTP_PASSWORD']
+            smtp_port = self.settings['SMPT_PORT']
+            smtp_do_tls = True
+            server = smtplib.SMTP(
+                host = smtp_server,
+                port = smtp_port,
+                timeout = 10
+            )
+            server.set_debuglevel(10)
+            server.starttls()
+            server.ehlo()
+            server.login(smtp_username, smtp_password)
+            for toaddrs in emails:
+                server.sendmail(fromaddr, toaddrs, msg)
+            server.quit()
+        except:
+            resp = False
+        callback(resp)
