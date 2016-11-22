@@ -21,7 +21,7 @@
 # For more information or to contact visit linclion.org or email tech@linclion.org
 
 from tornado.web import asynchronous
-from tornado.gen import coroutine,Task
+from tornado.gen import coroutine,Task,engine
 from handlers.base import BaseHandler
 from datetime import datetime,timedelta
 from lib.tokens import gen_token,token_encode,token_decode
@@ -34,6 +34,7 @@ from bson import ObjectId as ObjId
 from schematics.exceptions import ValidationError
 from models.user import User
 from tornado.httpclient import AsyncHTTPClient
+import bcrypt
 
 class CheckAuthHandler(BaseHandler):
     @api_authenticated
@@ -140,6 +141,25 @@ class LogoutHandler(BaseHandler):
         else:
             self.response(400,'Authentication token invalid. User already logged off.')
 
+class ChangePasswordHandler(BaseHandler):
+    @asynchronous
+    @coroutine
+    @api_authenticated
+    def post(self):
+        if 'new_password' in self.input_data.keys():
+            if len(self.input_data['new_password']) >= 6:
+                resp = self.settings['db']
+                ouser = yield self.settings['db'].users.find_one({'email':self.current_user['username']})
+                if ouser:
+                    resp = yield Task(self.changePassword,ouser,self.input_data['new_password'])
+                    self.response(resp[0],resp[1])
+                else:
+                    self.response(400,'Invalid user requesting password change.')
+            else:
+                self.response(400,'Password must have at least 6 characters.')
+        else:
+            self.response(400,'To change your password, you must send it in a json object with the key \'new_password\'.')
+
 class RestorePassword(BaseHandler):
     @asynchronous
     @coroutine
@@ -148,65 +168,53 @@ class RestorePassword(BaseHandler):
             email = self.input_data['email']
             ouser = yield self.settings['db'].users.find_one({'email':email})
             if ouser:
-                newpass = gen_token(10)
-                encpass = self.encryptPassword(newpass)
-                ouser['encrypted_password'] = encpass
-                ouser['updated_at'] = datetime.now()
-                updid = ObjId(ouser['_id'])
-                del ouser['_id']
                 try:
-                    updobj = User(ouser)
-                    updobj.validate()
-                    info(updobj)
-                    # the object is valid, so try to save
-                    try:
-                        updobj = updobj.to_native()
-                        updobj['_id'] = updid
-                        saved = yield self.settings['db'].users.update({'_id':updid},updobj)
-                        emails = [email]
-                        admin_emails = yield self.settings['db'].users.find({'admin':True}).to_list(None)
-                        for i in admin_emails:
-                            emails.append(i['email'])
-                        emails = list(set(emails))
-                        # DEPLOY = This will be removed
-                        info(emails)
-                        emails = [email]
-                        # DEPLOY = end
-                        # -- Send email
-                        pemail = False
-                        for email_address in emails:
-                            emailmsg = dict()
-                            emailmsg['html'] = 'A password recovery was requested for the email '+email+'.<br>\nYou can use the credentials:<br>\nUsername: '+email+'<br>\nPassword: '+newpass+'<br><br>\n\nto log-in the system https://linc.linclion.org/ <br><br>\n\nLinc Lion Team\n<br>'
-
-                            emailmsg['text'] = 'A password recovery was requested for the email '+email+'.\nYou can use the credentials:\nUsername: '+email+'\nPassword: '+newpass+'\n\nto log-in the system in https://linc.linclion.org/ \n\nLinc Lion Team\n'
-
-                            emailmsg['subject'] = "LINC Lion: Password recovery"
-                            emailmsg['from_email'] = "suporte@venidera.net"
-                            emailmsg['from_name'] = "LINC Lion"
-                            emailmsg['to'] = [{"email": email_address,"name": email_address}]
-
-                            http_client = AsyncHTTPClient()
-                            mail_url = 'http://labs.venidera.com:12800/messages/send.json'
-                            mail_data = {
-                                "key": 'dyNJmiW2RPxZoKqi1u-bXw',
-                                "message": emailmsg,
-                                "exception": True
-                            }
-                            body = self.json_encode(mail_data)
-                            response = yield Task(http_client.fetch, mail_url, method='POST', body=body)
-                            if 200 <= response.code < 300:
-                                if email == email_address:
-                                    pemail = True
-                        if pemail:
-                            self.response(200,'A new password was sent to the user.')
-                        else:
-                            self.response(400,'The system can\'t generate a new password for the user. Ask for support in suporte@venidera.com')
+                    newpass = gen_token(10)
+                    resp = yield Task(self.changePassword,ouser,newpass)
+                    if resp[0] != 200:
+                        self.response(resp[0],resp[1])
                         return
-                    except:
-                        self.response(400,'Fail to generate new password.')
-                except ValidationError as e:
-                    # received data is invalid in some way
-                    self.response(400,'Invalid input data. Errors: '+str(e)+'.')
+                    emails = [email]
+                    admin_emails = yield self.settings['db'].users.find({'admin':True}).to_list(None)
+                    for i in admin_emails:
+                        emails.append(i['email'])
+                    emails = list(set(emails))
+                    # DEPLOY = This will be removed
+                    info(emails)
+                    emails = [email]
+                    # DEPLOY = end
+                    # -- Send email
+                    pemail = False
+                    for email_address in emails:
+                        emailmsg = dict()
+                        emailmsg['html'] = 'A password recovery was requested for the email '+email+'.<br>\nYou can use the credentials:<br>\nUsername: '+email+'<br>\nPassword: '+newpass+'<br><br>\n\nto log-in the system https://linc.linclion.org/ <br><br>\n\nLinc Lion Team\n<br>'
+
+                        emailmsg['text'] = 'A password recovery was requested for the email '+email+'.\nYou can use the credentials:\nUsername: '+email+'\nPassword: '+newpass+'\n\nto log-in the system in https://linc.linclion.org/ \n\nLinc Lion Team\n'
+
+                        emailmsg['subject'] = "LINC Lion: Password recovery"
+                        emailmsg['from_email'] = "suporte@venidera.net"
+                        emailmsg['from_name'] = "LINC Lion"
+                        emailmsg['to'] = [{"email": email_address,"name": email_address}]
+
+                        http_client = AsyncHTTPClient()
+                        mail_url = 'http://labs.venidera.com:12800/messages/send.json'
+                        mail_data = {
+                            "key": 'dyNJmiW2RPxZoKqi1u-bXw',
+                            "message": emailmsg,
+                            "exception": True
+                        }
+                        body = self.json_encode(mail_data)
+                        response = yield Task(http_client.fetch, mail_url, method='POST', body=body)
+                        if 200 <= response.code < 300:
+                            if email == email_address:
+                                pemail = True
+                    if pemail:
+                        self.response(200,'A new password was sent to the user.')
+                    else:
+                        self.response(400,'The system can\'t generate a new password for the user. Ask for support in suporte@venidera.com')
+                    return
+                except:
+                    self.response(400,'Fail to generate new password.')
             else:
                 self.response(404,'No user found with email: '+email)
         else:
