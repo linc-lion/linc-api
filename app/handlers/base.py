@@ -48,7 +48,7 @@ class BaseHandler(RequestHandler):
         S3_BUCKET = self.settings['S3_BUCKET']
         conn = None
         try:
-            conn = s3con(S3_ACCESS_KEY,S3_SECRET_KEY,default_bucket=S3_BUCKET)
+            conn = s3con(S3_ACCESS_KEY,S3_SECRET_KEY,default_bucket=S3_BUCKET,endpoint='s3-us-east-1.amazonaws.com')
         except:
             info('\nFail to connect to S3')
         return conn
