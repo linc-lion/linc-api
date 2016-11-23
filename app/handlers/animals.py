@@ -172,6 +172,7 @@ class AnimalsHandler(BaseHandler):
                 litems = len(imgsets)
                 if imgsets:
                     for i in imgsets:
+                        info(i)
                         if i['location']:
                             if 'geopos_private' not in i.keys():
                                 geop = False
