@@ -165,7 +165,7 @@ class AnimalsHandler(BaseHandler):
                     self.response(400,'Requests about locations only accept integer id for the '+self.settings['animals']+'.')
                     return
                 lname = yield self.settings['db'][self.settings['animals']].find_one({'iid':iid},{'name':1})
-                cursor = self.settings['db'].imagesets.find({'animal_iid':iid},{'iid':1,'location':1,'date_stamp':1,'updated_at':1,'geopos_private':1})
+                cursor = self.settings['db'].imagesets.find({'animal_iid':iid},{'iid':1,'location':1,'date_stamp':1,'updated_at':1,'geopos_private':1,'owner_organization_iid':1})
                 cursor.sort('updated_at',DESCENDING)
                 imgsets = yield cursor.to_list(None)
                 locations = list()
@@ -178,7 +178,7 @@ class AnimalsHandler(BaseHandler):
                                 geop = False
                             else:
                                 geop = i['geopos_private']
-                            locations.append({'id':i['iid'],'label':'Image Set '+str(i['iid']),'latitude':i['location'][0][0],'longitude':i['location'][0][1],'updated_at':i['updated_at'].date().isoformat(),'date_stamp':i['date_stamp'],'name':lname['name'],'geopos_private':geop})
+                            locations.append({'id':i['iid'],'label':'Image Set '+str(i['iid']),'latitude':i['location'][0][0],'longitude':i['location'][0][1],'updated_at':i['updated_at'].date().isoformat(),'date_stamp':i['date_stamp'],'name':lname['name'],'geopos_private':geop,'organization_id':i['owner_organization_iid']})
                 self.response(200,'Location list.',{'count':litems,'locations':locations})
                 return
             else:
