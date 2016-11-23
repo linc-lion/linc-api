@@ -24,7 +24,7 @@ from tornado.escape import json_decode
 from logging import info
 from datetime import datetime
 from json import dumps,loads
-from tinys3 import Pool as s3con
+from boto.s3.connection import S3Connection, Bucket, Key
 
 @gen.coroutine
 def checkS3(db,api):
@@ -37,7 +37,8 @@ def checkS3(db,api):
         S3_SECRET_KEY = api['S3_SECRET_KEY']
         S3_BUCKET = api['S3_BUCKET']
         try:
-            conn = s3con(S3_ACCESS_KEY,S3_SECRET_KEY,default_bucket=S3_BUCKET,size=20)
+            conn = S3Connection(S3_ACCESS_KEY,S3_SECRET_KEY)
+            bucket = Bucket(conn, S3_BUCKET)
             info('\nConnected to S3')
         except:
             info('\nFail to connect to S3')
@@ -50,8 +51,8 @@ def checkS3(db,api):
                     for key in rmlist['list']:
                         info(str(key))
                         info(str(S3_BUCKET))
-                        reqs.append(conn.delete(key,S3_BUCKET))
-                    conn.all_completed(reqs)
+                        k = Key(bucket = bucket, name=key)
+                        k.delete()
                     res = db.dellist.remove({'_id':rmlist['_id']})
                 except:
                     info('Error in the deletion of images')
