@@ -24,7 +24,7 @@ from tornado.escape import json_decode
 from logging import info
 from datetime import datetime
 from json import dumps,loads
-from boto import connect_s3
+import boto
 from boto.s3.connection import Bucket, Key
 
 @gen.coroutine
@@ -38,7 +38,7 @@ def checkS3(db,api):
         S3_SECRET_KEY = api['S3_SECRET_KEY']
         S3_BUCKET = api['S3_BUCKET']
         try:
-            conn = connect_s3(S3_ACCESS_KEY,S3_SECRET_KEY,is_secure=False,calling_format=OrdinaryCallingFormat())
+            conn = boto.connect_s3(S3_ACCESS_KEY,S3_SECRET_KEY,is_secure=False,calling_format=OrdinaryCallingFormat())
             bucket = Bucket(conn, S3_BUCKET)
             info('\nConnected to S3')
         except:
