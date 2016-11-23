@@ -165,14 +165,14 @@ class AnimalsHandler(BaseHandler):
                     self.response(400,'Requests about locations only accept integer id for the '+self.settings['animals']+'.')
                     return
                 lname = yield self.settings['db'][self.settings['animals']].find_one({'iid':iid},{'name':1})
-                cursor = self.settings['db'].imagesets.find({'animal_iid':iid},{'iid':1,'location':1,'date_stamp':1,'updated_at':1})
+                cursor = self.settings['db'].imagesets.find({'animal_iid':iid},{'iid':1,'location':1,'date_stamp':1,'updated_at':1,'geopos_private':1})
                 cursor.sort('updated_at',DESCENDING)
                 imgsets = yield cursor.to_list(None)
                 locations = list()
                 litems = len(imgsets)
                 if imgsets:
                     for i in imgsets:
-                        info(i)
+                        #info(i)
                         if i['location']:
                             if 'geopos_private' not in i.keys():
                                 geop = False
