@@ -38,6 +38,7 @@ from hashlib import md5
 from tornadoist import ProcessMixin
 from base64 import b64decode
 from json import dumps
+from lib.upload_s3 import upload_to_s3
 
 class ImagesHandler(BaseHandler, ProcessMixin):
     """A class that handles requests about images informartion
@@ -55,7 +56,12 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                 keynames3 = self.settings['S3_FOLDER'] + '/' + self.folder_name + '/' + fupdname + suf
                 info(str(keynames3))
                 f = open(self.imgname[:-4]+suf,'rb')
-                self.s3con.upload(keynames3,f,expires=t,content_type='image/jpeg',public=True)
+                #self.s3con.upload(keynames3,f,expires=t,content_type='image/jpeg',public=True)
+                resp = upload_to_s3(self.settings['S3_ACCESS_KEY'],self.settings['S3_SECRET_KEY'], f, self.settings['S3_BUCKET'], keynames3):
+                if resp:
+                    info('File upload OK: '+str(keynames3))
+                else:
+                    info('FAIL to upload: '+str(keynames3))
                 f.close()
                 remove(self.imgname[:-4]+suf)
 
