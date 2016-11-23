@@ -33,7 +33,6 @@ from lib.tokens import token_decode,gen_token
 from os import remove
 from tornado.httpclient import AsyncHTTPClient,HTTPRequest,HTTPError
 from tornado.httputil import HTTPHeaders
-from tinys3 import Connection as s3con
 from bson import ObjectId as ObjId
 from schematics.exceptions import ValidationError
 from models.user import User
@@ -42,17 +41,6 @@ class BaseHandler(RequestHandler):
     """A class to collect common handler methods - all other handlers should
     inherit this one.
     """
-    def initS3(self):
-        S3_ACCESS_KEY = self.settings['S3_ACCESS_KEY']
-        S3_SECRET_KEY = self.settings['S3_SECRET_KEY']
-        S3_BUCKET = self.settings['S3_BUCKET']
-        conn = None
-        try:
-            conn = s3con(S3_ACCESS_KEY,S3_SECRET_KEY,default_bucket=S3_BUCKET)
-        except:
-            info('\nFail to connect to S3')
-        return conn
-
     def prepare(self):
         #self.auth_check()
         self.input_data = dict()

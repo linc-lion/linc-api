@@ -27,7 +27,6 @@ from models.imageset import Image
 from bson import ObjectId as ObjId
 from datetime import datetime,timedelta
 from schematics.exceptions import ValidationError
-from tinys3 import Connection as s3con
 from os.path import realpath,dirname
 from lib.image_utils import generate_images
 from os import remove
@@ -38,13 +37,12 @@ from hashlib import md5
 from tornadoist import ProcessMixin
 from base64 import b64decode
 from json import dumps
-from lib.upload_s3 import upload_to_s3
+from lib.upload_s3 import upload_to_s3, s3_copy, s3_delete
 
 class ImagesHandler(BaseHandler, ProcessMixin):
     """A class that handles requests about images informartion
     """
     def initialize(self):
-        self.s3con = self.initS3()
         self.process = False
 
     def on_finish(self):
@@ -156,9 +154,9 @@ class ImagesHandler(BaseHandler, ProcessMixin):
         if not updopt:
             self.response(400,'Uploads must be requested calling /images/upload.')
             return
-        if not self.s3con:
-            self.response(500,'Fail to connect to S3. You must request support.')
-            return
+        #if not self.s3con:
+        #    self.response(500,'Fail to connect to S3. You must request support.')
+        #    return
         # Check if file was sent and if its hash md5 already exists
         if 'image' not in self.input_data.keys():
             self.response(400,'The request to add image require the key "image" with the file encoded with base64.')
@@ -302,9 +300,6 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                         url = folder_name+'/'+updobj['created_at'].date().isoformat() + '_image_' + str(updobj['iid']) + '_' + str(updobj['_id'])
                         # copy image
                         # No need to specify the target bucket if we're copying inside the same bucket
-                        if not self.s3con:
-                            self.response(500,'Fail to connect to S3.')
-                            return
                         oldimgset = yield self.settings['db'].imagesets.find_one({'iid':orig_imgset_id})
                         srcurl = self.settings['S3_FOLDER'] + '/imageset_'+str(oldimgset['iid'])+'_'+str(oldimgset['_id'])+'/'
                         srcurl = srcurl + updobj['created_at'].date().isoformat() + '_image_'+str(updobj['iid'])+'_'+str(updobj['_id'])
@@ -334,12 +329,18 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                                 bkpcopy = self.settings['S3_FOLDER']+'/backup/'+updobj['created_at'].date().isoformat() + '_image_'+str(updobj['iid'])+'_'+str(updobj['_id'])
                             except:
                                 pass
-                            self.s3con.copy(srcurl+'_full.jpg',self.settings['S3_BUCKET'],bkpcopy+'_full.jpg')
+                            #self.s3con.copy(srcurl+'_full.jpg',self.settings['S3_BUCKET'],bkpcopy+'_full.jpg')
+                            if not s3_copy(self.settings['S3_ACCESS_KEY'],self.settings['S3_SECRET_KEY'], self.settings['S3_BUCKET'],srcurl+'_full.jpg',bkpcopy+'_full.jpg'):
+                                info('Fail to copy '+str(srcurl)+' to '+str(bkpcopy+'_full.jpg'))
                             for suf in ['_full.jpg','_icon.jpg','_medium.jpg','_thumbnail.jpg']:
                                 # Copy the files
-                                self.s3con.copy(srcurl+suf,self.settings['S3_BUCKET'],desurl+suf)
+                                #self.s3con.copy(srcurl+suf,self.settings['S3_BUCKET'],desurl+suf)
+                                if not s3_copy(self.settings['S3_ACCESS_KEY'],self.settings['S3_SECRET_KEY'], self.settings['S3_BUCKET'],srcurl+suf,desurl+suf):
+                                        info('Fail to copy '+str(srcurl+suf)+' to '+str(desurl+suf))
                                 # Delete the source file
-                                self.s3con.delete(srcurl+suf,self.settings['S3_BUCKET'])
+                                #self.s3con.delete(srcurl+suf,self.settings['S3_BUCKET'])
+                                if not s3_delete(self.settings['S3_ACCESS_KEY'],self.settings['S3_SECRET_KEY'], self.settings['S3_BUCKET'],srcurl+suf):
+                                    info('Fail to delete '+str(srcurl+suf))
                         output['image_set_id'] = output['image_set_iid']
                         del output['image_set_iid']
 

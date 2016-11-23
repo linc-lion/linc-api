@@ -3,7 +3,6 @@ Pillow
 motor
 pycurl
 schematics
-tinys3
 bcrypt
 APScheduler
 git+https://github.com/venidera/tornadoist.git
