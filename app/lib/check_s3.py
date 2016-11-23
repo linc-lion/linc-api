@@ -25,7 +25,8 @@ from logging import info
 from datetime import datetime
 from json import dumps,loads
 import boto
-from boto.s3.connection import Bucket, Key
+from boto.s3.connection import Bucket, Key, OrdinaryCallingFormat
+
 
 @gen.coroutine
 def checkS3(db,api):
