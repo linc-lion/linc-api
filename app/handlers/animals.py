@@ -175,8 +175,10 @@ class AnimalsHandler(BaseHandler):
                         #info(i)
                         if i['location']:
                             if 'geopos_private' not in i.keys():
-                                if not i['geopos_private']:
-                                    locations.append({'id':i['iid'],'label':'Image Set '+str(i['iid']),'latitude':i['location'][0][0],'longitude':i['location'][0][1],'updated_at':i['updated_at'].date().isoformat(),'date_stamp':i['date_stamp'],'name':lname['name'],'geopos_private':i['geopos_private'],'organization_id':i['owner_organization_iid']})
+                                geop = False
+                            else:
+                                geop = i['geopos_private']
+                            locations.append({'id':i['iid'],'label':'Image Set '+str(i['iid']),'latitude':i['location'][0][0],'longitude':i['location'][0][1],'updated_at':i['updated_at'].date().isoformat(),'date_stamp':i['date_stamp'],'name':lname['name'],'geopos_private':geop,'organization_id':i['owner_organization_iid']})
                 self.response(200,'Location list.',{'count':litems,'locations':locations})
                 return
             else:
