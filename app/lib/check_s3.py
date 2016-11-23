@@ -27,7 +27,6 @@ from json import dumps,loads
 import boto
 from boto.s3.connection import Bucket, Key, OrdinaryCallingFormat
 
-
 @gen.coroutine
 def checkS3(db,api):
     # Get list for DELETE
