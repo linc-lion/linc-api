@@ -179,13 +179,15 @@ class RestorePassword(BaseHandler):
                     for i in admin_emails:
                         emails.append(i['email'])
                     emails = list(set(emails))
-                    msg = """From: %s\nTo: %s\nSubject: LINC Lion: Password recovery\n
+                    pemail = False
+                    for emailaddress in emails:
+                        msg = """From: %s\nTo: %s\nSubject: LINC Lion: Password recovery\n
 
 A password recovery was requested for the email %s.\nYou can use the credentials:\n\nUsername: %s\nPassword: %s\n\nto log-in the system in https://linc.linclion.org/ \n\nLinc Lion Team\n
 
-                    """
-                    msg = msg % (self.settings['EMAIL_FROM'],email,email,email,newpass)
-                    pemail = yield Task(self.sendEmail,emails,msg)
+                        """
+                        msg = msg % (self.settings['EMAIL_FROM'],emailaddress,email,email,newpass)
+                        pemail = yield Task(self.sendEmail,emailaddress,msg)
                     if pemail:
                         self.response(200,'A new password was sent to the user.')
                     else:
@@ -200,7 +202,7 @@ A password recovery was requested for the email %s.\nYou can use the credentials
 
     @asynchronous
     @engine
-    def sendEmail(self,emails,msg,callback):
+    def sendEmail(self,toaddr,msg,callback):
         resp = True
         try:
             fromaddr = self.settings['EMAIL_FROM']
@@ -218,8 +220,7 @@ A password recovery was requested for the email %s.\nYou can use the credentials
             server.starttls()
             server.ehlo()
             server.login(smtp_username, smtp_password)
-            for toaddrs in emails:
-                server.sendmail(fromaddr, toaddrs, msg)
+            server.sendmail(fromaddr, toaddr, msg)
             server.quit()
         except:
             resp = False
