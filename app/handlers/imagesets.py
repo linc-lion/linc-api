@@ -207,7 +207,7 @@ class ImageSetsHandler(BaseHandler):
                     if 'joined' not in img.keys():
                         vjoined = False
                     else:
-                        vjoined = (img['joined'] != None):
+                        vjoined = (img['joined'] != None)
                     imgout = {'id': img['iid'], 'type': img[
                         'image_type'], 'is_public': img['is_public'],
                         'joined': vjoined}
