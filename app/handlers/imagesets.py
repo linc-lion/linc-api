@@ -76,10 +76,6 @@ class ImageSetsHandler(BaseHandler):
                     output['geopos_private'] = imgset['geopos_private']
                 else:
                     output['geopos_private'] = False
-                if 'joined' in output.keys():
-                    output['joined'] = imgset['joined']
-                else:
-                    output['joined'] = []
                 output['obj_id'] = str(imgset['_id'])
                 del output['_id']
                 self.switch_iid(output)
@@ -197,23 +193,24 @@ class ImageSetsHandler(BaseHandler):
             if objimgset:
                 # images = yield self.settings['db'].images.find(
                 #    {'image_set_iid': objimgset['iid']}).to_list(None)
-                joinedlist = list()
-                if 'joined' in objimgset.keys():
-                    joinedlist = list(objimgset['joined'])
                 images = yield \
                     self.settings['db'].images.find(
                         {'$or': [
-                            {'image_set_iid': objimgset['iid']},
-                            {'iid': {'$in': joinedlist}}
+                            {'image_set_iid': int(objimgset['iid'])},
+                            {'joined': int(objimgset['iid'])}
                         ]}).to_list(None)
                 output = dict()
                 output['id'] = imageset_id
                 cover = objimgset['main_image_iid']
                 output['images'] = list()
                 for img in images:
+                    if 'joined' not in img.keys():
+                        vjoined = False
+                    else:
+                        vjoined = (img['joined'] != None):
                     imgout = {'id': img['iid'], 'type': img[
                         'image_type'], 'is_public': img['is_public'],
-                        'joined': (int(imageset_id) != int(img['image_set_iid']))}
+                        'joined': vjoined}
                     if 'filename' in img.keys():
                         imgout['filename'] = img['filename']
                     else:
