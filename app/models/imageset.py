@@ -18,34 +18,38 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
-# For more information or to contact visit linclion.org or email tech@linclion.org
+# For more information or to contact visit linclion.org or
+# email tech@linclion.org
 
-import sys; sys.path.append('../')
+import sys
 from schematics.models import Model
-from schematics.types import StringType,IntType,DateTimeType,FloatType,BooleanType
+from schematics.types import StringType, IntType, DateTimeType,\
+    FloatType, BooleanType
 from schematics.types.compound import ListType
 from datetime import datetime
 
+
 class ImageSet(Model):
-    animal_iid = IntType(required=False,default=None)
+    animal_iid = IntType(required=False, default=None)
     iid = IntType(required=True)
-    main_image_iid = IntType(required=False,default=None)
+    main_image_iid = IntType(required=False, default=None)
     uploading_organization_iid = IntType(required=True)
-    uploading_user_iid = IntType(required=True,default=None)
-    owner_organization_iid = IntType(required=True,default=None)
-    is_verified = BooleanType(required=True,default=False)
+    uploading_user_iid = IntType(required=True, default=None)
+    owner_organization_iid = IntType(required=True, default=None)
+    is_verified = BooleanType(required=True, default=False)
     location = ListType(ListType(FloatType()))
-    gender = StringType(required=False,default=None)
-    date_of_birth = DateTimeType(required=False,default=None)
-    tags = StringType(required=False,default='[]')
-    date_stamp = StringType(required=False,default=None)
+    gender = StringType(required=False, default=None)
+    date_of_birth = DateTimeType(required=False, default=None)
+    tags = StringType(required=False, default='[]')
+    date_stamp = StringType(required=False, default=None)
     notes = StringType(required=False)
-    geopos_private = BooleanType(required=False,default=False)
-    created_at = DateTimeType(required=True,default=datetime.now())
-    updated_at = DateTimeType(required=True,default=datetime.now())
+    geopos_private = BooleanType(required=False, default=False)
+    joined = ListType(IntType, required=False)
+    created_at = DateTimeType(required=True, default=datetime.now())
+    updated_at = DateTimeType(required=True, default=datetime.now())
 
     @classmethod
-    def collection(self,name=None):
+    def collection(self, name=None):
         if not name:
             self.__collection__ = 'imagesets'
         else:
@@ -58,20 +62,21 @@ class ImageSet(Model):
         db.imagesets.createIndex( { "location": "2d" } )
     """
 
+
 class Image(Model):
     image_type = StringType(required=True)
     iid = IntType(required=True)
-    image_set_iid = IntType(required=True,default=None)
-    is_public = BooleanType(required=True,default=False)
+    image_set_iid = IntType(required=True, default=None)
+    is_public = BooleanType(required=True, default=False)
     url = StringType(required=True)
-    hashcheck = StringType(required=True,default='')
-    filename = StringType(required=False,default='')
-    exif_data = StringType(required=False,default='{}')
-    created_at = DateTimeType(required=True,default=datetime.now())
-    updated_at = DateTimeType(required=True,default=datetime.now())
+    hashcheck = StringType(required=True, default='')
+    filename = StringType(required=False, default='')
+    exif_data = StringType(required=False, default='{}')
+    created_at = DateTimeType(required=True, default=datetime.now())
+    updated_at = DateTimeType(required=True, default=datetime.now())
 
     @classmethod
-    def collection(self,name=None):
+    def collection(self, name=None):
         if not name:
             self.__collection__ = 'images'
         else:
