@@ -282,14 +282,20 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                                 'animal_iid': {'$ne': None}}})
                     # Check if is Primary and its associated
                     if imgset:
-                        imgprim = yield self.settings['db'][self.settings['animals']].find({}, {'primary_image_set_iid': 1}).to_list(None)
-                        imgprim = [x['primary_image_set_iid'] for x in imgprim]
-                        if imgset['iid'] in imgprim:
+                        imgprim = yield self.settings['db'][self.settings['animals']].find({}, {'primary_image_set_iid': 1,'iid':1}).to_list(None)
+                        if imgset['iid'] in [x['primary_image_set_iid'] for x in imgprim]:
                             self.response(400, 'The image is already from a primary image set.')
                             return
+                        id_imgset = None
+                        for anim in imgprim:
+                            if anim['iid'] == imgset['animal_iid']:
+                                id_imgset = anim['primary_image_set_iid']
+                                break
+                        jimgset = yield self.settings['db'].imagesets.find_one(
+                            {'iid': id_imgset})
                         ljoined = list()
-                        if 'joined' in imgset.keys():
-                            ljoined = list(imgset['joined'])
+                        if 'joined' in jimgset.keys():
+                            ljoined = list(jimgset['joined'])
                             info('Joined value: '+str(self.input_data['joined']))
                             if self.input_data['joined']:
                                 ljoined.append(int(image_id))
@@ -297,8 +303,8 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                                 ljoined = [x for x in ljoined if x != image_id ]
                         try:
                             resp = yield self.settings['db'].imagesets.update(
-                                {'iid': imgset['iid']},
-                                {'$set':{'joined':ljoined}})
+                                {'iid': jimgset['iid']},
+                                {'$set': {'joined': ljoined}})
                         except:
                             self.response(400, 'Fail to join image to primary \
                                 image set.')
