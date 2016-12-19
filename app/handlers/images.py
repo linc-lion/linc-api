@@ -291,13 +291,21 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                             if anim['iid'] == imgset['animal_iid']:
                                 id_imgset = anim['primary_image_set_iid']
                                 break
+                        info('joined value = '+str(self.input_data['joined']))
+                        info('joined type = '+str(type(self.input_data['joined'])))
+                        vjoined = None
+                        try:
+                            if self.input_data['joined']:
+                                vjoined = int(id_imgset)
+                        except:
+                            vjoined = None
                         try:
                             jimgset = yield self.settings['db'].imagesets.find_one(
                                 {'iid': int(id_imgset)})
                             if jimgset:
                                 resp = yield self.settings['db'].images.update(
                                     {'iid': int(imgobj['iid'])},
-                                    {'$set': {'joined': int(jimgset['iid'])}})
+                                    {'$set': {'joined': vjoined}})
                         except:
                             self.response(400, 'Fail to join image to primary \
                                 image set.')
