@@ -44,7 +44,6 @@ class ImageSet(Model):
     date_stamp = StringType(required=False, default=None)
     notes = StringType(required=False)
     geopos_private = BooleanType(required=False, default=False)
-    joined = ListType(IntType, required=False)
     created_at = DateTimeType(required=True, default=datetime.now())
     updated_at = DateTimeType(required=True, default=datetime.now())
 
@@ -72,6 +71,7 @@ class Image(Model):
     hashcheck = StringType(required=True, default='')
     filename = StringType(required=False, default='')
     exif_data = StringType(required=False, default='{}')
+    joined = IntType(required=False, default=None)
     created_at = DateTimeType(required=True, default=datetime.now())
     updated_at = DateTimeType(required=True, default=datetime.now())
 
