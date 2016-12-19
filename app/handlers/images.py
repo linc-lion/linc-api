@@ -146,37 +146,41 @@ class ImagesHandler(BaseHandler, ProcessMixin):
     @asynchronous
     @engine
     @api_authenticated
-    def post(self,updopt=None):
+    def post(self, updopt=None):
         # create a new image
         ########################################################################
         # Checking everything
         ########################################################################
         if not updopt:
-            self.response(400,'Uploads must be requested calling /images/upload.')
+            self.response(400, 'Uploads must be requested \
+                calling /images/upload.')
             return
         #if not self.s3con:
         #    self.response(500,'Fail to connect to S3. You must request support.')
         #    return
         # Check if file was sent and if its hash md5 already exists
         if 'image' not in self.input_data.keys():
-            self.response(400,'The request to add image require the key "image" with the file encoded with base64.')
+            self.response(400, 'The request to add image require the key \
+                "image" with the file encoded with base64.')
             return
         # Check if its a valid image
         dirfs = dirname(realpath(__file__))
-        imgname = dirfs+'/'+str(uuid4())+'.img'
+        imgname = dirfs + '/' + str(uuid4()) + '.img'
         try:
             fh = open(imgname, 'wb')
             fh.write(b64decode(self.input_data['image']))
             fh.close()
         except:
             self.remove_file(imgname)
-            self.response(400,'The encoded image is invalid, you must remake the encode using base64.')
+            self.response(400, 'The encoded image is invalid, \
+                you must remake the encode using base64.')
             return
         # Ok, image is valid
         # Now, check if it already exists in the database
-        image_file = open(imgname,'rb').read()
+        image_file = open(imgname, 'rb').read()
         filehash = md5(image_file).hexdigest()
-        imgaexists = yield self.settings['db'].images.find_one({'hashcheck':filehash})
+        imgaexists = yield self.settings['db'].images.find_one(
+            {'hashcheck': filehash})
         if imgaexists:
             self.remove_file(imgname)
             info('File already exists!')
@@ -264,7 +268,49 @@ class ImagesHandler(BaseHandler, ProcessMixin):
         # parse data recept by PUT and get only fields of the object
         update_data = self.parseInput(Image)
         fields_allowed_to_be_update = ['image_set_id',
-        'is_public','image_type']
+        'is_public','image_type','joined']
+        if 'joined' in self.input_data.keys():
+            if len(self.input_data.keys()) > 1:
+                self.response(400, 'When the "joined" is submitted, no other key should be sent together.')
+                return
+            else:
+                imgobj = yield self.settings['db'].images.find_one(
+                    {'iid': int(image_id)})
+                if imgobj:
+                    imgset = yield self.settings['db'].imagesets.find_one(
+                        {'$and': {'iid': imgobj['image_set_iid'],
+                                'animal_iid': {'$ne': None}}})
+                    # Check if is Primary and its associated
+                    if imgset:
+                        imgprim = yield self.settings['db'][self.settings['animals']].find({}, {'primary_image_set_iid': 1}).to_list(None)
+                        imgprim = [x['primary_image_set_iid'] for x in imgprim]
+                        if imgset['iid'] in imgprim:
+                            self.response(400, 'The image is already from a primary image set.')
+                            return
+                        ljoined = list()
+                        if 'joined' in imgset.keys():
+                            ljoined = list(imgset['joined'])
+                            info('Joined value: '+str(self.input_data['joined']))
+                            if self.input_data['joined']:
+                                ljoined.append(int(image_id))
+                            else:
+                                ljoined = [x for x in ljoined if x != image_id ]
+                        try:
+                            resp = yield self.settings['db'].imagesets.update(
+                                {'iid': imgset['iid']},
+                                {'$set':{'joined':ljoined}})
+                        except:
+                            self.response(400, 'Fail to join image to primary \
+                                image set.')
+                            return
+                        self.response(200, 'Image joined with success.')
+
+                    else:
+                        self.response(400, 'Image set of image ID submitted not found')
+                        return
+                else:
+                    self.response(404, 'Image ID not found.')
+                    return
         if 'image_set_id' in self.input_data.keys():
             imgiid = self.input_data['image_set_id']
             imgset = yield self.settings['db'].imagesets.find_one({'iid':imgiid})
