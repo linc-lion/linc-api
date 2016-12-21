@@ -341,9 +341,9 @@ class AnimalsHandler(BaseHandler):
                 if 'primary_image_set_iid' in update_data.keys():
                     newimgsetid = int(update_data['primary_image_set_iid'])
                     # Change joined images to the new primary image set
-                    resp = yield self.settings['db'].images.update({'$and':[{'joined':primimgsetid},{'image_set_iid': {'$ne':newimgsetid}}]},{'$set':{'joined':newimgsetid}},multi=1)
+                    resp = yield self.settings['db'].images.update({'$and':[{'joined':primimgsetid},{'image_set_iid': {'$ne':newimgsetid}}]},{'$set':{'joined':newimgsetid}},multi=True)
                     # Removed joined if it is an image from the new primary image set
-                    resp = yield self.settings['db'].images.update({'$and':[{'joined':primimgsetid},{'image_set_iid' : newimgsetid}]},{'$set':{'joined':None}},multi=1)
+                    resp = yield self.settings['db'].images.update({'$and':[{'joined':primimgsetid},{'image_set_iid' : newimgsetid}]},{'$set':{'joined':None}},multi=True)
                     oldimgset = yield self.settings['db'].imagesets.find_one({'iid':primimgsetid})
                     if oldimgset:
                         coverid = yield self.settings['db'].images.find_one({'iid':oldimgset['main_image_iid']})
