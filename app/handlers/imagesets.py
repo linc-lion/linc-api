@@ -483,7 +483,7 @@ class ImageSetsHandler(BaseHandler):
                         resp = yield self.settings['db'].images.update({'$and':[{'image_set_iid': objimgset['iid']},  {'joined':{'$ne':None}}]},{'$set':{'joined':None}},multi=True)
                         imgslist = yield self.settings['db'].images.find({'image_set_iid':objimgset['iid']}).to_list(None)
                         imgslist = [int(x['iid']) for x in imgslist]
-                        resp = self.settins['db'].imagesets.update({'main_image_id':{'$in':imgslist}},{'$set':{'main_image_id':None}},multi=True)
+                        resp = self.settings['db'].imagesets.update({'main_image_id':{'$in':imgslist}},{'$set':{'main_image_id':None}},multi=True)
                 for k, v in self.input_data.items():
                     if k in fields_allowed:
                         update_data[k] = v
