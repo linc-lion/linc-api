@@ -434,6 +434,8 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                     #    self.s3con.delete(bkpcopy,self.settings['S3_BUCKET'])
                     #except:
                     #    pass
+                    # Remove joined info from imagesets
+                    resp = yield self.settings['db'].imagesets.update({'main_image_iid':updobj['iid']},{'$set':{'main_image_iid':None}})
                     rmlist = list()
                     try:
                         for suf in ['_full.jpg','_icon.jpg','_medium.jpg','_thumbnail.jpg']:
