@@ -613,6 +613,8 @@ class ImageSetsHandler(BaseHandler):
                 imgl = yield self.settings['db'].images.find({'image_set_iid': imgobj['iid']}).to_list(None)
                 rmlist = list()
                 for img in imgl:
+                    # Remove joined referenced
+                    resp = yield self.settings['db'].imagesets.update({'main_image_iid':img['iid']},{'$set':{'main_image_iid':None}})
                     # Delete the source file
                     srcurl = self.settings['S3_FOLDER'] + '/imageset_' + \
                         str(imgobj['iid']) + '_' + str(imgobj['_id']) + '/'
