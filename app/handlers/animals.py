@@ -337,6 +337,19 @@ class AnimalsHandler(BaseHandler):
                     if field in update_data.keys():
                         updobj[field] = update_data[field]
                 updobj['updated_at'] = datetime.now()
+                # Check for primery change
+                if 'primary_image_set_iid' in update_data.keys():
+                    newimgsetid = int(update_data['primary_image_set_iid'])
+                    # Change joined images to the new primary image set
+                    resp = yield self.settings['db'].images.update({'$and':[{'joined':primimgsetid},{'image_set_iid': {'$ne':newimgsetid}}]},{'$set':{'joined':newimgsetid}},multi=1)
+                    # Removed joined if it is an image from the new primary image set
+                    resp = yield self.settings['db'].images.update({'$and':[{'joined':primimgsetid},{'image_set_iid' : newimgsetid}]},{'$set':{'joined':None}},multi=1)
+                    oldimgset = yield self.settings['db'].imagesets.find_one({'iid':primimgsetid})
+                    if oldimgset:
+                        coverid = yield self.settings['db'].images.find_one({'iid':oldimgset['main_image_iid']})
+                        if coverid:
+                            if int(coverid['image_set_iid']) != int(oldimgset['iid']):
+                                resp = yield self.settings['db'].imagesets.update({'iid':oldimgset['iid']},{'$set':{'main_image_iid':None}})
                 try:
                     updid = ObjId(updobj['_id'])
                     del updobj['_id']
@@ -347,19 +360,6 @@ class AnimalsHandler(BaseHandler):
                     try:
                         updated = yield self.settings['db'][self.settings['animals']].update({'_id':updid},Animals.to_native())
                         info(updated)
-                        # updated
-                        if 'primary_image_set_id' in self.input_data.keys():
-                            newimgsetid = int(self.input_data['primary_image_set_id'])
-                            # Change joined images to the new primary image set
-                            resp = yield self.settings['db'].images.update({'$and':[{'joined':primimgsetid},{'image_set_iid': {'$ne':newimgsetid}}]},{'$set':{'joined':newimgsetid}},multi=1)
-                            # Removed joined if it is an image from the new primary image set
-                            resp = yield self.settings['db'].images.update({'$and':[{'joined':primimgsetid},{'image_set_iid' : {'$eq':newimgsetid}}]},{'$set':{'joined':null}},multi=1)
-                            oldimgset = yield self.settings['db'].imagesets.find_one({'iid':primimgsetid})
-                            if oldimgset:
-                                coverid = yield self.settings['db'].images.find_one({'iid':oldimgset['main_image_iid']})
-                                if coverid:
-                                    if int(coverid['image_set_iid']) != int(oldimgset['iid']):
-                                        resp = yield self.settings['db'].imagesets.update({'iid':oldimgset['iid']},{'$set':{'main_image_iid':null}})
                         output = updobj
                         output['obj_id'] = str(updid)
                         # Change iid to id in the output
