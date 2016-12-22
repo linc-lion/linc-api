@@ -91,7 +91,7 @@ def checkresults(db,api):
                 info('URL: '+str(e.response.effective_url))
                 info('Reason: '+str(e.response.reason))
                 info('Body: '+str(e.response.body))
-            if int(e.code) == 400 and loads(e.response.body)['status'] == 'error':
+            if int(e.code) == 400 and loads(e.response.body.decode("utf-8"))['status'] == 'error':
                 db.cvrequests.update({'_id':cvreq['_id']},{'$set':{'status':'error','updated_at':dt}})
             elif int(e.code) == 401:
                 # authentication error
