@@ -210,7 +210,9 @@ class ImageSetsHandler(BaseHandler):
                         vjoined = (img['joined'] != None)
                     imgout = {'id': img['iid'], 'type': img[
                         'image_type'], 'is_public': img['is_public'],
-                        'joined': vjoined, 'joined_from':img['image_set_iid']}
+                        'joined': vjoined}
+                    if vjoined:
+                        imgout['joined_from'] = img['image_set_iid']
                     if 'filename' in img.keys():
                         imgout['filename'] = img['filename']
                     else:
@@ -277,7 +279,7 @@ class ImageSetsHandler(BaseHandler):
                 self.set_status(200)
                 if imageset_id:
                     loutput = loutput[0]
-                self.finish(self.json_encode({'status': 'success', 'data': loutput}))
+                self.response(200,'Image set required.',loutput)
             else:
                 self.response(404, 'Imageset id not found.')
 
