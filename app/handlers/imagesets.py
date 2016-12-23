@@ -474,10 +474,8 @@ class ImageSetsHandler(BaseHandler):
                                   'tags', 'date_stamp', 'notes', self.settings['animal'] + '_id', 'main_image_id', 'geopos_private']
                 update_data = dict()
                 # Remove join reference when remove association
-                info(self.input_data.keys())
                 animal_cfg = self.settings['animal'] + '_id'
                 if animal_cfg in self.input_data.keys():
-                    info('Value for animal_iid: '+str(self.input_data[animal_cfg]))
                     if self.input_data[animal_cfg] == None:
                         # Remove joined referenced
                         assocanimalid = objimgset['animal_iid']
@@ -486,7 +484,7 @@ class ImageSetsHandler(BaseHandler):
                         resp = yield self.settings['db'].images.update({'$and':[{'image_set_iid': objimgset['iid']},  {'joined':{'$ne':None}}]},{'$set':{'joined':None}},multi=True)
                         imgslist = yield self.settings['db'].images.find({'image_set_iid':objimgset['iid']}).to_list(None)
                         imgslist = [int(x['iid']) for x in imgslist]
-                        resp = self.settings['db'].imagesets.update({'main_image_id':{'$in':imgslist}},{'$set':{'main_image_id':None}},multi=True)
+                        resp = self.settings['db'].imagesets.update({'main_image_iid':{'$in':imgslist}},{'$set':{'main_image_iid':None}},multi=True)
                 for k, v in self.input_data.items():
                     if k in fields_allowed:
                         update_data[k] = v
