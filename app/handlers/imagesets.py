@@ -474,6 +474,7 @@ class ImageSetsHandler(BaseHandler):
                                   'tags', 'date_stamp', 'notes', self.settings['animal'] + '_id', 'main_image_id', 'geopos_private']
                 update_data = dict()
                 # Remove join reference when remove association
+                info(self.input_data.keys())
                 animal_cfg = self.settings['animal'] + '_id'
                 if animal_cfg in self.input_data.keys():
                     info('Value for animal_iid: '+str(self.input_data[animal_cfg]))
