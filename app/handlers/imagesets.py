@@ -480,11 +480,12 @@ class ImageSetsHandler(BaseHandler):
                         # Remove joined referenced
                         assocanimalid = objimgset['animal_iid']
                         primimgsetid = yield self.settings['db'][self.settings['animals']].find_one({'iid':assocanimalid})
-                        primimgsetid = primimgsetid['primary_image_set_iid']
-                        resp = yield self.settings['db'].images.update({'$and':[{'image_set_iid': objimgset['iid']},  {'joined':{'$ne':None}}]},{'$set':{'joined':None}},multi=True)
-                        imgslist = yield self.settings['db'].images.find({'image_set_iid':objimgset['iid']}).to_list(None)
-                        imgslist = [int(x['iid']) for x in imgslist]
-                        resp = self.settings['db'].imagesets.update({'main_image_iid':{'$in':imgslist}},{'$set':{'main_image_iid':None}},multi=True)
+                        if primimgsetid:
+                            primimgsetid = primimgsetid['primary_image_set_iid']
+                            resp = yield self.settings['db'].images.update({'$and':[{'image_set_iid': objimgset['iid']},  {'joined':{'$ne':None}}]},{'$set':{'joined':None}},multi=True)
+                            imgslist = yield self.settings['db'].images.find({'image_set_iid':objimgset['iid']}).to_list(None)
+                            imgslist = [int(x['iid']) for x in imgslist]
+                            resp = self.settings['db'].imagesets.update({'main_image_iid':{'$in':imgslist}},{'$set':{'main_image_iid':None}},multi=True)
                 for k, v in self.input_data.items():
                     if k in fields_allowed:
                         update_data[k] = v
