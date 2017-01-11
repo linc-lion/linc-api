@@ -213,7 +213,7 @@ class ImageSetsHandler(BaseHandler):
                         'joined': vjoined}
                     if vjoined:
                         imgout['joined_from'] = img['image_set_iid']
-                    if 'filename' in img.keys():
+                    if 'filename' in img.keys() and img['filename'] != '':
                         imgout['filename'] = img['filename']
                     else:
                         imgout['filename'] = 'undefined'
