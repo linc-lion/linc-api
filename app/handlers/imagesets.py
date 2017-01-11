@@ -216,7 +216,7 @@ class ImageSetsHandler(BaseHandler):
                     if 'filename' in img.keys():
                         imgout['filename'] = img['filename']
                     else:
-                        imgout['filename'] = 'noname'
+                        imgout['filename'] = 'undefined'
                     imgout['imgset_date_stamp'] = objimgset['date_stamp']
                     imgout['imgset_updated_at'] = objimgset['updated_at'].date().isoformat()
                     imgout['img_updated_at'] = img['updated_at'].date().isoformat()
