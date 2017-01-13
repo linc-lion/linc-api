@@ -79,6 +79,7 @@ class CVResultsHandler(BaseHandler):
                                 continue
                             objres = dict()
                             objres['id'] = int(i['id'])
+                            objres['primary_image_set_id'] = ''
                             objres['name'] = '-'
                             objres['thumbnail'] = ''
                             objres['image'] = ''
@@ -90,6 +91,9 @@ class CVResultsHandler(BaseHandler):
                             # get the animal
                             aobj = yield self.settings['db'][self.settings['animals']].find_one({'iid':objres['id']})
                             if aobj:
+                                objres['name'] = aobj['name']
+                                objres['primary_image_set_id'] = aobj['primary_image_set_iid']
+
                                 #cvreq = yield self.settings['db'].cvrequests.find_one({'iid':objs['cvrequest_iid']})
                                 # here
                                 img = yield self.settings['db'].images.find_one({'image_set_iid':aobj['primary_image_set_iid'],'image_type':'main-id'})
@@ -104,9 +108,6 @@ class CVResultsHandler(BaseHandler):
                                     else:
                                         objres['thumbnail'] = ''
                                         objres['image'] = ''
-
-                                if aobj:
-                                    objres['name'] = aobj['name']
                                 imgss = yield self.settings['db'].imagesets.find_one({'iid':aobj['primary_image_set_iid']})
                                 if imgss:
                                     objres['age'] = self.age(imgss['date_of_birth'])
