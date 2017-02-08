@@ -586,7 +586,7 @@ class ImageSetsHandler(BaseHandler):
                                     orgname = orgname['name']
                                 if len(emails) > 0:
                                     for eaddr in emails:
-                                        msg = """From: %s\nTo: %s\nSubject: LINC Lion: Request for verification\n\nThis email was created by the system due to a association request of an image set with a lion from another organization.\nThe image set was associated with the lion:\n\nId: %s\nName: %s\nOrganization: %s\n\nThe image set is presented below:\n\nId: %s\nOrganization: %s\nLink: %s (accessible for previous logged users)]\n\nPlease, go to the LINC website and accept verify the request to complete the association.\n\nLinc Lion Team\nhttps://linc.linclion.org/\n
+                                        msg = """From: %s\nTo: %s\nSubject: LINC Lion: Request for verification\n\nThis email was created by the system due to an association request of an image set with a lion from another organization.\nThe image set was associated with the lion:\n\nId: %s\nName: %s\nOrganization: %s\n\nThe image set is presented below:\n\nId: %s\nOrganization: %s\nLink: %s (accessible for previous logged users)]\n\nPlease, go to the LINC website to verify (accept) or remove the request for association.\n\nLinc Lion Team\nhttps://linc.linclion.org/\n
 
                                         """
                                         msg = msg % (self.settings['EMAIL_FROM'],eaddr,aniexists['iid'],aniexists['name'],aniorg['name'],imageset_id,orgname,'https://linc.linclion.org/#/imageset/'+str(imageset_id))
