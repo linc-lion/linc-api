@@ -199,29 +199,3 @@ A password recovery was requested for the email %s.\nYou can use the credentials
                 self.response(404,'No user found with email: '+email)
         else:
             self.response(400,'An email is required to restart user\'s passwords.')
-
-    @asynchronous
-    @engine
-    def sendEmail(self,toaddr,msg,callback):
-        resp = True
-        try:
-            fromaddr = self.settings['EMAIL_FROM']
-            smtp_server = self.settings['SMTP_SERVER']
-            smtp_username = self.settings['SMTP_USERNAME']
-            smtp_password = self.settings['SMTP_PASSWORD']
-            smtp_port = self.settings['SMPT_PORT']
-            smtp_do_tls = True
-            server = smtplib.SMTP(
-                host = smtp_server,
-                port = smtp_port,
-                timeout = 10
-            )
-            server.set_debuglevel(10)
-            server.starttls()
-            server.ehlo()
-            server.login(smtp_username, smtp_password)
-            server.sendmail(fromaddr, toaddr, msg)
-            server.quit()
-        except:
-            resp = False
-        callback(resp)

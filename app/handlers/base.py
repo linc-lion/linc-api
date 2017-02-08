@@ -243,6 +243,32 @@ class BaseHandler(RequestHandler):
             resp = [400,'Invalid input data. Errors: '+str(e)+'.']
         callback(resp)
 
+    @asynchronous
+    @engine
+    def sendEmail(self,toaddr,msg,callback):
+        resp = True
+        try:
+            fromaddr = self.settings['EMAIL_FROM']
+            smtp_server = self.settings['SMTP_SERVER']
+            smtp_username = self.settings['SMTP_USERNAME']
+            smtp_password = self.settings['SMTP_PASSWORD']
+            smtp_port = self.settings['SMPT_PORT']
+            smtp_do_tls = True
+            server = smtplib.SMTP(
+                host = smtp_server,
+                port = smtp_port,
+                timeout = 10
+            )
+            server.set_debuglevel(10)
+            server.starttls()
+            server.ehlo()
+            server.login(smtp_username, smtp_password)
+            server.sendmail(fromaddr, toaddr, msg)
+            server.quit()
+        except:
+            resp = False
+        callback(resp)
+
 class VersionHandler(BaseHandler):
     def get(self):
         self.response(200,self.settings['version']+' - animal defined: '+self.settings['animal'])
