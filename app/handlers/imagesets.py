@@ -579,18 +579,17 @@ class ImageSetsHandler(BaseHandler):
                                 userslist = yield self.settings['db'].users.find({'organization_iid':animal_org_iid}).to_list(None)
                                 emails = [user['email'] for user in userslist]
                                 orgname = yield self.settings['db'].organizations.find_one({'iid':int(imageset_org_iid)})
+                                aniorg = yield self.settings['db'].organizations.find_one({'iid':int(aniexists['organization_iid'])})
                                 if not orgname:
                                     orgname = 'no name defined'
                                 else:
                                     orgname = orgname['name']
                                 if len(emails) > 0:
                                     for eaddr in emails:
-                                        msg = """From: %s\nTo: %s\nSubject: LINC Lion: Request for verification\n
-
-                An image set was associated with the lion:\n\nId: %s\nName: %s\n\nthe image set associated is presented below:\n\nId: %s\nOrganization: %s\nLink: %s (accessible for logged users)\n\n\nLinc Lion Team\n
+                                        msg = """From: %s\nTo: %s\nSubject: LINC Lion: Request for verification\n\nThis email was created by the system due to a association request of an image set with a lion from another organization.\nThe image set was associated with the lion:\n\nId: %s\nName: %s\nOrganization: %s\n\nThe image set is presented below:\n\nId: %s\nOrganization: %s\nLink: %s (accessible for previous logged users)]\n\nPlease, go to the LINC website and accept verify the request to complete the association.\n\nLinc Lion Team\nhttps://linc.linclion.org/\n
 
                                         """
-                                        msg = msg % (self.settings['EMAIL_FROM'],eaddr,aniexists['iid'],aniexists['name'],imageset_id,orgname,'https://linc.linclion.org/#/imageset/'+str(imageset_id))
+                                        msg = msg % (self.settings['EMAIL_FROM'],eaddr,aniexists['iid'],aniexists['name'],aniorg['name'],imageset_id,orgname,'https://linc.linclion.org/#/imageset/'+str(imageset_id))
                                         pemail = yield Task(self.sendEmail,eaddr,msg)
 
                 try:
