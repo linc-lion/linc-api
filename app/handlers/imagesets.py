@@ -576,7 +576,7 @@ class ImageSetsHandler(BaseHandler):
                             if animal_org_iid != imageset_org_iid:
                                 # Request Verification
                                 # Get emails from the
-                                userslist = self.settings['db'].users.find({'organization_iid':animal_org_iid}).to_list(None)
+                                userslist = yield self.settings['db'].users.find({'organization_iid':animal_org_iid}).to_list(None)
                                 emails = [user['email'] for user in userslist]
                                 orgname = yield self.settings['db'].organizations.find_one({'iid':int(imageset_org_iid)})
                                 if not orgname:
