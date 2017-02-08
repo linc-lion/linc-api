@@ -36,6 +36,8 @@ from tornado.httputil import HTTPHeaders
 from bson import ObjectId as ObjId
 from schematics.exceptions import ValidationError
 from models.user import User
+import smtplib
+
 
 class BaseHandler(RequestHandler):
     """A class to collect common handler methods - all other handlers should

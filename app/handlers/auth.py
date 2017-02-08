@@ -34,7 +34,6 @@ from bson import ObjectId as ObjId
 from schematics.exceptions import ValidationError
 from models.user import User
 from tornado.httpclient import AsyncHTTPClient
-import smtplib
 
 class CheckAuthHandler(BaseHandler):
     @api_authenticated
@@ -168,8 +167,7 @@ class RestorePassword(BaseHandler):
             email = self.input_data['email']
             ouser = yield self.settings['db'].users.find_one({'email':email})
             if ouser:
-                #try:
-                if True:
+                try:
                     newpass = gen_token(10)
                     resp = yield Task(self.changePassword,ouser,newpass)
                     if resp[0] != 200:
@@ -194,8 +192,7 @@ A password recovery was requested for the email %s.\nYou can use the credentials
                     else:
                         self.response(400,'The system can\'t generate a new password for the user. Ask for support in suporte@venidera.com')
                     return
-                #except:
-                else:
+                except:
                     self.response(400,'Fail to generate new password.')
             else:
                 self.response(404,'No user found with email: '+email)
