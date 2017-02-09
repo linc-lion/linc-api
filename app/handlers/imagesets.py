@@ -568,30 +568,47 @@ class ImageSetsHandler(BaseHandler):
                         self.response(409, 'The ' + self.settings['animal'] +
                                       " id sent doesn't exist.")
                         return
-                    else:
-                        # Check for Verification request
-                        if animal_cfg in self.input_data.keys() and self.input_data[animal_cfg] != None:
-                            animal_org_iid = aniexists['organization_iid']
-                            imageset_org_iid = objimgset['owner_organization_iid']
-                            if animal_org_iid != imageset_org_iid:
-                                # Request Verification
-                                # Get emails from the
-                                userslist = yield self.settings['db'].users.find({'organization_iid':animal_org_iid}).to_list(None)
-                                emails = [user['email'] for user in userslist]
-                                orgname = yield self.settings['db'].organizations.find_one({'iid':int(imageset_org_iid)})
-                                aniorg = yield self.settings['db'].organizations.find_one({'iid':int(aniexists['organization_iid'])})
-                                if not orgname:
-                                    orgname = 'no name defined'
-                                else:
-                                    orgname = orgname['name']
-                                if len(emails) > 0:
-                                    for eaddr in emails:
-                                        msg = """From: %s\nTo: %s\nSubject: LINC Lion: Request for verification\n\nThis email was created by the system due to an association request of an image set with a lion from another organization.\nThe image set was associated with the lion:\n\nId: %s\nName: %s\nOrganization: %s\n\nThe image set is presented below:\n\nId: %s\nOrganization: %s\nLink: %s (accessible for previous logged users)]\n\nPlease, go to the LINC website to verify (accept) or remove the request for association.\n\nLinc Lion Team\nhttps://linc.linclion.org/\n
+                # Check for Verification request
+                if animal_cfg in self.input_data.keys() and self.input_data[animal_cfg] != None:
+                    aniexists = yield \
+                        self.settings['db'][self.settings['animals']].find_one(
+                            {'iid': self.input_data[animal_cfg]})
+                    animal_org_iid = aniexists['organization_iid']
+                    imageset_org_iid = objimgset['owner_organization_iid']
+                    if animal_org_iid != imageset_org_iid:
+                        # Request Verification
+                        # Get emails from the
+                        userslist = yield self.settings['db'].users.find({'organization_iid':animal_org_iid}).to_list(None)
+                        emails = [user['email'] for user in userslist]
+                        orgname = yield self.settings['db'].organizations.find_one({'iid':int(imageset_org_iid)})
+                        aniorg = yield self.settings['db'].organizations.find_one({'iid':int(aniexists['organization_iid'])})
+                        if not orgname:
+                            orgname = 'no name defined'
+                        else:
+                            orgname = orgname['name']
+                        if len(emails) > 0:
+                            for eaddr in emails:
+                                msg = """From: %s\nTo: %s\nSubject: LINC Lion: Request for verification\n\nThis email was created by the system due to an association request of an image set with a lion from another organization.\nThe image set was associated with the lion:\n\nId: %s\nName: %s\nOrganization: %s\n\nThe image set is presented below:\n\nId: %s\nOrganization: %s\nLink: %s (accessible for previous logged users)\n\nPlease, go to the LINC website to verify (accept) or remove the request for association.\n\nLinc Lion Team\nhttps://linc.linclion.org/\n
 
-                                        """
-                                        msg = msg % (self.settings['EMAIL_FROM'],eaddr,aniexists['iid'],aniexists['name'],aniorg['name'],imageset_id,orgname,'https://linc.linclion.org/#/imageset/'+str(imageset_id))
-                                        pemail = yield Task(self.sendEmail,eaddr,msg)
+                                """
+                                msg = msg % (self.settings['EMAIL_FROM'],eaddr,aniexists['iid'],aniexists['name'],aniorg['name'],imageset_id,orgname,'https://linc.linclion.org/#/imageset/'+str(imageset_id))
+                                pemail = yield Task(self.sendEmail,eaddr,msg)
+                if 'is_verified' in self.input_data.keys() and self.input_data['is_verified'] == True:
+                    imgset2ver = yield self.settings['db'].imagesets.find_one(query)
+                    userslist = yield self.settings['db'].users.find({'organization_iid':imgset2ver['owner_organization_iid']}).to_list(None)
+                    animobj = yield self.settings['db'][self.settings['animals']].find_one({'iid':imgset2ver['animal_iid']})
+                    if animobj:
+                        aniorg = yield self.settings['db'].organizations.find_one({'iid':animobj['organization_iid']})
+                        imgorg = yield self.settings['db'].organizations.find_one({'iid':imgset2ver['owner_organization_iid']})
+                        emails = [user['email'] for user in userslist]
+                        if len(emails) > 0:
+                            for eaddr in emails:
+                                msg = """From: %s\nTo: %s\nSubject: LINC Lion: Image set %s was verified\n\nThis email was created by the system as a notification for the accept of an image set association with a lion from another organization.\nThe image set:\n\nId: %s\nOrganization: %s\nLink: %s (accessible for previous logged users)\nIt was associated with the lion:\n\nId: %s\nName: %s\nOrganization: %s\n
+                                \n\nThis is just a notification.\n\nLinc Lion Team\nhttps://linc.linclion.org/\n
 
+                                """
+                                msg = msg % (self.settings['EMAIL_FROM'],eaddr,imageset_id,imageset_id,imgorg['name'],'https://linc.linclion.org/#/imageset/'+str(imageset_id),animobj['iid'],animobj['name'],aniorg['name'],)
+                                pemail = yield Task(self.sendEmail,eaddr,msg)
                 try:
                     imgid = ObjId(objimgset['_id'])
                     del objimgset['_id']
