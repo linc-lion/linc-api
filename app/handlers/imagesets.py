@@ -603,8 +603,8 @@ class ImageSetsHandler(BaseHandler):
                         emails = [user['email'] for user in userslist]
                         if len(emails) > 0:
                             for eaddr in emails:
-                                msg = """From: %s\nTo: %s\nSubject: LINC Lion: Image set %s was verified\n\nThis email was created by the system as a notification for the accept of an image set association with a lion from another organization.\nThe image set:\n\nId: %s\nOrganization: %s\nLink: %s (accessible for previous logged users)\nIt was associated with the lion:\n\nId: %s\nName: %s\nOrganization: %s\n
-                                \n\nThis is just a notification.\n\nLinc Lion Team\nhttps://linc.linclion.org/\n
+                                msg = """From: %s\nTo: %s\nSubject: LINC Lion: Image set %s was verified\n\nThis email was created by the system as a notification for the accept of an image set association with a lion from another organization.\nThe image set:\n\nId: %s\nOrganization: %s\nLink: %s (accessible for previous logged users)\n\nIt was associated with the lion:\n\nId: %s\nName: %s\nOrganization: %s\n
+                                \nLinc Lion Team\nhttps://linc.linclion.org/\n
 
                                 """
                                 msg = msg % (self.settings['EMAIL_FROM'],eaddr,imageset_id,imageset_id,imgorg['name'],'https://linc.linclion.org/#/imageset/'+str(imageset_id),animobj['iid'],animobj['name'],aniorg['name'],)
