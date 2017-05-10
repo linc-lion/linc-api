@@ -110,7 +110,7 @@ class CVRequestsHandler(BaseHandler):
                 # a history collection
                 try:
                     # get cvresult if it exists
-                    cvres = yield self.settings['db'].cvresults.find_one({'cv_request_iid':req_id})
+                    cvres = yield self.settings['db'].cvresults.find_one({'cvrequest_iid': req_id})
                     if cvres:
                         info(cvres)
                         idcvres = ObjId(cvres['_id'])
