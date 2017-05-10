@@ -25,34 +25,35 @@ from tornado.gen import coroutine,engine,Task
 from handlers.base import BaseHandler
 from models.animal import Animal
 from models.imageset import ImageSet
-from datetime import datetime,time
+from datetime import datetime, time
 from bson import ObjectId as ObjId
 from pymongo import DESCENDING
 from lib.rolecheck import allowedRole, refusedRole, api_authenticated
 from schematics.exceptions import ValidationError
 from logging import info
-from json import loads,dumps
+from json import loads, dumps
+
 
 class AnimalsHandler(BaseHandler):
     """A class that handles requests about animals informartion
     """
 
-    def query_id(self,animal_id):
+    def query_id(self, animal_id):
         """This method configures the query that will find an object"""
         try:
-            query = { 'iid' : int(animal_id) }
+            query = {'iid': int(animal_id)}
         except:
             try:
-                query = { '_id' : ObjId(animal_id) }
+                query = {'_id': ObjId(animal_id)}
             except:
-                query = { 'name' : animal_id}
+                query = {'name': animal_id}
         return query
 
     @asynchronous
     @coroutine
     def get(self, animal_id=None, xurl=None):
-        apiout = self.get_argument('api',None)
-        noimages = self.get_argument('no_images','')
+        apiout = self.get_argument('api', None)
+        noimages = self.get_argument('no_images', '')
         if noimages.lower() == 'true':
             noimages = True
         else:
@@ -226,10 +227,11 @@ class AnimalsHandler(BaseHandler):
             except:
                 self.response(400,'Invalid value for dob_start/dob_end.')
                 return
+            info(queryfilter)
             objs = yield self.settings['db'].imagesets.find(queryfilter).to_list(None)
             iids = [x['animal_iid'] for x in objs]
             iids = list(set(iids))
-            objs = yield self.settings['db'][self.settings['animals']].find({'iid': { '$in' : iids }}).to_list(None)
+            objs = yield self.settings['db'][self.settings['animals']].find({'iid': {'$in': iids}}).to_list(None)
             output = list()
             for x in objs:
                 if 'dead' not in x.keys():
@@ -244,11 +246,11 @@ class AnimalsHandler(BaseHandler):
                     del obj['primary_image_set_iid']
                     self.switch_iid(obj)
                 else:
-                    obj = yield Task(self.prepareOutput,x,noimages)
+                    obj = yield Task(self.prepareOutput, x, noimages)
                 output.append(obj)
             self.set_status(200)
             if apiout:
-                outshow = {'status':'success','data':output}
+                outshow = {'status': 'success', 'data': output}
             else:
                 outshow = output
             self.finish(self.json_encode(outshow))
@@ -540,10 +542,10 @@ class AnimalsHandler(BaseHandler):
             obj['notes'] = oimgst['notes']
             obj['owner_organization_id'] = oimgst['owner_organization_iid']
             obj['user_id'] = oimgst['uploading_user_iid']
-            cvreq = yield self.settings['db'].cvrequests.find_one({'image_set_iid':oimgst['iid']})
+            cvreq = yield self.settings['db'].cvrequests.find_one({'image_set_iid': oimgst['iid']})
             if cvreq:
                 obj['has_cv_request'] = True
-                cvres = yield self.settings['db'].cvresults.find_one({'cv_request_iid':cvreq['iid']})
+                cvres = yield self.settings['db'].cvresults.find_one({'cvrequest_iid': cvreq['iid']})
                 if cvres:
                     obj['has_cv_result'] = True
                 else:
@@ -552,7 +554,7 @@ class AnimalsHandler(BaseHandler):
                 obj['has_cv_request'] = False
                 obj['has_cv_result'] = False
             if not noimages:
-                images = yield self.settings['db'].images.find({'image_set_iid':oimgst['iid']}).to_list(None)
+                images = yield self.settings['db'].images.find({'image_set_iid': oimgst['iid']}).to_list(None)
                 outimages = list()
                 for image in images:
                     obji = dict()
@@ -563,13 +565,13 @@ class AnimalsHandler(BaseHandler):
                     obji['thumbnail_url'] = ''
                     obji['main_url'] = ''
                     obji['url'] = ''
-                    img = yield self.settings['db'].images.find_one({'iid':image['iid']})
+                    img = yield self.settings['db'].images.find_one({'iid': image['iid']})
                     if img:
                         obji['thumbnail_url'] = self.settings['S3_URL']+img['url']+'_thumbnail.jpg'
                         obji['main_url'] = self.settings['S3_URL']+img['url']+'_full.jpg'
                         obji['url'] = self.settings['S3_URL']+img['url']+'_full.jpg'
                     outimages.append(obji)
-                obj['_embedded'] = {'images':outimages}
+                obj['_embedded'] = {'images': outimages}
             imgsets_output.append(obj)
         objanimal['_embedded'] = {'image_sets': imgsets_output}
         callback(objanimal)
