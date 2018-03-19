@@ -32,6 +32,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.vm.synced_folder "../", "/home/vagrant/linc-api", create: true
   config.vm.synced_folder "../../linc-webapp", "/home/vagrant/linc-webapp", create: true
 
+
   # Use an Ubuntu box based in the host arch
   arch = Vagrant::Util::Platform::bit64? ? 64 : 32
   config.vm.box = "ubuntu/trusty#{arch}"
@@ -45,7 +46,6 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.vm.network :forwarded_port, guest: 5080, host: 5080 # MongoDB Adimin Dev Purposes
 
   config.vm.network :private_network, ip: "192.168.100.10"
-  config.vm.network :private_network, ip: "192.168.100.20"
 
   config.vm.provider :virtualbox do |vb|
     vb.name = "linc-dev"
@@ -55,9 +55,174 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     vb.customize ["modifyvm", :id, "--memory", "1024"]
   end
 
-  # Provision without puppet or cheff, using shell scripts
-  config.vm.provision :shell, path: "./provision/ubuntu_provision.sh"
 
+  # Provision without puppet or cheff, using shell scripts
+  #config.vm.provision :shell, path: "./provision/ubuntu_provision.sh"
+  # Provision without puppet or cheff, using shell scripts
+  config.vm.provision :shell, inline: <<-SCRIPT
+
+  # Functions definitions
+  msg () {
+      echo " "
+      echo -e "\033[33;34m >>> "$1
+      echo " "
+      return 0
+  }
+
+  msg "Starting provision..."
+
+  msg "Configuring OS"
+  # Provision config section
+  USER=vagrant
+
+  msg "Disabling IPv6"
+  sudo echo "net.ipv6.conf.all.disable_ipv6 = 1" >> /etc/sysctl.conf
+  sudo echo "net.ipv6.conf.default.disable_ipv6 = 1" >> /etc/sysctl.conf
+  sudo echo 1 > /proc/sys/net/ipv6/conf/all/disable_ipv6
+  sudo echo 1 > /proc/sys/net/ipv6/conf/default/disable_ipv6
+
+  # Timezone definition
+  msg "Setting timezone: EST"
+  export LANGUAGE=en_US.UTF-8
+  export LANG=en_US.UTF-8
+  export LC_ALL=en_US.UTF-8
+  sudo timedatectl set-timezone EST > /dev/null
+  sudo apt-get install ntp > /dev/null
+  sudo locale-gen en_US.UTF-8
+  sudo dpkg-reconfigure locales
+
+  # #update apt-key 
+  # msg "Importing apt-key"
+  # sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 5BB92C09DB82666C
+  # sudo apt-get update > /dev/null
+
+  # mongodb
+  msg "Adding MongoDB package repository"
+
+          # msg "Installing MongoDB 3 and other packages required"
+          # sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 7F0CEB10
+          # echo "deb http://repo.mongodb.org/apt/ubuntu trusty/mongodb-org/3.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-3.0.list
+          # sudo apt-get update > /dev/null
+
+          # msg "Installing and configuring MongoDB"
+          # sudo apt-get install -y mongodb-server > /dev/null
+          # sudo service mongodb stop > /dev/null
+          # sudo rm -fr /var/lib/mongodb/*
+
+          # msg "Starting MongoDB service"
+          # sudo service mongodb start > /dev/null
+          # sudo update-rc.d mongodb defaults > /dev/null
+          # sudo update-rc.d mongodb enable > /dev/null
+          
+          # sleep 5
+
+          # msg "Loading MongoDB database"
+          # mongorestore -h 127.0.0.1:27017 -d linc-api-lions /home/vagrant/linc-api/db/mongodb/dump/dump-2018-03-19-heroku_twzd61j5 --drop
+
+  # Adding Packages
+  # common
+
+  msg "Adding repo for Python 3.6"
+  sudo add-apt-repository -y ppa:deadsnakes/ppa
+  sudo apt-get update > /dev/null
+
+  msg "Installing common packages and dependencies"
+  sudo apt-get install -y python3.6 python3.6-dev python-dev python-virtualenv python3.6-venv python3-setuptools > /dev/null > /dev/null
+  sudo apt-get install -y build-essential libssl-dev supervisor git redis-server redis-tools > /dev/null
+
+  # Installing NodeJS
+  msg "Installing NodeJS"
+  curl -sL https://deb.nodesource.com/setup_6.x -o nodesource_setup.sh
+  sudo bash nodesource_setup.sh > /dev/null
+  sudo apt-get install nodejs > /dev/null
+  sudo apt-get update
+  curl -sL https://raw.githubusercontent.com/creationix/nvm/v0.31.0/install.sh -o install_nvm.sh
+  bash install_nvm.sh
+  source ~/.profile
+  VERSION=$(nvm ls-remote | tail -1 | cut -d v -f 2)
+  nvm install $VERSION
+  nvm use $VERSION
+  nvm alias default $VERSION
+  nvm use default
+
+  sudo apt-get update > /dev/null
+  
+  # Python image tools Pillow dependencies
+  msg "Installing Python Image Tools"
+  sudo apt-get -y install libjpeg-dev libzip2 > /dev/null
+
+  ## Adjusting for Pillow JPEG creation
+  sudo ln -s /usr/lib/x86_64-linux-gnu/libjpeg.so /usr/lib > /dev/null
+  sudo ln -s /usr/lib/x86_64-linux-gnu/libfreetype.so /usr/lib > /dev/null
+  sudo ln -s /usr/lib/x86_64-linux-gnu/libz.so /usr/lib > /dev/null
+
+  # App Configuration
+  sudo rm -fr /home/vagrant/app/venv /home/vagrant/linc-api/venv /home/vagrant/linc-webapp/venv /home/vagrant/linc-webapp/venv > /dev/null
+
+  # Update Python libs
+  msg "Updating Python libs"
+  sudo apt-get -y install libcurl4-openssl-dev libffi-dev > /dev/null
+
+  msg "Starting provision for All Apps..."
+
+  /usr/bin/python3.6 -m venv /home/vagrant/app/venv
+  source /home/vagrant/app/venv/bin/activate
+  
+  msg "Install Python Dependencies"
+  pip install pip --upgrade
+  pip install setuptools --upgrade
+  pip install -r /home/vagrant/linc-api/requirements.txt --upgrade
+  pip install -I Pillow
+
+
+  msg "Configuring supervisord to run linc-api services"
+
+  sudo echo '[program:linc-api]' > /etc/supervisor/conf.d/linc-api.conf
+  sudo echo 'command=/home/vagrant/app/venv/bin/python  /home/vagrant/linc-api/app/linc-api.py --port=5050' >> /etc/supervisor/conf.d/linc-api.conf
+  sudo echo 'environment=S3_URL=https://linc-media.linclion.org/,APPURL=https://linc-api.venidera.local,IsDevelopment=True' >> /etc/supervisor/conf.d/linc-api.conf
+  sudo echo 'redirect_stderr=true' >> /etc/supervisor/conf.d/linc-api.conf
+  sudo echo 'stdout_logfile=/tmp/linc-api.log' >> /etc/supervisor/conf.d/linc-api.conf
+  sudo echo 'numprocs=1' >> /etc/supervisor/conf.d/linc-api.conf
+  sudo echo 'user=vagrant' >> /etc/supervisor/conf.d/linc-api.conf
+  sudo echo 'directory=/home/vagrant/linc-api/app' >> /etc/supervisor/conf.d/linc-api.conf
+
+  msg "Configuring supervisord to run linc-web services"
+
+  sudo echo '[program:linc-webapp]' > /etc/supervisor/conf.d/linc-webapp.conf
+  sudo echo 'command=/home/vagrant/app/venv/bin/python  /home/vagrant/linc-webapp/app/linc-webapp.py --port=5080' >> /etc/supervisor/conf.d/linc-webapp.conf
+  sudo echo 'environment=APPURL=https://linc-webapp.venidera.local,APPURL=https://linc-api.venidera.local,IsDevelopment=True' >> /etc/supervisor/conf.d/linc-webapp.conf
+  sudo echo 'redirect_stderr=true' >> /etc/supervisor/conf.d/linc-webapp.conf
+  sudo echo 'stdout_logfile=/tmp/linc-webapp.log' >> /etc/supervisor/conf.d/linc-webapp.conf
+  sudo echo 'numprocs=1' >> /etc/supervisor/conf.d/linc-webapp.conf
+  sudo echo 'user=vagrant' >> /etc/supervisor/conf.d/linc-webapp.conf
+  sudo echo 'directory=/home/vagrant/linc-webapp/app' >> /etc/supervisor/conf.d/linc-webapp.conf
+
+  # Updating
+
+  msg "Updating supervisord services"
+  sudo supervisorctl update > /dev/null
+
+  echo "source /home/vagrant/app/venv/bin/activate" >> "/home/vagrant/.bashrc"
+  echo 'export LC_ALL=en_US.UTF-8' >> "/home/vagrant/.bashrc"
+  echo 'export LANGUAGE=en_US.UTF-8' >> "/home/vagrant/.bashrc"
+  echo 'export LANG=en_US.UTF-8' >> "/home/vagrant/.bashrc"
+
+  msg "Cleaning Everything"
+  msg "   dist-upgrade"
+  sudo apt-get -y dist-upgrade > /dev/null
+  msg "   autoremove"
+  sudo apt-get -y autoremove > /dev/null
+  msg "   autoclean"
+  sudo apt-get -y autoclean > /dev/null
+  
+  # Shrink image size
+  sudo dd if=/dev/zero of=/EMPTY bs=1M
+  sudo rm -f /EMPTY
+
+  msg "Provision completed!"
+
+  SCRIPT
+  
   # X11 over ssh
   config.ssh.forward_x11 = true
 end

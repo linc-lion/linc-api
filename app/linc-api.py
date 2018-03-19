@@ -35,12 +35,13 @@ from settings import api as settings
 from routes import url_patterns
 import os
 
-logging.basicConfig(
-    stream=stdout,
-    level=logging.DEBUG,
-    format='"%(asctime)s %(levelname)8s %(name)s - %(message)s"',
-    datefmt='%H:%M:%S'
-)
+# logging.basicConfig(
+#     stream=stdout,
+#     level=logging.DEBUG,
+#     format='"%(asctime)s %(levelname)8s %(name)s - %(message)s"',
+#     datefmt='%H:%M:%S'
+# )
+logger = logging.getLogger()
 
 url_routes = url_patterns(settings['animals'])
 
@@ -52,6 +53,16 @@ class Application(tornado.web.Application):
 # Run server
 def main():
     app = Application()
+    
+    if (len(logger.handlers) > 0):
+        formatter = logging.Formatter("[%(levelname).1s %(asctime)s %(module)s:%(lineno)s] %(message)s", datefmt='%y%m%d %H:%M:%S')
+        logger.handlers[0].setFormatter(formatter)
+    if options.debug:
+        logging.info('== Tornado in DEBUG mode ==============================')
+        for key, cfg in settings.items():
+            logging.info(key + ' = ' + str(cfg))
+        logging.info('=======================================================')
+
     logging.info('API handlers:')
     for h in url_routes:
         logging.info(h)

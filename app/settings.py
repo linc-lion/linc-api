@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+# !/usr/bin/env python3
 # coding: utf-8
 
 # LINC is an open source shared database and facial recognition
@@ -37,50 +37,38 @@ from logging import info
 
 # Adjusting path for the app
 
-# make filepaths relative to settings.
-ROOT = os.path.dirname(os.path.realpath(__file__))
-path = lambda *a: os.path.join(ROOT, *a)
+appdir = os.path.dirname(os.path.realpath(__file__))
+info('Work directory: %s' % str(appdir))
+
+# Set False in Development
+IsDevelopment = eval(os.environ.get('IsDevelopment', 'False'))
+if IsDevelopment:
+    environ = 'lion-development'
+else:
+    environ = 'lion-production'
 
 # save original Python path
 old_sys_path = list(sys.path)
 
 # add local packages directories to Python's site-packages path
-site.addsitedir(path('handlers'))  # Request handlers
-site.addsitedir(ROOT)
-site.addsitedir(ROOT+'/models')
-site.addsitedir(ROOT+'/handlers')
+paths_list = [appdir, appdir + '/handlers', appdir + '/models', appdir + '/lib']
+for path in paths_list:
+    site.addsitedir(path)
 
-# add local dependencies
-if os.path.exists(path('lib')):
-    for directory in os.listdir(path('lib')):
-        full_path = path('lib/%s' % directory)
-        if os.path.isdir(full_path):
-            site.addsitedir(full_path)
-
-# move the new items to the front of sys.path
-new_sys_path = [ROOT,ROOT+'/handlers',ROOT+'/models']
-for item in list(sys.path):
-    if item not in old_sys_path:
-        new_sys_path.append(item)
-        sys.path.remove(item)
-sys.path[:0] = new_sys_path
-
-# database directory
-site.addsitedir("../db")
+sys.path = sys.path + paths_list
 
 define("port",default=5050,type=int,help=("Server port"))
 define("config",default=None,help=("Tornado configuration file"))
 define('debug',default=True,type=bool,help=("Turn on autoreload, log to stderr only"))
-tornado.options.parse_command_line()
 
-appdir = os.path.dirname(os.path.realpath(__file__))
+tornado.options.parse_command_line()
 
 # API settings
 api = {}
 api['debug'] = options.debug
 api['xsrf_cookies'] = False
 api['app_path'] = appdir
-api['version'] = 'api version v1.1.0 - 20161123'
+api['version'] = 'api version v2.0 - 20180316'
 api['template_path'] = os.path.join(appdir,"templates")
 api['static_path'] = os.path.join(appdir, "static")
 
@@ -107,6 +95,7 @@ else:
     db = conn[dbname]
     sdb = pm[dbname]
 
+info('MongoDB Database set to: %s' % (URI))
 api['db'] = db
 
 from lib.tokens import gen_token,mksecret
@@ -131,10 +120,15 @@ api['SMTP_USERNAME'] = os.environ.get('SMTP_USERNAME','')
 api['SMTP_PASSWORD'] = os.environ.get('SMTP_PASSWORD')
 api['SMPT_PORT'] = os.environ.get('SMTP_PORT','587')
 
-api['url'] = os.environ.get('API_URL','')
-api['scheduler'] = TornadoScheduler()
-api['scheduler'].start()
+api['url'] = os.environ.get('APPURL','')
+# api['scheduler'] = TornadoScheduler()
+# api['scheduler'].start()
 # Check CV Server results - every 30 seconds
-api['scheduler'].add_job(checkresults, 'interval', seconds=30, args=[sdb,api])
+# api['scheduler'].add_job(checkresults, 'interval', seconds=30, args=[sdb,api])
 # Delete files in S3
-api['scheduler'].add_job(checkS3, 'interval', seconds=50, args=[sdb,api])
+# api['scheduler'].add_job(checkS3, 'interval', seconds=50, args=[sdb,api])
+
+info('environ: ' + environ)
+info('url: ' + api['url'])
+info('')
+
