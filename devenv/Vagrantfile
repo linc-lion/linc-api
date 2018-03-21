@@ -99,25 +99,23 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   # mongodb
   msg "Adding MongoDB package repository"
 
-          # msg "Installing MongoDB 3 and other packages required"
-          # sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 7F0CEB10
-          # echo "deb http://repo.mongodb.org/apt/ubuntu trusty/mongodb-org/3.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-3.0.list
-          # sudo apt-get update > /dev/null
+  # msg "Installing MongoDB 3 and other packages required"
+  sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 2930ADAE8CAF5059EE73BB4B58712A2291FA4AD5
+  echo "deb [ arch=amd64 ] https://repo.mongodb.org/apt/ubuntu trusty/mongodb-org/3.6 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-3.6.list
+  sudo apt-get update > /dev/null
 
-          # msg "Installing and configuring MongoDB"
-          # sudo apt-get install -y mongodb-server > /dev/null
-          # sudo service mongodb stop > /dev/null
-          # sudo rm -fr /var/lib/mongodb/*
+  # msg "Installing and configuring MongoDB"
+  sudo apt-get install -y mongodb-org > /dev/null
+  sudo service mongod stop > /dev/null
+  sudo rm -fr /var/lib/mongodb/*
 
-          # msg "Starting MongoDB service"
-          # sudo service mongodb start > /dev/null
-          # sudo update-rc.d mongodb defaults > /dev/null
-          # sudo update-rc.d mongodb enable > /dev/null
+  # msg "Starting MongoDB service"
+  sudo service mongod start > /dev/null
           
-          # sleep 5
+  sleep 5
 
-          # msg "Loading MongoDB database"
-          # mongorestore -h 127.0.0.1:27017 -d linc-api-lions /home/vagrant/linc-api/db/mongodb/dump/dump-2018-03-19-heroku_twzd61j5 --drop
+  # msg "Loading MongoDB database"
+  # mongorestore -h 127.0.0.1:27017 -d linc-api-lions /home/vagrant/linc-api/db/mongodb/dump/dump-2018-03-19-heroku_twzd61j5 --drop
 
   # Adding Packages
   # common
@@ -174,7 +172,6 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   pip install -r /home/vagrant/linc-api/requirements.txt --upgrade
   pip install -I Pillow
 
-
   msg "Configuring supervisord to run linc-api services"
 
   sudo echo '[program:linc-api]' > /etc/supervisor/conf.d/linc-api.conf
@@ -190,7 +187,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
   sudo echo '[program:linc-webapp]' > /etc/supervisor/conf.d/linc-webapp.conf
   sudo echo 'command=/home/vagrant/app/venv/bin/python  /home/vagrant/linc-webapp/app/linc-webapp.py --port=5080' >> /etc/supervisor/conf.d/linc-webapp.conf
-  sudo echo 'environment=APPURL=https://linc-webapp.venidera.local,APPURL=https://linc-api.venidera.local,IsDevelopment=True' >> /etc/supervisor/conf.d/linc-webapp.conf
+  sudo echo 'environment=APPURL=https://linc-webapp.venidera.local,API_URL=http://localhost:5050,IsDevelopment=True' >> /etc/supervisor/conf.d/linc-webapp.conf
   sudo echo 'redirect_stderr=true' >> /etc/supervisor/conf.d/linc-webapp.conf
   sudo echo 'stdout_logfile=/tmp/linc-webapp.log' >> /etc/supervisor/conf.d/linc-webapp.conf
   sudo echo 'numprocs=1' >> /etc/supervisor/conf.d/linc-webapp.conf
@@ -201,6 +198,23 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
   msg "Updating supervisord services"
   sudo supervisorctl update > /dev/null
+
+  # Install nginx
+  msg "Install the nginx service"
+  sudo apt-get -y install nginx > /dev/null
+
+  msg "Configuring the nginx services"
+  sudo ufw allow 'Nginx Full'
+
+  msg "Copying nginx config file"
+  sudo mv /etc/nginx/nginx.conf /etc/nginx/nginx.conf.original
+  sudo cp /home/vagrant/linc-api/devenv/nginx/nginx.conf /etc/nginx/nginx.conf
+
+  msg "Restarting the nginx service"
+  sudo /etc/init.d/nginx restart
+
+  msg "Nginx service status"
+  /etc/init.d/nginx status
 
   echo "source /home/vagrant/app/venv/bin/activate" >> "/home/vagrant/.bashrc"
   echo 'export LC_ALL=en_US.UTF-8' >> "/home/vagrant/.bashrc"
