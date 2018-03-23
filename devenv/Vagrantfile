@@ -154,7 +154,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
   sudo echo '[program:linc-api]' > /etc/supervisor/conf.d/linc-api.conf
   sudo echo 'command=/home/vagrant/app/venv/bin/python  /home/vagrant/linc-api/app/linc-api.py --port=5050' >> /etc/supervisor/conf.d/linc-api.conf
-  sudo echo 'environment=S3_URL=https://linc-media.linclion.org/,APPURL=https://linc-api.venidera.local,IsDevelopment=True' >> /etc/supervisor/conf.d/linc-api.conf
+  sudo echo 'environment=S3_URL=https://linc-media.linclion.org/,APPURL=http://localhost:5050,IsDevelopment=True' >> /etc/supervisor/conf.d/linc-api.conf
   sudo echo 'redirect_stderr=true' >> /etc/supervisor/conf.d/linc-api.conf
   sudo echo 'stdout_logfile=/tmp/linc-api.log' >> /etc/supervisor/conf.d/linc-api.conf
   sudo echo 'numprocs=1' >> /etc/supervisor/conf.d/linc-api.conf
@@ -165,7 +165,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
   sudo echo '[program:linc-webapp]' > /etc/supervisor/conf.d/linc-webapp.conf
   sudo echo 'command=/home/vagrant/app/venv/bin/python  /home/vagrant/linc-webapp/app/linc-webapp.py --port=5080' >> /etc/supervisor/conf.d/linc-webapp.conf
-  sudo echo 'environment=APPURL=https://linc-webapp.venidera.local,API_URL=http://localhost:5050,IsDevelopment=True' >> /etc/supervisor/conf.d/linc-webapp.conf
+  sudo echo 'environment=APPURL=http://linc-webapp.venidera.local,API_URL=http://localhost:5050,IsDevelopment=True' >> /etc/supervisor/conf.d/linc-webapp.conf
   sudo echo 'redirect_stderr=true' >> /etc/supervisor/conf.d/linc-webapp.conf
   sudo echo 'stdout_logfile=/tmp/linc-webapp.log' >> /etc/supervisor/conf.d/linc-webapp.conf
   sudo echo 'numprocs=1' >> /etc/supervisor/conf.d/linc-webapp.conf
