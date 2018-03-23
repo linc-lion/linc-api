@@ -21,21 +21,25 @@
 # For more information or to contact visit linclion.org or email tech@linclion.org
 
 from handlers.base import BaseHandler
-from tornado.web import asynchronous,ErrorHandler as EHandler
+from tornado.web import asynchronous, ErrorHandler as EHandler
+
 
 class ErrorHandler(EHandler, BaseHandler):
     """ Error handling """
-    def get(self):
-        self.reqresp(self)
+    def prepare(self):
+        self.response(self.status_code, 'teste do base')
 
-    def post(self):
-        self.reqresp(self)
+    # def get(self):
+    #     self.reqresp(self)
 
-    def put(self):
-        self.reqresp(self)
+    # def post(self):
+    #     self.reqresp(self)
 
-    def delete(seld):
-        self.reqresp(self)
+    # def put(self):
+    #     self.reqresp(self)
 
-    def reqresp(self):
-        self.write({'status':'error','message':'resource can not be accessed','code':str(self.status_code)})
+    # def delete(self):
+    #     self.reqresp(self)
+
+    # def reqresp(self):
+        

@@ -75,9 +75,6 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   sudo echo 1 > /proc/sys/net/ipv6/conf/default/disable_ipv6
 
   # Timezone definition
-  msg "Setting timezone: EST"
-  sudo timedatectl set-timezone EST
-  sudo dpkg-reconfigure -f noninteractive tzdata
   export LANGUAGE=en_US.UTF-8
   export LANG=en_US.UTF-8
   export LC_ALL=en_US.UTF-8
@@ -157,7 +154,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
   sudo echo '[program:linc-api]' > /etc/supervisor/conf.d/linc-api.conf
   sudo echo 'command=/home/vagrant/app/venv/bin/python  /home/vagrant/linc-api/app/linc-api.py --port=5050' >> /etc/supervisor/conf.d/linc-api.conf
-  sudo echo 'environment=S3_URL=https://linc-media.linclion.org/,APPURL=https://linc-api.venidera.local,IsDevelopment=True' >> /etc/supervisor/conf.d/linc-api.conf
+  sudo echo 'environment=S3_URL=https://linc-media.linclion.org/,APPURL=http://localhost:5050,IsDevelopment=True' >> /etc/supervisor/conf.d/linc-api.conf
   sudo echo 'redirect_stderr=true' >> /etc/supervisor/conf.d/linc-api.conf
   sudo echo 'stdout_logfile=/tmp/linc-api.log' >> /etc/supervisor/conf.d/linc-api.conf
   sudo echo 'numprocs=1' >> /etc/supervisor/conf.d/linc-api.conf
@@ -168,7 +165,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
   sudo echo '[program:linc-webapp]' > /etc/supervisor/conf.d/linc-webapp.conf
   sudo echo 'command=/home/vagrant/app/venv/bin/python  /home/vagrant/linc-webapp/app/linc-webapp.py --port=5080' >> /etc/supervisor/conf.d/linc-webapp.conf
-  sudo echo 'environment=APPURL=https://linc-webapp.venidera.local,API_URL=http://localhost:5050,IsDevelopment=True' >> /etc/supervisor/conf.d/linc-webapp.conf
+  sudo echo 'environment=APPURL=http://linc-webapp.venidera.local,API_URL=http://localhost:5050,IsDevelopment=True' >> /etc/supervisor/conf.d/linc-webapp.conf
   sudo echo 'redirect_stderr=true' >> /etc/supervisor/conf.d/linc-webapp.conf
   sudo echo 'stdout_logfile=/tmp/linc-webapp.log' >> /etc/supervisor/conf.d/linc-webapp.conf
   sudo echo 'numprocs=1' >> /etc/supervisor/conf.d/linc-webapp.conf
@@ -206,6 +203,11 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   msg "Cleaning Everything"
   msg "   dist-upgrade"
   sudo apt-get -y dist-upgrade > /dev/null
+
+  msg "Setting timezone: EST"
+  sudo timedatectl set-timezone EST > /dev/null
+  sudo dpkg-reconfigure -f noninteractive tzdata
+
   msg "   autoremove"
   sudo apt-get -y autoremove > /dev/null
   msg "   autoclean"
