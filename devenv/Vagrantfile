@@ -20,11 +20,6 @@
 #
 # For more information or to contact visit linclion.org or email tech@linclion.org
 
-# Helper for host configuration - 32 or 64 bits systems
-require './helper/core'
-require './helper/utils'
-require './helper/config'
-
 VAGRANTFILE_API_VERSION = "2"
 
 Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
@@ -32,11 +27,8 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.vm.synced_folder "../", "/home/vagrant/linc-api", create: true
   config.vm.synced_folder "../../linc-webapp", "/home/vagrant/linc-webapp", create: true
 
-
-  # Use an Ubuntu box based in the host arch
-  arch = Vagrant::Util::Platform::bit64? ? 64 : 32
-  config.vm.box = "ubuntu/trusty#{arch}"
-  config.vm.hostname = "linc-api"
+  config.vm.box = "ubuntu/xenial64"
+  config.vm.hostname = "linc-api-website"
 
   # Ports for services and api in development mode - 5000 for heroky deploy
   config.vm.network :forwarded_port, guest:  5050, host: 5050 # API Port
@@ -48,7 +40,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   config.vm.network :private_network, ip: "192.168.100.10"
 
   config.vm.provider :virtualbox do |vb|
-    vb.name = "linc-dev"
+    vb.name = "linc-api-website"
     vb.customize ["setextradata", :id, "VBoxInternal2/SharedFoldersEnableSymlinksCreate/app", "1"]
     vb.customize ["setextradata", :id, "VBoxInternal2/SharedFoldersEnableSymlinksCreate/linc-api", "1"]
     vb.customize ["setextradata", :id, "VBoxInternal2/SharedFoldersEnableSymlinksCreate/linc-webapp", "1"]
@@ -57,7 +49,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
 
   # Provision without puppet or cheff, using shell scripts
-  #config.vm.provision :shell, path: "./provision/ubuntu_provision.sh"
+  # config.vm.provision :shell, path: "./provision/ubuntu_provision.sh"
   # Provision without puppet or cheff, using shell scripts
   config.vm.provision :shell, inline: <<-SCRIPT
 
@@ -72,6 +64,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   msg "Starting provision..."
 
   msg "Configuring OS"
+  
   # Provision config section
   USER=vagrant
 
@@ -83,83 +76,71 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
   # Timezone definition
   msg "Setting timezone: EST"
+  sudo timedatectl set-timezone EST
+  sudo dpkg-reconfigure -f noninteractive tzdata
   export LANGUAGE=en_US.UTF-8
   export LANG=en_US.UTF-8
   export LC_ALL=en_US.UTF-8
-  sudo timedatectl set-timezone EST > /dev/null
-  sudo apt-get install ntp > /dev/null
-  sudo locale-gen en_US.UTF-8
-  sudo dpkg-reconfigure locales
-
-  # #update apt-key 
-  # msg "Importing apt-key"
-  # sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 5BB92C09DB82666C
-  # sudo apt-get update > /dev/null
+  echo -e 'LANG="en_US.UTF-8"\nLANGUAGE="en_US:en"\n' | sudo tee /etc/default/locale
+  echo -e 'LANG="en_US.UTF-8"\nLC_ALL="en_US.UTF-8"\n' | sudo tee -a /etc/environment
+  sudo locale-gen en_US.UTF-8 pt_BR.UTF-8
+  sudo dpkg-reconfigure -f noninteractive locales
 
   # mongodb
   msg "Adding MongoDB package repository"
 
-  # msg "Installing MongoDB 3 and other packages required"
+  msg "Installing MongoDB 3 and other packages required"
   sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 2930ADAE8CAF5059EE73BB4B58712A2291FA4AD5
   echo "deb [ arch=amd64 ] https://repo.mongodb.org/apt/ubuntu trusty/mongodb-org/3.6 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-3.6.list
-  sudo apt-get update > /dev/null
-
-  # msg "Installing and configuring MongoDB"
-  sudo apt-get install -y mongodb-org > /dev/null
-  sudo service mongod stop > /dev/null
-  sudo rm -fr /var/lib/mongodb/*
-
-  # msg "Starting MongoDB service"
-  sudo service mongod start > /dev/null
-          
-  sleep 5
-
-  # msg "Loading MongoDB database"
-  # mongorestore -h 127.0.0.1:27017 -d linc-api-lions /home/vagrant/linc-api/db/mongodb/dump/dump-2018-03-19-heroku_twzd61j5 --drop
-
-  # Adding Packages
-  # common
-
+  
   msg "Adding repo for Python 3.6"
   sudo add-apt-repository -y ppa:deadsnakes/ppa
   sudo apt-get update > /dev/null
 
-  msg "Installing common packages and dependencies"
-  sudo apt-get install -y python3.6 python3.6-dev python-dev python-virtualenv python3.6-venv python3-setuptools > /dev/null > /dev/null
-  sudo apt-get install -y build-essential libssl-dev supervisor git redis-server redis-tools > /dev/null
+  msg "Installing and configuring MongoDB"
+  sudo apt-get install -y ntp mongodb-org nodejs npm > /dev/null
 
-  # Installing NodeJS
-  msg "Installing NodeJS"
-  curl -sL https://deb.nodesource.com/setup_6.x -o nodesource_setup.sh
-  sudo bash nodesource_setup.sh > /dev/null
-  sudo apt-get install nodejs > /dev/null
-  sudo apt-get update
-  curl -sL https://raw.githubusercontent.com/creationix/nvm/v0.31.0/install.sh -o install_nvm.sh
-  bash install_nvm.sh
-  source ~/.profile
-  VERSION=$(nvm ls-remote | tail -1 | cut -d v -f 2)
-  nvm install $VERSION
-  nvm use $VERSION
-  nvm alias default $VERSION
-  nvm use default
+  echo "[Unit]" | sudo tee /etc/systemd/system/mongodb.service
+  echo "Description=High-performance, schema-free document-oriented database" | sudo tee -a /etc/systemd/system/mongodb.service
+  echo "After=network.target" | sudo tee -a /etc/systemd/system/mongodb.service
+  echo " " | sudo tee -a /etc/systemd/system/mongodb.service
+  echo "[Service]" | sudo tee -a /etc/systemd/system/mongodb.service
+  echo "User=mongodb" | sudo tee -a /etc/systemd/system/mongodb.service
+  echo "ExecStart=/usr/bin/mongod --quiet --config /etc/mongod.conf" | sudo tee -a /etc/systemd/system/mongodb.service
+  echo " " | sudo tee -a /etc/systemd/system/mongodb.service
+  echo "[Install]" | sudo tee -a /etc/systemd/system/mongodb.service
+  echo "WantedBy=multi-user.target" | sudo tee -a /etc/systemd/system/mongodb.service
 
-  sudo apt-get update > /dev/null
+  msg "Starting MongoDB service"
+  sudo rm -fr /var/lib/mongodb/*
+  sudo systemctl enable mongodb.service
+  sudo systemctl start mongodb.service
   
+  msg "Loading MongoDB database"
+  DUMPDIR=/home/vagrant/linc-api/db/mongodb/dump/heroku_twzd61j5
+  if [ -d "$DUMPDIR" ]; then
+        msg "Dump directory found... trying to restore"
+        mongorestore -h 127.0.0.1:27017 -d linc-api-lions $DUMPDIR --drop
+  else
+    msg "No dump found so no MongoDB restore"
+  fi
+
+  msg "Installing common packages and dependencies"
+  sudo apt-get install -y build-essential libssl-dev supervisor git redis-server redis-tools > /dev/null
+  sudo apt-get install -y python3.6 python3.6-dev python-dev python-virtualenv python3.6-venv python3-setuptools > /dev/null
+
   # Python image tools Pillow dependencies
   msg "Installing Python Image Tools"
-  sudo apt-get -y install libjpeg-dev libzip2 > /dev/null
+  sudo apt-get -y install libjpeg-dev libzip4 libzip-dev zlib1g zlib1g-dev > /dev/null
+  sudo apt-get -y install libcurl4-openssl-dev libffi-dev > /dev/null
 
-  ## Adjusting for Pillow JPEG creation
-  sudo ln -s /usr/lib/x86_64-linux-gnu/libjpeg.so /usr/lib > /dev/null
-  sudo ln -s /usr/lib/x86_64-linux-gnu/libfreetype.so /usr/lib > /dev/null
-  sudo ln -s /usr/lib/x86_64-linux-gnu/libz.so /usr/lib > /dev/null
+  # ## Adjusting for Pillow JPEG creation
+  # sudo ln -s /usr/lib/x86_64-linux-gnu/libjpeg.so /usr/lib > /dev/null
+  # sudo ln -s /usr/lib/x86_64-linux-gnu/libfreetype.so /usr/lib > /dev/null
+  # sudo ln -s /usr/lib/x86_64-linux-gnu/libz.so /usr/lib > /dev/null
 
   # App Configuration
   sudo rm -fr /home/vagrant/app/venv /home/vagrant/linc-api/venv /home/vagrant/linc-webapp/venv /home/vagrant/linc-webapp/venv > /dev/null
-
-  # Update Python libs
-  msg "Updating Python libs"
-  sudo apt-get -y install libcurl4-openssl-dev libffi-dev > /dev/null
 
   msg "Starting provision for All Apps..."
 
@@ -172,7 +153,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   pip install -r /home/vagrant/linc-api/requirements.txt --upgrade
   pip install -I Pillow
 
-  msg "Configuring supervisord to run linc-api services"
+  # msg "Configuring supervisord to run linc-api services"
 
   sudo echo '[program:linc-api]' > /etc/supervisor/conf.d/linc-api.conf
   sudo echo 'command=/home/vagrant/app/venv/bin/python  /home/vagrant/linc-api/app/linc-api.py --port=5050' >> /etc/supervisor/conf.d/linc-api.conf
@@ -215,7 +196,8 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
   msg "Nginx service status"
   /etc/init.d/nginx status
-
+  sudo systemctl enable nginx.service
+  
   echo "source /home/vagrant/app/venv/bin/activate" >> "/home/vagrant/.bashrc"
   echo 'export LC_ALL=en_US.UTF-8' >> "/home/vagrant/.bashrc"
   echo 'export LANGUAGE=en_US.UTF-8' >> "/home/vagrant/.bashrc"
