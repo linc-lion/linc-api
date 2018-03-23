@@ -57,9 +57,9 @@ for path in paths_list:
 
 sys.path = sys.path + paths_list
 
-define("port",default=5050,type=int,help=("Server port"))
-define("config",default=None,help=("Tornado configuration file"))
-define('debug',default=True,type=bool,help=("Turn on autoreload, log to stderr only"))
+define("port", default=5050, type=int, help=("Server port"))
+define("config", default=None, help=("Tornado configuration file"))
+define('debug', default=True, type=bool, help=("Turn on autoreload, log to stderr only"))
 
 tornado.options.parse_command_line()
 
@@ -68,9 +68,10 @@ api = {}
 api['debug'] = options.debug
 api['xsrf_cookies'] = False
 api['app_path'] = appdir
-api['version'] = 'api version v2.0 - 20180316'
+api['version'] = 'LINC API version v4.0 - 20180323'
 api['template_path'] = os.path.join(appdir,"templates")
 api['static_path'] = os.path.join(appdir, "static")
+api['default_handler_class'] = ErrorHandler
 
 # Token security
 api['attempts'] = dict()
@@ -102,33 +103,29 @@ from lib.tokens import gen_token,mksecret
 api['cookie_secret'] = os.environ.get('COOKIE_SECRET',gen_token(50))
 api['token_secret'] = os.environ.get('TOKEN_SECRET',mksecret(50))
 
-api['CVSERVER_URL_IDENTIFICATION'] = os.environ.get('CVSERVER_URL_IDENTIFICATION','')
-api['CVSERVER_URL_RESULTS'] = os.environ.get('CVSERVER_URL_RESULTS','')
-api['CV_USERNAME'] = os.environ.get('CV_USERNAME','')
-api['CV_PASSWORD'] = os.environ.get('CV_PASSWORD','')
+api['CVSERVER_URL_IDENTIFICATION'] = os.environ.get('CVSERVER_URL_IDENTIFICATION', '')
+api['CVSERVER_URL_RESULTS'] = os.environ.get('CVSERVER_URL_RESULTS', '')
+api['CV_USERNAME'] = os.environ.get('CV_USERNAME', '')
+api['CV_PASSWORD'] = os.environ.get('CV_PASSWORD', '')
 
-api['S3_BUCKET'] = os.environ.get('S3_BUCKET','')
-api['S3_FOLDER'] = 'linc-api-'+api['animals']
-api['S3_URL'] = os.environ.get('S3_URL','')+api['S3_FOLDER']+'/'
+api['S3_BUCKET'] = os.environ.get('S3_BUCKET', '')
+api['S3_FOLDER'] = 'linc-api-' + api['animals']
+api['S3_URL'] = os.environ.get('S3_URL','') + api['S3_FOLDER'] + '/'
 
-api['S3_ACCESS_KEY'] = os.environ.get('S3_ACCESS_KEY','')
-api['S3_SECRET_KEY'] = os.environ.get('S3_SECRET_KEY','')
+api['S3_ACCESS_KEY'] = os.environ.get('S3_ACCESS_KEY', '')
+api['S3_SECRET_KEY'] = os.environ.get('S3_SECRET_KEY', '')
 
-api['EMAIL_FROM'] = os.environ.get('EMAIL_FROM','linclionproject@gmail.com')
+api['EMAIL_FROM'] = os.environ.get('EMAIL_FROM', 'linclionproject@gmail.com')
 api['SMTP_SERVER'] = os.environ.get('SMTP_SERVER','email-smtp.us-east-1.amazonaws.com')
 api['SMTP_USERNAME'] = os.environ.get('SMTP_USERNAME','')
 api['SMTP_PASSWORD'] = os.environ.get('SMTP_PASSWORD')
-api['SMPT_PORT'] = os.environ.get('SMTP_PORT','587')
+api['SMPT_PORT'] = os.environ.get('SMTP_PORT', '587')
 
-api['url'] = os.environ.get('APPURL','')
-# api['scheduler'] = TornadoScheduler()
-# api['scheduler'].start()
+api['url'] = os.environ.get('APPURL', '')
+api['scheduler'] = TornadoScheduler()
+api['scheduler'].start()
 # Check CV Server results - every 30 seconds
-# api['scheduler'].add_job(checkresults, 'interval', seconds=30, args=[sdb,api])
+api['scheduler'].add_job(checkresults, 'interval', seconds=30, args=[sdb,api])
 # Delete files in S3
-# api['scheduler'].add_job(checkS3, 'interval', seconds=50, args=[sdb,api])
-
-info('environ: ' + environ)
-info('url: ' + api['url'])
-info('')
+api['scheduler'].add_job(checkS3, 'interval', seconds=50, args=[sdb,api])
 
