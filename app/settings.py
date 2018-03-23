@@ -124,9 +124,9 @@ api['url'] = os.environ.get('APPURL','')
 api['scheduler'] = TornadoScheduler()
 api['scheduler'].start()
 # Check CV Server results - every 30 seconds
-# api['scheduler'].add_job(checkresults, 'interval', seconds=30, args=[sdb,api])
-# Delete files in S3
-# api['scheduler'].add_job(checkS3, 'interval', seconds=50, args=[sdb,api])
+api['scheduler'].add_job(checkresults, 'interval', seconds=30, args=[sdb,api])
+Delete files in S3
+api['scheduler'].add_job(checkS3, 'interval', seconds=50, args=[sdb,api])
 
 info('environ: ' + environ)
 info('url: ' + api['url'])
