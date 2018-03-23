@@ -75,9 +75,6 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   sudo echo 1 > /proc/sys/net/ipv6/conf/default/disable_ipv6
 
   # Timezone definition
-  msg "Setting timezone: EST"
-  sudo timedatectl set-timezone EST
-  sudo dpkg-reconfigure -f noninteractive tzdata
   export LANGUAGE=en_US.UTF-8
   export LANG=en_US.UTF-8
   export LC_ALL=en_US.UTF-8
@@ -206,6 +203,11 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   msg "Cleaning Everything"
   msg "   dist-upgrade"
   sudo apt-get -y dist-upgrade > /dev/null
+
+  msg "Setting timezone: EST"
+  sudo timedatectl set-timezone EST > /dev/null
+  sudo dpkg-reconfigure -f noninteractive tzdata
+
   msg "   autoremove"
   sudo apt-get -y autoremove > /dev/null
   msg "   autoclean"
