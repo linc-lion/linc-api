@@ -20,18 +20,17 @@
 #
 # For more information or to contact visit linclion.org or email tech@linclion.org
 
-from tornado.web import RequestHandler,asynchronous
-from tornado.gen import engine,coroutine
+from tornado.web import RequestHandler, asynchronous
+from tornado.gen import engine
 from tornado import web
-from tornado.escape import utf8
-import string,os
-from datetime import date,datetime
+import string
+from datetime import date, datetime
 from logging import info
 import bcrypt
-from json import load,loads,dumps,dump
-from lib.tokens import token_decode,gen_token
+from json import load, loads, dumps, dump
+from lib.tokens import token_decode, gen_token
 from os import remove
-from tornado.httpclient import AsyncHTTPClient,HTTPRequest,HTTPError
+from tornado.httpclient import AsyncHTTPClient, HTTPRequest, HTTPError
 from tornado.httputil import HTTPHeaders
 from bson import ObjectId as ObjId
 from schematics.exceptions import ValidationError
@@ -59,7 +58,7 @@ class BaseHandler(RequestHandler):
                 self.response(400,'Fail to parse input data.')
 
     def get_current_user(self):
-        max_days_valid=365
+        max_days_valid = 365
         # check for https comunication
         using_ssl = (self.request.headers.get('X-Scheme', 'http') == 'https')
         if not using_ssl:
@@ -92,27 +91,20 @@ class BaseHandler(RequestHandler):
         iid = yield self.settings['db'].counters.find_and_modify(query={'_id':collection}, update={'$inc' : {'next':1}}, new=True, upsert=True)
         callback(int(iid['next']))
 
-    def parseInput(self,objmodel):
+    def parseInput(self, objmodel):
         valid_fields = objmodel._fields.keys()
         newobj = dict()
-        for k,v in self.input_data.items():
+        for k, v in self.input_data.items():
             if k in valid_fields:
                 newobj[k] = v
         return newobj
 
-    def switch_iid(self,obj):
+    def switch_iid(self, obj):
         obj['id'] = obj['iid']
         del obj['iid']
 
-    # def setSuccess(self,code=200,message="",data=None):
-    #     output_response = {'status':'success','message':message}
-    #     if data:
-    #         output_response['data'] = loads(self.json_encode(data))
-    #     self.set_status(code)
-    #     self.finish(output_response)
-
-    def response(self,code,message="",data=None,headers=None):
-        output_response = {'status':None,'message':message}
+    def response(self, code, message="", data=None, headers=None):
+        output_response = {'status': None, 'message': message}
         if data:
             output_response['data'] = data
         if code < 300:
@@ -123,10 +115,11 @@ class BaseHandler(RequestHandler):
             output_response['status'] = 'error'
         else:
             output_response['status'] = 'fail'
-        if headers and isinstance(headers,dict):
-            for k,v in headers.items():
-                self.add_header(k,v)
+        if headers and isinstance(headers, dict):
+            for k, v in headers.items():
+                self.add_header(k, v)
         self.set_status(code)
+        self.set_json_output()
         self.write(self.json_encode(output_response))
         self.finish()
 
@@ -220,7 +213,7 @@ class BaseHandler(RequestHandler):
         elif status_code == 405:
             self.response(status_code,'Method not allowed in this resource. Check your verb (GET,POST,PUT and DELETE)')
         else:
-            self.response(status_code,'Internal server error.')
+            self.response(status_code, 'Internal server error.')
 
     @asynchronous
     @engine
