@@ -36,15 +36,15 @@ class CVResultsHandler(BaseHandler):
     """A class that handles requests about CV identificaiton results informartion
     """
 
-    def query_id(self,res_id):
+    def query_id(self, res_id):
         """This method configures the query that will find an object"""
         try:
-            query = { 'iid' : int(res_id) }
-        except:
+            query = {'iid': int(res_id)}
+        except Exception as e:
             try:
-                query = { '_id' : ObjId(res_id) }
-            except:
-                self.response(400,'Invalid id key.')
+                query = {'_id': ObjId(res_id)}
+            except Exception as e:
+                self.response(400, 'Invalid id key.')
                 return
         return query
 
@@ -56,7 +56,7 @@ class CVResultsHandler(BaseHandler):
             if res_id == 'list':
                 objs = yield self.settings['db'].cvresults.find().to_list(None)
                 self.set_status(200)
-                self.finish(self.json_encode({'status':'success','data':self.list(objs)}))
+                self.finish(self.json_encode({'status': 'success', 'data':self.list(objs)}))
             else:
                 query = self.query_id(res_id)
                 objs = yield self.settings['db'].cvresults.find_one(query)
@@ -69,7 +69,7 @@ class CVResultsHandler(BaseHandler):
                         output = objres
                     else:
                         # List data following the website form
-                        animl = yield self.settings['db'][self.settings['animals']].find().to_list(None)
+                        animl = yield self.settings['db'][self.animals].find().to_list(None)
                         animl = [x['iid'] for x in animl]
                         output = list()
                         mp = loads(objs['match_probability'])
@@ -89,14 +89,14 @@ class CVResultsHandler(BaseHandler):
                             objres['organization'] = ''
                             objres['organization_id'] = ''
                             # get the animal
-                            aobj = yield self.settings['db'][self.settings['animals']].find_one({'iid':objres['id']})
+                            aobj = yield self.settings['db'][self.animals].find_one({'iid':objres['id']})
                             if aobj:
                                 objres['name'] = aobj['name']
                                 objres['primary_image_set_id'] = aobj['primary_image_set_iid']
 
                                 #cvreq = yield self.settings['db'].cvrequests.find_one({'iid':objs['cvrequest_iid']})
                                 # here
-                                img = yield self.settings['db'].images.find_one({'image_set_iid':aobj['primary_image_set_iid'],'image_type':'main-id'})
+                                img = yield self.settings['db'].images.find_one({'image_set_iid':aobj['primary_image_set_iid'], 'image_type': 'main-id'})
                                 if img:
                                     objres['thumbnail'] = self.settings['S3_URL']+img['url']+'_icon.jpg'
                                     objres['image'] = self.settings['S3_URL']+img['url']+'_medium.jpg'
@@ -126,7 +126,7 @@ class CVResultsHandler(BaseHandler):
                                 objres['cn'] = i['classifier']
                             output.append(objres)
                         cvreq = yield self.settings['db'].cvrequests.find_one({'iid':objs['cvrequest_iid']})
-                        assoc = {'id': None,'name':None }
+                        assoc = {'id': None, 'name':None }
                         reqstatus = '-'
                         if cvreq:
                             reqid = cvreq['iid']
@@ -135,15 +135,15 @@ class CVResultsHandler(BaseHandler):
                             if imgset:
                                 assoc['id'] = imgset['animal_iid']
                                 if imgset['animal_iid']:
-                                    lname = yield self.settings['db'][self.settings['animals']].find_one({'iid':imgset['animal_iid']})
+                                    lname = yield self.settings['db'][self.animals].find_one({'iid':imgset['animal_iid']})
                                     if lname:
                                         assoc['name'] = lname['name']
-                        output = {'table':output,'associated':assoc,'status':reqstatus,'req_id':reqid}
+                        output = {'table':output, 'associated':assoc, 'status':reqstatus, 'req_id':reqid}
                     self.set_status(200)
-                    self.finish(self.json_encode({'status':'success','data':output}))
+                    self.finish(self.json_encode({'status': 'success', 'data':output}))
                 else:
                     self.set_status(404)
-                    self.finish(self.json_encode({'status':'error','message':'not found'}))
+                    self.finish(self.json_encode({'status': 'error', 'message': 'not found'}))
         else:
             objs = yield self.settings['db'].cvresults.find().to_list(None)
             output = list()
@@ -156,7 +156,7 @@ class CVResultsHandler(BaseHandler):
                 self.switch_iid(obj)
                 output.append(obj)
             self.set_status(200)
-            self.finish(self.json_encode({'status':'success','data':output}))
+            self.finish(self.json_encode({'status': 'success', 'data':output}))
 
     @api_authenticated
     def post(self):
@@ -182,13 +182,13 @@ class CVResultsHandler(BaseHandler):
                     del updobj['_id']
                     newhres = yield self.settings['db'].cvresults_history.insert(updobj)
                     cvres = yield self.settings['db'].cvresults.remove({'_id':idcvres})
-                    self.response(200,'CVresult successfully deleted.')
-                except:
-                    self.response(500,'Fail to delete cvresult.')
+                    self.response(200, 'CVresult successfully deleted.')
+                except Exception as e:
+                    self.response(500, 'Fail to delete cvresult.')
             else:
-                self.response(404,'CVresult not found.')
+                self.response(404, 'CVresult not found.')
         else:
-            self.response(400,'Remove requests (DELETE) must have a resource ID.')
+            self.response(400, 'Remove requests (DELETE) must have a resource ID.')
 
     def list(self,objs):
         """ Implements the list output used for UI in the website
@@ -220,6 +220,6 @@ class CVResultsHandler(BaseHandler):
             rbody = json_decode(response.body)
             rbody['code'] = response.code
             rbody['reason'] = response.reason
-        except:
+        except Exception as e:
             rbody = {}
         callback(rbody)

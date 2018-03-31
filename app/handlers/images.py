@@ -50,10 +50,10 @@ class ImagesHandler(BaseHandler, ProcessMixin):
             fupdname = self.dt.date().isoformat() + '_image_' + self.imgid + '_' + self.imgobjid
             generate_images(self.imgname)
             t = timedelta(days=1)
-            for suf in ['_full.jpg','_icon.jpg','_medium.jpg','_thumbnail.jpg']:
+            for suf in ['_full.jpg', '_icon.jpg', '_medium.jpg', '_thumbnail.jpg']:
                 keynames3 = self.settings['S3_FOLDER'] + '/' + self.folder_name + '/' + fupdname + suf
                 info(str(keynames3))
-                f = open(self.imgname[:-4]+suf,'rb')
+                f = open(self.imgname[:-4]+suf, 'rb')
                 #self.s3con.upload(keynames3,f,expires=t,content_type='image/jpeg',public=True)
                 resp = upload_to_s3(self.settings['S3_ACCESS_KEY'],self.settings['S3_SECRET_KEY'], f, self.settings['S3_BUCKET'], keynames3)
                 if resp:
@@ -63,15 +63,15 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                 f.close()
                 remove(self.imgname[:-4]+suf)
 
-    def query_id(self,image_id):
+    def query_id(self, image_id):
         """This method configures the query that will find an object"""
         try:
-            query = { 'iid' : int(image_id) }
-        except:
+            query = {'iid': int(image_id)}
+        except Exception as e:
             try:
-                query = { '_id' : ObjId(image_id) }
-            except:
-                self.response(400,'Invalid id key.')
+                query = {'_id': ObjId(image_id)}
+            except Exception as e:
+                self.response(400, 'Invalid id key.')
                 return
         return query
 
@@ -79,10 +79,10 @@ class ImagesHandler(BaseHandler, ProcessMixin):
     @coroutine
     @api_authenticated
     def get(self, image_id=None):
-        download = self.get_argument('download',None)
+        download = self.get_argument('download', None)
         if download:
-            dimg = [int(x) for x in download.split(',')]
-            limgs = yield self.settings['db'].images.find({'iid' : {'$in' : dimg}}).to_list(None)
+            dimg = [int(x) for x in download.split(', ')]
+            limgs = yield self.settings['db'].images.find({'iid': {'$in': dimg}}).to_list(None)
             if len(limgs) > 0:
                 s3url = self.settings['S3_URL']
                 suf = '_full.jpg'
@@ -93,8 +93,8 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                         fname = 'imageset_'+str(x['image_set_iid'])+'_image_'+str(x['iid'])+'.jpg'
                     else:
                         fname = x['filename']
-                    urls.append({'url':iurl ,'filename':fname})
-                self.response(200,'Links for the requested images with id='+download+'.',urls)
+                    urls.append({'url':iurl , 'filename':fname})
+                self.response(200, 'Links for the requested images with id='+download+'.',urls)
                 return
             else:
                 self.response(400,"you need to pass image's ids separated by commas")
@@ -105,7 +105,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                 if image_id == 'list':
                     objs = yield self.settings['db'].images.find().to_list(None)
                     self.set_status(200)
-                    self.finish(self.json_encode({'status':'success','data':self.list(objs)}))
+                    self.finish(self.json_encode({'status': 'success', 'data':self.list(objs)}))
                 else:
                     # return a specific image accepting as id the integer id, hash and name
                     query = self.query_id(image_id)
@@ -120,13 +120,13 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                         del objimage['_id']
                         objimage['image_set_id'] = objimage['image_set_iid']
                         del objimage['image_set_iid']
-                        objimage['url'] = self.imgurl(objimage['url'],'medium')
+                        objimage['url'] = self.imgurl(objimage['url'], 'medium')
 
                         self.set_status(200)
-                        self.finish(self.json_encode({'status':'success','data':objimage}))
+                        self.finish(self.json_encode({'status': 'success', 'data':objimage}))
                     else:
                         self.set_status(404)
-                        self.finish(self.json_encode({'status':'error','message':'not found'}))
+                        self.finish(self.json_encode({'status': 'error', 'message': 'not found'}))
             else:
                 # return a list of images
                 objs = yield self.settings['db'].images.find().to_list(None)
@@ -138,10 +138,10 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                     self.switch_iid(obj)
                     obj['image_set_id'] = obj['image_set_iid']
                     del obj['image_set_iid']
-                    obj['url'] = self.imgurl(obj['url'],'medium')
+                    obj['url'] = self.imgurl(obj['url'], 'medium')
                     output.append(obj)
                 self.set_status(200)
-                self.finish(self.json_encode({'status':'success','data':output}))
+                self.finish(self.json_encode({'status': 'success', 'data':output}))
 
     @asynchronous
     @engine
@@ -156,7 +156,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                 calling /images/upload.')
             return
         #if not self.s3con:
-        #    self.response(500,'Fail to connect to S3. You must request support.')
+        #    self.response(500, 'Fail to connect to S3. You must request support.')
         #    return
         # Check if file was sent and if its hash md5 already exists
         if 'image' not in self.input_data.keys():
@@ -170,7 +170,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
             fh = open(imgname, 'wb')
             fh.write(b64decode(self.input_data['image']))
             fh.close()
-        except:
+        except Exception as e:
             self.remove_file(imgname)
             self.response(400, 'The encoded image is invalid, \
                 you must remake the encode using base64.')
@@ -184,7 +184,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
         if imgaexists:
             self.remove_file(imgname)
             info('File already exists!')
-            self.response(409,'The file already exists in the system.')
+            self.response(409, 'The file already exists in the system.')
             return
         #####
         # everything checked, so good to go.
@@ -197,11 +197,11 @@ class ImagesHandler(BaseHandler, ProcessMixin):
         dt = datetime.now()
         newobj['created_at'] = dt
         newobj['updated_at'] = dt
-        fields_needed = ['image_set_id','is_public','image_type']
+        fields_needed = ['image_set_id', 'is_public', 'image_type']
         for field in fields_needed:
             if field not in self.input_data.keys():
                 self.remove_file(imgname)
-                self.response(400,'you need to provide the field '+field)
+                self.response(400, 'you need to provide the field '+field)
                 return
             else:
                 newobj[field] = self.input_data[field]
@@ -242,7 +242,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                 self.switch_iid(output)
                 # if is Cover
                 if self.input_data['iscover']:
-                    updiscover = self.settings['db'].imagesets.update({'iid':output['image_set_id']},{'$set':{'updated_at':datetime.now(),'main_image_iid':output['id']}})
+                    updiscover = self.settings['db'].imagesets.update({'iid':output['image_set_id']},{'$set':{'updated_at':datetime.now(), 'main_image_iid':output['id']}})
                 # Info to processing image
                 self.process = True
                 self.imgname = imgname
@@ -251,14 +251,14 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                 self.imgobjid = output['obj_id']
                 self.folder_name = folder_name
                 # Returning success
-                self.response(201,'New image saved. The image processing will start for this new image.',output)
+                self.response(201, 'New image saved. The image processing will start for this new image.',output)
             except ValidationError as e:
                 self.remove_file(imgname)
-                self.response(400,'Fail to save image. Errors: '+str(e)+'.')
+                self.response(400, 'Fail to save image. Errors: '+str(e)+'.')
         except ValidationError as e:
             self.remove_file(imgname)
             # received data is invalid in some way
-            self.response(400,'Invalid input data. Errors: '+str(e)+'.')
+            self.response(400, 'Invalid input data. Errors: '+str(e)+'.')
 
     @asynchronous
     @coroutine
@@ -268,7 +268,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
         # parse data recept by PUT and get only fields of the object
         update_data = self.parseInput(Image)
         fields_allowed_to_be_update = ['image_set_id',
-        'is_public','image_type','joined']
+        'is_public', 'image_type', 'joined']
         if 'joined' in self.input_data.keys():
             if len(self.input_data.keys()) > 1:
                 self.response(400, 'When the "joined" is submitted, no other key should be sent together.')
@@ -282,7 +282,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                                   {'animal_iid': {'$ne': None}}]})
                     # Check if is Primary and its associated
                     if imgset:
-                        imgprim = yield self.settings['db'][self.settings['animals']].find({}, {'primary_image_set_iid': 1,'iid':1}).to_list(None)
+                        imgprim = yield self.settings['db'][self.animals].find({}, {'primary_image_set_iid': 1, 'iid':1}).to_list(None)
                         if imgset['iid'] in [x['primary_image_set_iid'] for x in imgprim]:
                             self.response(400, 'The image is already from a primary image set.')
                             return
@@ -297,7 +297,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                         try:
                             if self.input_data['joined']:
                                 vjoined = int(id_imgset)
-                        except:
+                        except Exception as e:
                             vjoined = None
                         try:
                             jimgset = yield self.settings['db'].imagesets.find_one(
@@ -306,7 +306,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                                 resp = yield self.settings['db'].images.update(
                                     {'iid': int(imgobj['iid'])},
                                     {'$set': {'joined': vjoined}})
-                        except:
+                        except Exception as e:
                             self.response(400, 'Fail to join image to primary \
                                 image set.')
                             return
@@ -380,12 +380,12 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                             # image set was changed
                             try:
                                 bkpcopy = self.settings['S3_FOLDER']+'/backup/'+updobj['created_at'].date().isoformat() + '_image_'+str(updobj['iid'])+'_'+str(updobj['_id'])
-                            except:
+                            except Exception as e:
                                 pass
                             #self.s3con.copy(srcurl+'_full.jpg',self.settings['S3_BUCKET'],bkpcopy+'_full.jpg')
                             if not s3_copy(self.settings['S3_ACCESS_KEY'],self.settings['S3_SECRET_KEY'], self.settings['S3_BUCKET'],srcurl+'_full.jpg',bkpcopy+'_full.jpg'):
                                 info('Fail to copy '+str(srcurl)+' to '+str(bkpcopy+'_full.jpg'))
-                            for suf in ['_full.jpg','_icon.jpg','_medium.jpg','_thumbnail.jpg']:
+                            for suf in ['_full.jpg', '_icon.jpg', '_medium.jpg', '_thumbnail.jpg']:
                                 # Copy the files
                                 #self.s3con.copy(srcurl+suf,self.settings['S3_BUCKET'],desurl+suf)
                                 if not s3_copy(self.settings['S3_ACCESS_KEY'],self.settings['S3_SECRET_KEY'], self.settings['S3_BUCKET'],srcurl+suf,desurl+suf):
@@ -397,18 +397,18 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                         output['image_set_id'] = output['image_set_iid']
                         del output['image_set_iid']
 
-                        #self.finish(self.json_encode({'status':'success','message':'image updated','data':output}))
-                        self.response(200,'Image id '+str(output['id'])+ ' updated successfully.',output)
+                        #self.finish(self.json_encode({'status': 'success', 'message': 'image updated', 'data':output}))
+                        self.response(200, 'Image id '+str(output['id'])+ ' updated successfully.',output)
                     except Exception as e:
                         # duplicated index error
-                        self.response(409,'Key violation. Errors: '+str(e)+'.')
+                        self.response(409, 'Key violation. Errors: '+str(e)+'.')
                 except ValidationError as e:
                     # received data is invalid in some way
-                    self.response(400,'Invalid input data. Errors: '+str(e)+'.')
+                    self.response(400, 'Invalid input data. Errors: '+str(e)+'.')
             else:
-                self.response(404,'Image not found.')
+                self.response(404, 'Image not found.')
         else:
-            self.response(400,'Update requests (PUT) must have a resource ID and update pairs for key and value.')
+            self.response(400, 'Update requests (PUT) must have a resource ID and update pairs for key and value.')
 
     @asynchronous
     @coroutine
@@ -432,27 +432,27 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                     srcurl = srcurl + updobj['created_at'].date().isoformat() + '_image_'+str(updobj['iid'])+'_'+str(updobj['_id'])
                     #try:
                     #    self.s3con.delete(bkpcopy,self.settings['S3_BUCKET'])
-                    #except:
+                    #except Exception as e:
                     #    pass
                     # Remove joined info from imagesets
                     resp = yield self.settings['db'].imagesets.update({'main_image_iid':updobj['iid']},{'$set':{'main_image_iid':None}})
                     rmlist = list()
                     try:
-                        for suf in ['_full.jpg','_icon.jpg','_medium.jpg','_thumbnail.jpg']:
+                        for suf in ['_full.jpg', '_icon.jpg', '_medium.jpg', '_thumbnail.jpg']:
                             #self.s3con.delete(srcurl+suf,self.settings['S3_BUCKET'])
                             rmlist.append(srcurl+suf)
                     except Exception as e:
-                        self.response(200,'Image successfully deleted but can\'t remove files from S3. Errors: '+str(e)+'.')
+                        self.response(200, 'Image successfully deleted but can\'t remove files from S3. Errors: '+str(e)+'.')
                         return
                     if len(rmlist):
-                        rmladd = yield self.settings['db'].dellist.insert({'list':rmlist,'ts':datetime.now()})
-                    self.response(200,'Image successfully deleted.')
+                        rmladd = yield self.settings['db'].dellist.insert({'list':rmlist, 'ts':datetime.now()})
+                    self.response(200, 'Image successfully deleted.')
                 except Exception as e:
-                    self.response(500,'Fail to delete image. Errors: '+str(e)+'.')
+                    self.response(500, 'Fail to delete image. Errors: '+str(e)+'.')
             else:
-                self.response(404,'Image not found.')
+                self.response(404, 'Image not found.')
         else:
-            self.response(400,'Remove requests (DELETE) must have a resource ID.')
+            self.response(400, 'Remove requests (DELETE) must have a resource ID.')
 
     def list(self,objs,callback=None):
         """ Implements the list output used for UI in the website
@@ -461,7 +461,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
         for x in objs:
             obj = dict()
             obj['id'] = x['iid']
-            url = self.imgurl(x['url'],'icon')
+            url = self.imgurl(x['url'], 'icon')
             obj['url'] = url
             output.append(obj)
         return output

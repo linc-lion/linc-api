@@ -67,7 +67,7 @@ class AnimalsHandler(BaseHandler):
                     self.response(404, 'Not found.')
                 return
                 # self.set_status(200)
-                # self.finish(self.json_encode({'status':'success','data':output}))
+                # self.finish(self.json_encode({'status': 'success', 'data':output}))
             elif animal_id and xurl == 'profile':
                 # show profile page data for the website
                 query = self.query_id(animal_id)

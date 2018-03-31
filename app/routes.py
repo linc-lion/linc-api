@@ -20,10 +20,8 @@
 #
 # For more information or to contact visit linclion.org or email tech@linclion.org
 
-import sys
-from handlers.base import VersionHandler,DocHandler,LogInfoHandler
-from handlers.error import ErrorHandler
-from handlers.auth import LoginHandler,LogoutHandler,CheckAuthHandler,RestorePassword,ChangePasswordHandler
+from handlers.base import VersionHandler, DocHandler, LogInfoHandler
+from handlers.auth import LoginHandler, LogoutHandler, CheckAuthHandler, RestorePassword, ChangePasswordHandler
 from handlers.animals import AnimalsHandler
 from handlers.organizations import OrganizationsHandler
 from handlers.users import UsersHandler
@@ -32,8 +30,6 @@ from handlers.images import ImagesHandler
 from handlers.cvrequests import CVRequestsHandler
 from handlers.cvresults import CVResultsHandler
 
-# To import data
-#from db.import2mongodb import ImportHandler
 
 # Defining routes
 def url_patterns(animals='lions'):
@@ -44,13 +40,13 @@ def url_patterns(animals='lions'):
         (r"/auth/logout/?", LogoutHandler),
         (r"/auth/check", CheckAuthHandler),
         (r"/auth/recover", RestorePassword),
-        (r"/auth/changepassword",ChangePasswordHandler),
+        (r"/auth/changepassword", ChangePasswordHandler),
         (r"/documentation.html", DocHandler),
 
-        (r"/"+animals+"/?$", AnimalsHandler),
-        (r"/"+animals+"/(\w+)/?$", AnimalsHandler),
-        (r"/"+animals+"/(\w+)/(profile)$", AnimalsHandler),
-        (r"/"+animals+"/(\w+)/(locations)$", AnimalsHandler),
+        (r"/" + animals + "/?$", AnimalsHandler),
+        (r"/" + animals + "/(\w+)/?$", AnimalsHandler),
+        (r"/" + animals + "/(\w+)/(profile)$", AnimalsHandler),
+        (r"/" + animals + "/(\w+)/(locations)$", AnimalsHandler),
 
         (r"/organizations/?$", OrganizationsHandler),
         (r"/organizations/(.*)$", OrganizationsHandler),

@@ -34,15 +34,15 @@ from logging import info
 class OrganizationsHandler(BaseHandler):
     """A class that handles requests about organizations informartion"""
 
-    def query_id(self,org_id):
+    def query_id(self, org_id):
         """This method configures the query that will find an object"""
         try:
-            query = { 'iid' : int(org_id) }
-        except:
+            query = {'iid': int(org_id)}
+        except Exception as e:
             try:
-                query = { '_id' : ObjId(org_id) }
-            except:
-                query = { 'name' : org_id}
+                query = {'_id': ObjId(org_id)}
+            except Exception as e:
+                query = {'name': org_id}
         return query
 
     @asynchronous
@@ -57,7 +57,7 @@ class OrganizationsHandler(BaseHandler):
                 # Motor way
                 objs = yield self.settings['db'].organizations.find().to_list(None)
                 self.set_status(200)
-                self.finish(self.json_encode({'status':'success','data':self.list(objs)}))
+                self.finish(self.json_encode({'status': 'success', 'data':self.list(objs)}))
             else:
                 # return a specific organization accepting as id the integer id, hash and name
                 query = self.query_id(org_id)
@@ -69,10 +69,10 @@ class OrganizationsHandler(BaseHandler):
                     del objorg['iid']
                     del objorg['_id']
                     self.set_status(200)
-                    self.finish(self.json_encode({'status':'success','data':objorg}))
+                    self.finish(self.json_encode({'status': 'success', 'data':objorg}))
                 else:
                     self.set_status(404)
-                    self.finish(self.json_encode({'status':'error','message':'not found'}))
+                    self.finish(self.json_encode({'status': 'error', 'message': 'not found'}))
         else:
             # return a list of organizations
             objs = yield self.settings['db'].organizations.find().to_list(None)
@@ -84,7 +84,7 @@ class OrganizationsHandler(BaseHandler):
                 self.switch_iid(obj)
                 output.append(obj)
             self.set_status(200)
-            self.finish(self.json_encode({'status':'success','data':output}))
+            self.finish(self.json_encode({'status': 'success', 'data':output}))
 
     @asynchronous
     @engine
@@ -107,13 +107,13 @@ class OrganizationsHandler(BaseHandler):
                 output['obj_id'] = str(newsaved)
                 # Change iid to id in the output
                 self.switch_iid(output)
-                self.finish(self.json_encode({'status':'success','message':'new organization saved','data':output}))
-            except:
+                self.finish(self.json_encode({'status': 'success', 'message': 'new organization saved', 'data':output}))
+            except Exception as e:
                 # duplicated index error
-                self.response(409,'Duplicated name for an organization.')
-        except:
+                self.response(409, 'Duplicated name for an organization.')
+        except Exception as e:
             # received data is invalid in some way
-            self.response(400,'Invalid input data.')
+            self.response(400, 'Invalid input data.')
 
     @asynchronous
     @coroutine
@@ -152,19 +152,19 @@ class OrganizationsHandler(BaseHandler):
                                 output[k] = v
                             # Change iid to id in the output
                             self.switch_iid(output)
-                            self.finish(self.json_encode({'status':'success','message':'organization updated','data':output}))
-                        except:
+                            self.finish(self.json_encode({'status': 'success', 'message': 'organization updated', 'data':output}))
+                        except Exception as e:
                             # duplicated index error
-                            self.response(409,'Duplicated name for an organization.')
+                            self.response(409, 'Duplicated name for an organization.')
                     else:
-                        self.response(400,'No data provided to be updated.')
-                except:
+                        self.response(400, 'No data provided to be updated.')
+                except Exception as e:
                     # received data is invalid in some way
-                    self.response(400,'Invalid input data.')
+                    self.response(400, 'Invalid input data.')
             else:
-                self.response(404,'Organization not found.')
+                self.response(404, 'Organization not found.')
         else:
-            self.response(400,'Update requests (PUT) must have a resource ID and update pairs for key and value.')
+            self.response(400, 'Update requests (PUT) must have a resource ID and update pairs for key and value.')
 
     @asynchronous
     @coroutine
@@ -179,24 +179,24 @@ class OrganizationsHandler(BaseHandler):
                 # check for references
                 iid = updobj['iid']
                 # user - organization_iid
-                userrc = yield self.settings['db'].users.update({'organization_iid':iid},{'$set':{'organization_iid':self.current_user['org_id'],'updated_at':datetime.now()}},multi=True)
+                userrc = yield self.settings['db'].users.update({'organization_iid':iid},{'$set':{'organization_iid':self.current_user['org_id'], 'updated_at':datetime.now()}},multi=True)
                 # imageset - uploading_organization_iid
                 # imageset - owner_organization_iid
-                imgsetrc1 = yield self.settings['db'].imagesets.update({'uploading_organization_iid':iid},{'$set':{'uploading_organization_iid':self.current_user['org_id'],'updated_at':datetime.now()}},multi=True)
-                imgsetrc2 = yield self.settings['db'].imagesets.update({'owner_organization_iid':iid},{'$set':{'owner_organization_iid':self.current_user['org_id'],'updated_at':datetime.now()}},multi=True)
+                imgsetrc1 = yield self.settings['db'].imagesets.update({'uploading_organization_iid':iid},{'$set':{'uploading_organization_iid':self.current_user['org_id'], 'updated_at':datetime.now()}},multi=True)
+                imgsetrc2 = yield self.settings['db'].imagesets.update({'owner_organization_iid':iid},{'$set':{'owner_organization_iid':self.current_user['org_id'], 'updated_at':datetime.now()}},multi=True)
                 # animal - organization_iid
-                animalsrc = yield self.settings['db'][self.settings['animals']].update({'organization_iid':iid},{'$set':{'organization_iid':self.current_user['org_id'],'updated_at':datetime.now()}},multi=True)
+                animalsrc = yield self.settings['db'][self.animals].update({'organization_iid':iid},{'$set':{'organization_iid':self.current_user['org_id'], 'updated_at':datetime.now()}},multi=True)
                 # cvrequest - uploading_organization_iid
-                cvreqrc = yield self.settings['db'].cvrequests.update({'requesting_organization_iid':iid},{'$set':{'requesting_organization_iid':self.current_user['org_id'],'updated_at':datetime.now()}},multi=True)
+                cvreqrc = yield self.settings['db'].cvrequests.update({'requesting_organization_iid':iid},{'$set':{'requesting_organization_iid':self.current_user['org_id'], 'updated_at':datetime.now()}},multi=True)
                 try:
                     updobj = yield self.settings['db'].organizations.remove(query)
-                    self.response(200,'Organization successfully deleted.')
-                except:
-                    self.response(500,'Fail to delete organization.')
+                    self.response(200, 'Organization successfully deleted.')
+                except Exception as e:
+                    self.response(500, 'Fail to delete organization.')
             else:
-                self.response(404,'Organization not found.')
+                self.response(404, 'Organization not found.')
         else:
-            self.response(400,'Remove requests (DELETE) must have a resource ID.')
+            self.response(400, 'Remove requests (DELETE) must have a resource ID.')
 
     def list(self,objs):
         """ Implements the list output used for UI in the website

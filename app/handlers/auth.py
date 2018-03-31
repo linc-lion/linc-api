@@ -21,10 +21,10 @@
 # For more information or to contact visit linclion.org or email tech@linclion.org
 
 from tornado.web import asynchronous
-from tornado.gen import coroutine,Task,engine
+from tornado.gen import coroutine, Task, engine
 from handlers.base import BaseHandler
-from datetime import datetime,timedelta
-from lib.tokens import gen_token,token_encode,token_decode
+from datetime import datetime, timedelta
+from lib.tokens import gen_token, token_encode, token_decode
 from lib.rolecheck import api_authenticated
 from tornado.escape import utf8
 from tornado import web
@@ -35,16 +35,20 @@ from schematics.exceptions import ValidationError
 from models.user import User
 from tornado.httpclient import AsyncHTTPClient
 
+
 class CheckAuthHandler(BaseHandler):
     @api_authenticated
     def get(self):
         x_real_ip = self.request.headers.get("X-Real-IP")
         remote_ip = x_real_ip or self.request.remote_ip
         output = {
-            'login ip':self.current_user['ip'],
-            'check ip':remote_ip,
+            'login ip': self.current_user['ip'],
+            'check ip': remote_ip,
         }
-        self.response(200,'Token valid and the user '+self.current_user['username']+' is still logged.',output)
+        self.response(200, 
+                      'Token valid and the user ' + self.current_user['username'] + ' is still logged.',
+                      output)
+
 
 class LoginHandler(BaseHandler):
     @asynchronous
@@ -56,16 +60,17 @@ class LoginHandler(BaseHandler):
             password = self.input_data['password']
             wlist = self.settings['wait_list']
             count = self.settings['attempts']
-            ouser = yield self.settings['db'].users.find_one({'email':username})
+            ouser = yield self.settings['db'].users.find_one({'email': username})
             if username in wlist.keys():
                 dt = wlist[username]
                 if datetime.now() < dt + timedelta(minutes=30):
-                    self.response(401,'Authentication failed, your user have more than 3 attempts so you must wait 30 minutes since your last attempt.')
+                    self.response(401,
+                                  'Authentication failed, your user have more than 3 attempts so you must wait 30 minutes since your last attempt.')
                     return
                 else:
                     del wlist[username]
             if ouser:
-                if self.checkPassword(utf8(password),utf8(ouser['encrypted_password'])):
+                if self.checkPassword(utf8(password), utf8(ouser['encrypted_password'])):
                     # Ok: password matches
                     x_real_ip = self.request.headers.get("X-Real-IP")
                     remote_ip = x_real_ip or self.request.remote_ip
@@ -73,30 +78,32 @@ class LoginHandler(BaseHandler):
                         role = 'admin'
                     else:
                         role = 'user'
-                    org = yield self.settings['db'].organizations.find_one({'iid':ouser['organization_iid']})
+                    org = yield self.settings['db'].organizations.find_one(
+                        {'iid': ouser['organization_iid']})
                     orgname = ''
                     if org:
                          orgname = org['name']
                     token = gen_token(24)
                     objuser = { 'id': ouser['iid'],
-                                'username':ouser['email'],
-                                'orgname':orgname,
-                                'org_id':ouser['organization_iid'],
+                                'username': ouser['email'],
+                                'orgname': orgname,
+                                'org_id': ouser['organization_iid'],
                                 'role': role,
                                 'token': token,
-                                'ip':remote_ip,
-                                'timestamp':datetime.now().isoformat()}
+                                'ip': remote_ip,
+                                'timestamp': datetime.now().isoformat()}
                     # update user info about the login
-                    datupd = {'$set':{'updated_at':datetime.now(),
-                                      'sign_in_count':int(ouser['sign_in_count'])+1,
-                                      'last_sign_in_ip':ouser['current_sign_in_ip'],
-                                      'last_sign_in_at':ouser['current_sign_in_at'],
-                                      'current_sign_in_at':datetime.now(),
-                                      'current_sign_in_ip':remote_ip
+                    datupd = {'$set':{'updated_at': datetime.now(),
+                                      'sign_in_count': int(ouser['sign_in_count'])+1,
+                                      'last_sign_in_ip': ouser['current_sign_in_ip'],
+                                      'last_sign_in_at': ouser['current_sign_in_at'],
+                                      'current_sign_in_at': datetime.now(),
+                                      'current_sign_in_ip': remote_ip
                                       }
                              }
-                    upduser = self.settings['db'].users.update({'iid':ouser['iid']},datupd)
-                    authtoken = web.create_signed_value(self.settings['cookie_secret'],'authtoken',dumps(objuser))
+                    upduser = self.settings['db'].users.update({'iid': ouser['iid']}, datupd)
+                    authtoken = web.create_signed_value(
+                        self.settings['cookie_secret'], 'authtoken', dumps(objuser))
                     if username in wlist.keys():
                         del wlist[username]
                     if username in count.keys():
@@ -106,27 +113,28 @@ class LoginHandler(BaseHandler):
                     outputtoken = token_encode(authtoken,self.settings['token_secret'])
                     # Output Response
                     outputdata = {'token':outputtoken,
-                                  'role':role,'orgname':orgname,
+                                  'role': role, 'orgname': orgname,
                                   'id': ouser['iid'],
                                   'organization_id': ouser['organization_iid']}
-                    self.response(200,'Authentication OK.',outputdata,{'Linc-Api-AuthToken':outputtoken})
+                    self.response(200, 'Authentication OK.', outputdata, {'Linc-Api-AuthToken': outputtoken})
                     return
                 else:
                     # wrong password
                     if username in count.keys() and datetime.now() < count[username]['d'] + timedelta(minutes=30):
                         count[username]['c'] += 1
                     else:
-                        count[username] = {'c' : 1, 'd' : None}
+                        count[username] = {'c': 1, 'd': None}
                     count[username]['d'] = datetime.now()
                     if count[username]['c'] > 3:
                         wlist[username] = datetime.now()
-                        self.response(401,'Authentication failure, and you have more than three attempts in 30 minutes, so you will need to wait 30 minutes to try to login again.')
+                        self.response(401,
+                                      'Authentication failure, and you have more than three attempts in 30 minutes, so you will need to wait 30 minutes to try to login again.')
                     else:
-                        self.response(401,'Authentication failure, password incorrect.')
+                        self.response(401, 'Authentication failure, password incorrect.')
             else:
-                self.response(401,'Authentication failure. Username or password are incorrect or maybe the user are disabled.')
+                self.response(401, 'Authentication failure. Username or password are incorrect or maybe the user are disabled.')
         else:
-            self.response(400,'Authentication requires username and password')
+            self.response(400, 'Authentication requires username and password')
 
 class LogoutHandler(BaseHandler):
     @api_authenticated
@@ -136,9 +144,9 @@ class LogoutHandler(BaseHandler):
         info(self.settings['wait_list'])
         if self.current_user['username'] in self.settings['tokens'].keys():
             del self.settings['tokens'][self.current_user['username']]
-            self.response(200,'Logout OK.')
+            self.response(200, 'Logout OK.')
         else:
-            self.response(400,'Authentication token invalid. User already logged off.')
+            self.response(400, 'Authentication token invalid. User already logged off.')
 
 class ChangePasswordHandler(BaseHandler):
     @asynchronous
@@ -153,11 +161,11 @@ class ChangePasswordHandler(BaseHandler):
                     resp = yield Task(self.changePassword,ouser,self.input_data['new_password'])
                     self.response(resp[0],resp[1])
                 else:
-                    self.response(400,'Invalid user requesting password change.')
+                    self.response(400, 'Invalid user requesting password change.')
             else:
-                self.response(400,'Password must have at least 6 characters.')
+                self.response(400, 'Password must have at least 6 characters.')
         else:
-            self.response(400,'To change your password, you must send it in a json object with the key \'new_password\'.')
+            self.response(400, 'To change your password, you must send it in a json object with the key \'new_password\'.')
 
 class RestorePassword(BaseHandler):
     @asynchronous
@@ -188,13 +196,13 @@ A password recovery was requested for the email %s.\nYou can use the credentials
                         msg = msg % (self.settings['EMAIL_FROM'],emailaddress,email,email,newpass)
                         pemail = yield Task(self.sendEmail,emailaddress,msg)
                     if pemail:
-                        self.response(200,'A new password was sent to the user.')
+                        self.response(200, 'A new password was sent to the user.')
                     else:
-                        self.response(400,'The system can\'t generate a new password for the user. Ask for support in suporte@venidera.com')
+                        self.response(400, 'The system can\'t generate a new password for the user. Ask for support in suporte@venidera.com')
                     return
-                except:
-                    self.response(400,'Fail to generate new password.')
+                except Exception as e:
+                    self.response(400, 'Fail to generate new password.')
             else:
-                self.response(404,'No user found with email: '+email)
+                self.response(404, 'No user found with email: '+email)
         else:
-            self.response(400,'An email is required to restart user\'s passwords.')
+            self.response(400, 'An email is required to restart user\'s passwords.')
