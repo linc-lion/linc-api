@@ -26,11 +26,11 @@ import sys
 import tornado
 import tornado.template
 from tornado.options import define, options
-from handlers.error import ErrorHandler
-from tornado.ioloop import IOLoop
+from handlers.base import BaseHandler
 from motor import MotorClient as connect
 from lib.check_cv import checkresults
 from lib.check_s3 import checkS3
+from lib.tokens import gen_token, mksecret
 from apscheduler.schedulers.tornado import TornadoScheduler
 from pymongo import MongoClient
 from logging import info
@@ -69,9 +69,9 @@ api['debug'] = options.debug
 api['xsrf_cookies'] = False
 api['app_path'] = appdir
 api['version'] = 'LINC API version v4.0 - 20180323'
-api['template_path'] = os.path.join(appdir,"templates")
+api['template_path'] = os.path.join(appdir, "templates")
 api['static_path'] = os.path.join(appdir, "static")
-api['default_handler_class'] = ErrorHandler
+api['default_handler_class'] = BaseHandler
 
 # Token security
 api['attempts'] = dict()
@@ -83,12 +83,12 @@ api['animal'] = 'lion'
 api['animals'] = 'lions'
 
 # MongoDB Connection
-URI = os.environ.get("MONGOLAB_URI","local")
+URI = os.environ.get("MONGOLAB_URI", "local")
 if URI == "local":
     conn = connect("mongodb://localhost:27017")
     pm = MongoClient("mongodb://localhost:27017")
-    db = conn['linc-api-'+api['animals']]
-    sdb = pm['linc-api-'+api['animals']]
+    db = conn['linc-api-' + api['animals']]
+    sdb = pm['linc-api-' + api['animals']]
 else:
     dbname = URI.split("://")[1].split(":")[0]
     conn = connect(URI)
@@ -99,9 +99,8 @@ else:
 info('MongoDB Database set to: %s' % (URI))
 api['db'] = db
 
-from lib.tokens import gen_token,mksecret
-api['cookie_secret'] = os.environ.get('COOKIE_SECRET',gen_token(50))
-api['token_secret'] = os.environ.get('TOKEN_SECRET',mksecret(50))
+api['cookie_secret'] = os.environ.get('COOKIE_SECRET', gen_token(50))
+api['token_secret'] = os.environ.get('TOKEN_SECRET', mksecret(50))
 
 api['CVSERVER_URL_IDENTIFICATION'] = os.environ.get('CVSERVER_URL_IDENTIFICATION', '')
 api['CVSERVER_URL_RESULTS'] = os.environ.get('CVSERVER_URL_RESULTS', '')
@@ -110,14 +109,14 @@ api['CV_PASSWORD'] = os.environ.get('CV_PASSWORD', '')
 
 api['S3_BUCKET'] = os.environ.get('S3_BUCKET', '')
 api['S3_FOLDER'] = 'linc-api-' + api['animals']
-api['S3_URL'] = os.environ.get('S3_URL','') + api['S3_FOLDER'] + '/'
+api['S3_URL'] = os.environ.get('S3_URL', '') + api['S3_FOLDER'] + '/'
 
 api['S3_ACCESS_KEY'] = os.environ.get('S3_ACCESS_KEY', '')
 api['S3_SECRET_KEY'] = os.environ.get('S3_SECRET_KEY', '')
 
 api['EMAIL_FROM'] = os.environ.get('EMAIL_FROM', 'linclionproject@gmail.com')
-api['SMTP_SERVER'] = os.environ.get('SMTP_SERVER','email-smtp.us-east-1.amazonaws.com')
-api['SMTP_USERNAME'] = os.environ.get('SMTP_USERNAME','')
+api['SMTP_SERVER'] = os.environ.get('SMTP_SERVER', 'email-smtp.us-east-1.amazonaws.com')
+api['SMTP_USERNAME'] = os.environ.get('SMTP_USERNAME', '')
 api['SMTP_PASSWORD'] = os.environ.get('SMTP_PASSWORD')
 api['SMPT_PORT'] = os.environ.get('SMTP_PORT', '587')
 
@@ -125,7 +124,6 @@ api['url'] = os.environ.get('APPURL', '')
 api['scheduler'] = TornadoScheduler()
 api['scheduler'].start()
 # Check CV Server results - every 30 seconds
-api['scheduler'].add_job(checkresults, 'interval', seconds=30, args=[sdb,api])
+api['scheduler'].add_job(checkresults, 'interval', seconds=30, args=[sdb, api])
 # Delete files in S3
-api['scheduler'].add_job(checkS3, 'interval', seconds=50, args=[sdb,api])
-
+api['scheduler'].add_job(checkS3, 'interval', seconds=50, args=[sdb, api])

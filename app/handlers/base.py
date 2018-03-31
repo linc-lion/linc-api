@@ -27,8 +27,8 @@ import string
 from datetime import date, datetime
 from logging import info
 import bcrypt
-from json import load, loads, dumps, dump
-from lib.tokens import token_decode, gen_token
+from json import loads, dumps
+from lib.tokens import token_decode
 from os import remove
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest, HTTPError
 from tornado.httputil import HTTPHeaders
@@ -42,20 +42,25 @@ class BaseHandler(RequestHandler):
     """A class to collect common handler methods - all other handlers should
     inherit this one.
     """
+
+    def initialize(self):
+        self.animal = self.settings['animal']
+        self.animals = self.settings['animals']
+
     def prepare(self):
-        #self.auth_check()
+        # self.auth_check()
         self.input_data = dict()
-        if self.request.method in ['POST','PUT'] and \
+        if self.request.method in ['POST', 'PUT'] and \
            "Content-Type" in self.request.headers.keys() and \
            self.request.headers["Content-Type"].startswith("application/json"):
             try:
                 if self.request.body:
                     self.input_data = loads(self.request.body.decode("utf-8"))
-                for k,v in self.request.arguments.items():
+                for k, v in self.request.arguments.items():
                     if str(k) != str(self.request.body.decode("utf-8")):
                         self.input_data[k] = v[0].decode("utf-8")
             except ValueError:
-                self.response(400,'Fail to parse input data.')
+                self.response(400, 'Fail to parse input data.')
 
     def get_current_user(self):
         max_days_valid = 365
@@ -71,14 +76,14 @@ class BaseHandler(RequestHandler):
         if token:
             # Decode to test
             try:
-                token = token_decode(token,self.settings['token_secret'])
-                vtoken = web.decode_signed_value(self.settings["cookie_secret"],'authtoken',token,max_age_days=max_days_valid)
-            except:
+                token = token_decode(token, self.settings['token_secret'])
+                vtoken = web.decode_signed_value(self.settings["cookie_secret"], 'authtoken', token, max_age_days=max_days_valid)
+            except Exception as e:
                 vtoken = None
             if vtoken:
                 dtoken = loads(vtoken.decode('utf-8'))
                 if dtoken['username'] in self.settings['tokens'].keys() and \
-                    self.settings['tokens'][dtoken['username']]['token'] == dtoken['token']:
+                   self.settings['tokens'][dtoken['username']]['token'] == dtoken['token']:
                     res = dtoken
             else:
                 # Validation error
@@ -87,9 +92,24 @@ class BaseHandler(RequestHandler):
 
     @asynchronous
     @engine
-    def new_iid(self,collection,callback=None):
-        iid = yield self.settings['db'].counters.find_and_modify(query={'_id':collection}, update={'$inc' : {'next':1}}, new=True, upsert=True)
+    def new_iid(self, collection, callback=None):
+        iid = yield self.settings['db'].counters.find_and_modify(
+            query={'_id': collection},
+            update={'$inc': {'next': 1}},
+            new=True, upsert=True)
         callback(int(iid['next']))
+
+    def query_id(self, req_id):
+        """ This method configures the query to find an object """
+        query = None
+        try:
+            query = {'iid': int(req_id)}
+        except Exception as e:
+            try:
+                query = {'_id': ObjId(req_id)}
+            except Exception as e:
+                query = {'name': str(req_id)}
+        return query
 
     def parseInput(self, objmodel):
         valid_fields = objmodel._fields.keys()
@@ -119,30 +139,29 @@ class BaseHandler(RequestHandler):
             for k, v in headers.items():
                 self.add_header(k, v)
         self.set_status(code)
-        self.set_json_output()
         self.write(self.json_encode(output_response))
         self.finish()
 
-    def json_encode(self,value):
-        return dumps(value,default=str).replace("</", "<\\/")
+    def json_encode(self, value):
+        return dumps(value, default=str).replace("</", "<\\/")
 
     def set_default_headers(self):
         self.set_header('Content-Type', 'application/json; charset=UTF-8')
 
-    def age(self,born):
+    def age(self, born):
         if born:
             today = date.today()
             return today.year - born.year - ((today.month, today.day) < (born.month, born.day))
         else:
             return "-"
 
-    def encryptPassword(self,password):
+    def encryptPassword(self, password):
         return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
-    def checkPassword(self,password,hashed):
-        return bcrypt.hashpw(password,hashed) == hashed
+    def checkPassword(self, password, hashed):
+        return bcrypt.hashpw(password, hashed) == hashed
 
-    def imgurl(self,urlpath,imgtype='thumbnail'):
+    def imgurl(self, urlpath, imgtype='thumbnail'):
         # type can be: full,medium,thumbnail and icon
         url = self.settings['S3_URL'] + urlpath
         if imgtype == 'thumbnail':
@@ -152,37 +171,37 @@ class BaseHandler(RequestHandler):
         elif imgtype == 'icon':
             url = url + '_icon.jpg'
         else:
-        #imgtype == 'medium':
+            # imgtype == 'medium':
             url = url + '_medium.jpg'
         return url
 
-    def remove_file(self,fname):
+    def remove_file(self, fname):
         try:
             remove(fname)
-        except:
+        except Exception as e:
             pass
 
-    def sanitizestr(self,strs):
+    def sanitizestr(self, strs):
         txt = "%s%s" % (string.ascii_letters, string.digits)
         return ''.join(c for c in strs if c in txt)
 
     @asynchronous
     @engine
-    def api(self,url,method,body=None,headers=None,auth_username=None,auth_password=None,callback=None):
+    def api(self, url, method, body=None, headers=None, auth_username=None, auth_password=None, callback=None):
         AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient")
         http_client = AsyncHTTPClient()
         dictheaders = {"content-type": "application/json"}
         if headers:
-            for k,v in headers.items():
+            for k, v in headers.items():
                 dictheaders[k] = v
         h = HTTPHeaders(dictheaders)
-        params={
-            'headers' : h,
-            'url' : url,
-            'method' : method,
+        params = {
+            'headers': h,
+            'url': url,
+            'method': method,
             'request_timeout': 720,
-            'validate_cert' : False}
-        if method in ['POST','PUT']:
+            'validate_cert': False}
+        if method in ['POST', 'PUT']:
             params['body'] = body
         if auth_username:
             params['auth_username'] = auth_username
@@ -192,15 +211,15 @@ class BaseHandler(RequestHandler):
             response = yield http_client.fetch(request)
         except HTTPError as e:
             info('HTTTP error returned... ')
-            info("Code: "+str(e.code))
-            info("Message: "+str(e.log_message))
+            info("Code: " + str(e.code))
+            info("Message: " + str(e.log_message))
             if e.response:
-                info('URL: '+str(e.response.effective_url))
-                info('Reason: '+str(e.response.reason))
-                info('Body: '+str(e.response.body))
+                info('URL: ' + str(e.response.effective_url))
+                info('Reason: ' + str(e.response.reason))
+                info('Body: ' + str(e.response.body))
                 response = e.response
             else:
-                responde = e
+                response = e
         except Exception as e:
             # Other errors are possible, such as IOError.
             info("Other Errors: " + str(e))
@@ -209,15 +228,15 @@ class BaseHandler(RequestHandler):
 
     def write_error(self, status_code, **kwargs):
         if status_code == 404:
-            self.response(status_code,'Resource not found. Check the URL.')
+            self.response(status_code, 'Resource not found. Check the URL.')
         elif status_code == 405:
-            self.response(status_code,'Method not allowed in this resource. Check your verb (GET,POST,PUT and DELETE)')
+            self.response(status_code, 'This request is not allowed in this resource. Check your verb (GET,POST,PUT and DELETE)')
         else:
-            self.response(status_code, 'Internal server error.')
+            self.response(status_code, 'Request results is an error with the code: %d' % (status_code))
 
     @asynchronous
     @engine
-    def changePassword(self,ouser,newpass,callback=None):
+    def changePassword(self, ouser, newpass, callback=None):
         encpass = self.encryptPassword(newpass)
         ouser['encrypted_password'] = encpass
         ouser['updated_at'] = datetime.now()
@@ -230,17 +249,18 @@ class BaseHandler(RequestHandler):
             try:
                 updobj = updobj.to_native()
                 updobj['_id'] = updid
-                saved = yield self.settings['db'].users.update({'_id':updid},updobj)
-                resp = [200,'Password changed successfully.']
-            except:
-                resp = [400,'Fail to update password.']
+                saved = yield self.settings['db'].users.update({'_id': updid}, updobj)
+                info(saved)
+                resp = [200, 'Password changed successfully.']
+            except Exception as e:
+                resp = [400, 'Fail to update password.']
         except ValidationError as e:
-            resp = [400,'Invalid input data. Errors: '+str(e)+'.']
+            resp = [400, 'Invalid input data. Errors: ' + str(e) + '.']
         callback(resp)
 
     @asynchronous
     @engine
-    def sendEmail(self,toaddr,msg,callback):
+    def sendEmail(self, toaddr, msg, callback):
         resp = True
         try:
             fromaddr = self.settings['EMAIL_FROM']
@@ -248,32 +268,32 @@ class BaseHandler(RequestHandler):
             smtp_username = self.settings['SMTP_USERNAME']
             smtp_password = self.settings['SMTP_PASSWORD']
             smtp_port = self.settings['SMPT_PORT']
-            smtp_do_tls = True
-            server = smtplib.SMTP(
-                host = smtp_server,
-                port = smtp_port,
-                timeout = 10
-            )
+            server = smtplib.SMTP(host=smtp_server,
+                                  port=smtp_port,
+                                  timeout=10)
             server.set_debuglevel(10)
             server.starttls()
             server.ehlo()
             server.login(smtp_username, smtp_password)
             server.sendmail(fromaddr, toaddr, msg)
             server.quit()
-        except:
+        except Exception as e:
             resp = False
         callback(resp)
 
+
 class VersionHandler(BaseHandler):
     def get(self):
-        self.response(200,self.settings['version']+' - animal defined: '+self.settings['animal'])
+        self.response(200, self.settings['version'] + ' - animal defined: ' + self.animal)
+
 
 class DocHandler(BaseHandler):
     def get(self):
-        self.set_header('Content-Type','text/html; charset=UTF-8')
+        self.set_header('Content-Type', 'text/html; charset=UTF-8')
         self.render('documentation.html')
+
 
 class LogInfoHandler(BaseHandler):
     def put(self):
-        output = [ self.settings['attempts'],self.settings['wait_list'],self.settings['tokens']]
-        self.response(200,'Log info.',output)
+        output = [self.settings['attempts'], self.settings['wait_list'], self.settings['tokens']]
+        self.response(200, 'Log info.', output)

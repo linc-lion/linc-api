@@ -38,10 +38,10 @@ class UsersHandler(BaseHandler):
         """This method configures the query that will find an object"""
         try:
             query = { 'iid' : int(user_id) }
-        except:
+        except Exception as e:
             try:
                 query = { '_id' : ObjId(user_id) }
-            except:
+            except Exception as e:
                 query = { 'email' : user_id}
         return query
 
@@ -59,7 +59,7 @@ class UsersHandler(BaseHandler):
                 for obj in objs:
                     del obj['encrypted_password']
                 self.set_status(200)
-                self.finish(self.json_encode({'status':'success','data':self.list(objs,orgnames)}))
+                self.finish(self.json_encode({'status': 'success', 'data':self.list(objs,orgnames)}))
             elif user_id == 'conservationists':
                 orgs = yield self.settings['db'].organizations.find().to_list(None)
                 users = yield self.settings['db'].users.find().to_list(None)
@@ -76,7 +76,7 @@ class UsersHandler(BaseHandler):
                         rm.append(k)
                 for k in rm:
                     del orglist[k]
-                self.response(200,'Ok, it works.',orglist)
+                self.response(200, 'Ok, it works.',orglist)
                 return
             else:
                 # return a specific user accepting as id the integer id, hash and name
@@ -92,10 +92,10 @@ class UsersHandler(BaseHandler):
                     del objuser['encrypted_password']
 
                     self.set_status(200)
-                    self.finish(self.json_encode({'status':'success','data':objuser}))
+                    self.finish(self.json_encode({'status': 'success', 'data':objuser}))
                 else:
                     self.set_status(404)
-                    self.finish(self.json_encode({'status':'error','message':'not found'}))
+                    self.finish(self.json_encode({'status': 'error', 'message': 'not found'}))
         else:
             # return a list of users
             #objs = yield User.objects.find_all()
@@ -111,7 +111,7 @@ class UsersHandler(BaseHandler):
                 self.switch_iid(obj)
                 output.append(obj)
             self.set_status(200)
-            self.finish(self.json_encode({'status':'success','data':output}))
+            self.finish(self.json_encode({'status': 'success', 'data':output}))
 
     @asynchronous
     @engine
@@ -144,13 +144,13 @@ class UsersHandler(BaseHandler):
                 del output['organization_iid']
                 self.switch_iid(output)
                 del output['encrypted_password']
-                self.finish(self.json_encode({'status':'success','message':'new user saved','data':output}))
-            except:
+                self.finish(self.json_encode({'status': 'success', 'message': 'new user saved', 'data':output}))
+            except Exception as e:
                 # duplicated index error
-                self.response(409,'Key violation.')
+                self.response(409, 'Key violation.')
         except ValidationError as e:
             # received data is invalid in some way
-            self.response(400,'Invalid input data. Errors: '+str(e)+'.')
+            self.response(400, 'Invalid input data. Errors: '+str(e)+'.')
 
     @asynchronous
     @coroutine
@@ -160,7 +160,7 @@ class UsersHandler(BaseHandler):
         # update an user
         # parse data recept by PUT and get only fields of the object
         update_data = self.parseInput(User)
-        fields_allowed_to_be_update = ['email','organization_iid','admin','password']
+        fields_allowed_to_be_update = ['email', 'organization_iid', 'admin', 'password']
         if 'organization_id' in self.input_data.keys():
             orgiid = self.input_data['organization_id']
             orgexists = yield self.settings['db'].organizations.find_one({'iid':orgiid})
@@ -203,17 +203,17 @@ class UsersHandler(BaseHandler):
                         del output['encrypted_password']
                         output['organization_id'] = output['organization_iid']
                         del output['organization_iid']
-                        self.finish(self.json_encode({'status':'success','message':'user updated','data':output}))
-                    except:
+                        self.finish(self.json_encode({'status': 'success', 'message': 'user updated', 'data':output}))
+                    except Exception as e:
                         # duplicated index error
-                        self.response(409,'Invalid data for update.')
+                        self.response(409, 'Invalid data for update.')
                 except ValidationError as e:
                     # received data is invalid in some way
-                    self.response(400,'Invalid input data. Errors: '+str(e)+'.')
+                    self.response(400, 'Invalid input data. Errors: '+str(e)+'.')
             else:
-                self.response(404,'User not found.')
+                self.response(404, 'User not found.')
         else:
-            self.response(400,'Update requests (PUT) must have a resource ID and update pairs for key and value.')
+            self.response(400, 'Update requests (PUT) must have a resource ID and update pairs for key and value.')
 
     @asynchronous
     @coroutine
@@ -228,16 +228,16 @@ class UsersHandler(BaseHandler):
                 iid = updobj['iid']
                 # imageset - uploading_user_iid
                 # Imagesets now will be uploaded by the admin iid
-                imgsetrc = yield self.settings['db'].imagesets.update({'uploading_user_iid':iid},{'$set':{'uploading_user_iid':self.current_user['id'],'updated_at':datetime.now()}},multi=True)
+                imgsetrc = yield self.settings['db'].imagesets.update({'uploading_user_iid':iid},{'$set':{'uploading_user_iid':self.current_user['id'], 'updated_at':datetime.now()}},multi=True)
                 try:
                     updobj = yield self.settings['db'].users.remove(query)
-                    self.response(200,'User successfully deleted.')
-                except:
-                    self.response(500,'Fail to delete user.')
+                    self.response(200, 'User successfully deleted.')
+                except Exception as e:
+                    self.response(500, 'Fail to delete user.')
             else:
-                self.response(404,'User not found.')
+                self.response(404, 'User not found.')
         else:
-            self.response(400,'Remove requests (DELETE) must have a resource ID.')
+            self.response(400, 'Remove requests (DELETE) must have a resource ID.')
 
     def list(self,objs,orgnames=None):
         """ Implements the list output used for UI in the website
