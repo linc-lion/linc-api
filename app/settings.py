@@ -115,6 +115,8 @@ api['S3_ACCESS_KEY'] = os.environ.get('S3_ACCESS_KEY', '')
 api['S3_SECRET_KEY'] = os.environ.get('S3_SECRET_KEY', '')
 
 api['EMAIL_FROM'] = os.environ.get('EMAIL_FROM', 'linclionproject@gmail.com')
+# new request access email address
+api['EMAIL_NEWUSER']  = os.environ.get('EMAIL_NEWUSER', 'info@lionguardians.org')
 api['SMTP_SERVER'] = os.environ.get('SMTP_SERVER', 'email-smtp.us-east-1.amazonaws.com')
 api['SMTP_USERNAME'] = os.environ.get('SMTP_USERNAME', '')
 api['SMTP_PASSWORD'] = os.environ.get('SMTP_PASSWORD')
