@@ -206,3 +206,27 @@ A password recovery was requested for the email %s.\nYou can use the credentials
                 self.response(404, 'No user found with email: '+email)
         else:
             self.response(400, 'An email is required to restart user\'s passwords.')
+
+
+class RequestAccessHandler(BaseHandler):
+    SUPPORTED_METHODS = ("POST")
+
+    @asynchronous
+    @coroutine
+    def post(self):
+        if 'email' in self.input_data.keys():            
+            msg = """From: %s\nTo: %s\nSubject: LINC Lion: Request New Access to Linc\n
+
+A new user is requesting access to Linc.\nThe user data is:\nemail: %s\nFull Name: %s\nOrganization: %s\nGeographical Study Area: %s\n\nLinc Lion Team\n
+
+                """
+            msg = msg % (self.settings['EMAIL_FROM'],self.settings['EMAIL_NEWUSER'],
+                self.input_data['email'],self.input_data['fullname'],self.input_data['organization'],self.input_data['geographical'])
+            pemail = yield Task(self.sendEmail, self.settings['EMAIL_NEWUSER'], msg)
+            if pemail:
+                self.response(200, 'A new access request email was sent to ' + self.settings['EMAIL_NEWUSER'])
+            else:
+                self.response(400, 'The system can not send the access request. Ask for support in info@lionguardians.org')
+        else:
+            self.response(400, 'An email is required to request access')
+

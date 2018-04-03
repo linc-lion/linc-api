@@ -21,7 +21,8 @@
 # For more information or to contact visit linclion.org or email tech@linclion.org
 
 from handlers.base import VersionHandler, DocHandler, LogInfoHandler
-from handlers.auth import LoginHandler, LogoutHandler, CheckAuthHandler, RestorePassword, ChangePasswordHandler
+from handlers.auth import LoginHandler, LogoutHandler, CheckAuthHandler, RestorePassword, ChangePasswordHandler,\
+RequestAccessHandler
 from handlers.animals import AnimalsHandler
 from handlers.organizations import OrganizationsHandler
 from handlers.users import UsersHandler
@@ -40,6 +41,7 @@ def url_patterns(animals='lions'):
         (r"/auth/logout/?", LogoutHandler),
         (r"/auth/check", CheckAuthHandler),
         (r"/auth/recover", RestorePassword),
+        (r"/auth/requestaccess", RequestAccessHandler),
         (r"/auth/changepassword", ChangePasswordHandler),
         (r"/documentation.html", DocHandler),
 
