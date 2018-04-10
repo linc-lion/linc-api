@@ -1,7 +1,9 @@
 import os
 import boto
 from boto.s3.key import Key
-from boto.s3.connection import S3Connection, OrdinaryCallingFormat
+from boto.s3.connection import OrdinaryCallingFormat
+from logging import info
+
 
 def upload_to_s3(aws_access_key_id, aws_secret_access_key, file, bucket, key, callback=None, md5=None, reduced_redundancy=False, content_type=None):
     """
@@ -22,13 +24,14 @@ def upload_to_s3(aws_access_key_id, aws_secret_access_key, file, bucket, key, ca
     """
     try:
         size = os.fstat(file.fileno()).st_size
-    except:
+    except Exception as e:
+        info(e)
         # Not all file objects implement fileno(),
         # so we fall back on this
         file.seek(0, os.SEEK_END)
         size = file.tell()
 
-    conn = boto.connect_s3(aws_access_key_id, aws_secret_access_key,is_secure=False,calling_format=OrdinaryCallingFormat())
+    conn = boto.connect_s3(aws_access_key_id, aws_secret_access_key, is_secure=False, calling_format=OrdinaryCallingFormat())
     bucket = conn.get_bucket(bucket, validate=True)
     k = Key(bucket)
     k.key = key
@@ -44,25 +47,29 @@ def upload_to_s3(aws_access_key_id, aws_secret_access_key, file, bucket, key, ca
         return True
     return False
 
+
 def s3_copy(aws_access_key_id, aws_secret_access_key, bucket, src, dst):
     try:
-        conn = boto.connect_s3(aws_access_key_id, aws_secret_access_key,is_secure=False,calling_format=OrdinaryCallingFormat())
+        conn = boto.connect_s3(aws_access_key_id, aws_secret_access_key, is_secure=False, calling_format=OrdinaryCallingFormat())
         bucket = conn.get_bucket(bucket, validate=True)
-        bucket.copy_key(dst,bucket.name,src)
+        bucket.copy_key(dst, bucket.name, src)
         return True
-    except:
+    except Exception as e:
+        info(e)
         return False
+
 
 def s3_delete(aws_access_key_id, aws_secret_access_key, bucket, key):
     try:
-        conn = boto.connect_s3(aws_access_key_id, aws_secret_access_key,is_secure=False,calling_format=OrdinaryCallingFormat())
+        conn = boto.connect_s3(aws_access_key_id, aws_secret_access_key, is_secure=False, calling_format=OrdinaryCallingFormat())
         bucket = conn.get_bucket(bucket, validate=True)
-        k = Key(bucket = bucket, name=key)
+        k = Key(bucket=bucket, name=key)
         if k.exists():
             k.delete()
         if k.exists():
             return False
         else:
             return True
-    except:
+    except Exception as e:
+        info(e)
         return False

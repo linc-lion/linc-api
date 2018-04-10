@@ -21,16 +21,15 @@
 # For more information or to contact visit linclion.org or email tech@linclion.org
 
 from tornado.web import asynchronous
-from tornado.gen import coroutine, Task, engine
+from tornado.gen import coroutine, Task
 from handlers.base import BaseHandler
 from datetime import datetime, timedelta
-from lib.tokens import gen_token, token_encode, token_decode
+from lib.tokens import gen_token, token_encode
 from lib.rolecheck import api_authenticated
 from tornado.escape import utf8
 from tornado import web
 from json import dumps
 from logging import info
-from bson import ObjectId as ObjId
 from schematics.exceptions import ValidationError
 from models.user import User
 from tornado.httpclient import AsyncHTTPClient
@@ -94,7 +93,7 @@ class LoginHandler(BaseHandler):
                                 'timestamp': datetime.now().isoformat()}
                     # update user info about the login
                     datupd = {'$set':{'updated_at': datetime.now(),
-                                      'sign_in_count': int(ouser['sign_in_count'])+1,
+                                      'sign_in_count': int(ouser['sign_in_count']) +1,
                                       'last_sign_in_ip': ouser['current_sign_in_ip'],
                                       'last_sign_in_at': ouser['current_sign_in_at'],
                                       'current_sign_in_at': datetime.now(),
@@ -110,7 +109,7 @@ class LoginHandler(BaseHandler):
                         del count[username]
                     self.settings['tokens'][username] = { 'token' : token, 'dt' : datetime.now() }
                     # Encode to output
-                    outputtoken = token_encode(authtoken,self.settings['token_secret'])
+                    outputtoken = token_encode(authtoken, self.settings['token_secret'])
                     # Output Response
                     outputdata = {'token':outputtoken,
                                   'role': role, 'orgname': orgname,
@@ -158,7 +157,7 @@ class ChangePasswordHandler(BaseHandler):
                 resp = self.settings['db']
                 ouser = yield self.settings['db'].users.find_one({'email':self.current_user['username']})
                 if ouser:
-                    resp = yield Task(self.changePassword,ouser,self.input_data['new_password'])
+                    resp = yield Task(self.changePassword,ouser, self.input_data['new_password'])
                     self.response(resp[0],resp[1])
                 else:
                     self.response(400, 'Invalid user requesting password change.')
@@ -220,8 +219,8 @@ class RequestAccessHandler(BaseHandler):
 A new user is requesting access to Linc.\nThe user data is:\nemail: %s\nFull Name: %s\nOrganization: %s\nGeographical Study Area: %s\n\nLinc Lion Team\n
 
                 """
-            msg = msg % (self.settings['EMAIL_FROM'],self.settings['EMAIL_NEWUSER'],
-                self.input_data['email'],self.input_data['fullname'],self.input_data['organization'],self.input_data['geographical'])
+            msg = msg % (self.settings['EMAIL_FROM'], self.settings['EMAIL_NEWUSER'],
+                self.input_data['email'], self.input_data['fullname'], self.input_data['organization'], self.input_data['geographical'])
             pemail = yield Task(self.sendEmail, self.settings['EMAIL_NEWUSER'], msg)
             if pemail:
                 self.response(200, 'A new access request email was sent to ' + self.settings['EMAIL_NEWUSER'])

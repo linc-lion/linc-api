@@ -29,6 +29,7 @@ from logging import info
 import bcrypt
 from json import loads, dumps
 from lib.tokens import token_decode
+from lib.rolecheck import api_authenticated
 from os import remove
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest, HTTPError
 from tornado.httputil import HTTPHeaders
@@ -36,6 +37,7 @@ from bson import ObjectId as ObjId
 from schematics.exceptions import ValidationError
 from models.user import User
 import smtplib
+import csv
 
 
 class BaseHandler(RequestHandler):
@@ -283,17 +285,50 @@ class BaseHandler(RequestHandler):
 
 
 class VersionHandler(BaseHandler):
+    SUPPORTED_METHODS = ('GET')
+
     def get(self):
         self.response(200, self.settings['version'] + ' - animal defined: ' + self.animal)
 
 
 class DocHandler(BaseHandler):
+    SUPPORTED_METHODS = ('GET')
+
     def get(self):
         self.set_header('Content-Type', 'text/html; charset=UTF-8')
         self.render('documentation.html')
 
 
-class LogInfoHandler(BaseHandler):
-    def put(self):
-        output = [self.settings['attempts'], self.settings['wait_list'], self.settings['tokens']]
-        self.response(200, 'Log info.', output)
+class DataExportHandler(BaseHandler):
+    SUPPORTED_METHODS = ('POST')
+
+    def check_structure(self, key, data):
+        if key in data:
+            if isinstance(data, list):
+                if all([True if isinstance(x, int) else False for x in data]):
+                    return True
+        return False
+
+    def write_csv(self, cursor):
+        fn = str(ObjId()) + '.csv'
+        with open(fn, 'w', newline='') as csvfile:
+            # Sample
+            fieldnames = ['first_name', 'last_name']
+            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerow({'first_name': 'Baked', 'last_name': 'Beans'})
+            writer.writerow({'first_name': 'Lovely', 'last_name': 'Spam'})
+            writer.writerow(
+                {'first_name': 'Wonderful', 'last_name': 'Spam'})
+        return fn
+
+    @api_authenticated
+    def post(self):
+        if self.check_structure('lions', self.input_data):
+            # Query mongodb
+            self.response(200, 'Will return a file to download.')
+        elif self.check_structure('imagesets', self.input_data):
+            # Query mongodb
+            self.response(200, 'Will return a file to download.')
+        else:
+            self.response(400, 'Invalid call.')

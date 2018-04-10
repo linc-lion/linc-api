@@ -37,12 +37,12 @@ class UsersHandler(BaseHandler):
     def query_id(self,user_id):
         """This method configures the query that will find an object"""
         try:
-            query = { 'iid' : int(user_id) }
+            query = {'iid': int(user_id)}
         except Exception as e:
             try:
-                query = { '_id' : ObjId(user_id) }
+                query = {'_id': ObjId(user_id)}
             except Exception as e:
-                query = { 'email' : user_id}
+                query = { 'email': user_id}
         return query
 
     @asynchronous
@@ -150,7 +150,7 @@ class UsersHandler(BaseHandler):
                 self.response(409, 'Key violation.')
         except ValidationError as e:
             # received data is invalid in some way
-            self.response(400, 'Invalid input data. Errors: '+str(e)+'.')
+            self.response(400, 'Invalid input data. Errors: ' + str(e) +'.')
 
     @asynchronous
     @coroutine
@@ -203,13 +203,13 @@ class UsersHandler(BaseHandler):
                         del output['encrypted_password']
                         output['organization_id'] = output['organization_iid']
                         del output['organization_iid']
-                        self.finish(self.json_encode({'status': 'success', 'message': 'user updated', 'data':output}))
+                        self.finish(self.json_encode({'status': 'success', 'message': 'user updated', 'data': output}))
                     except Exception as e:
                         # duplicated index error
                         self.response(409, 'Invalid data for update.')
                 except ValidationError as e:
                     # received data is invalid in some way
-                    self.response(400, 'Invalid input data. Errors: '+str(e)+'.')
+                    self.response(400, 'Invalid input data. Errors: ' + str(e) + '.')
             else:
                 self.response(404, 'User not found.')
         else:
@@ -228,7 +228,13 @@ class UsersHandler(BaseHandler):
                 iid = updobj['iid']
                 # imageset - uploading_user_iid
                 # Imagesets now will be uploaded by the admin iid
-                imgsetrc = yield self.settings['db'].imagesets.update({'uploading_user_iid':iid},{'$set':{'uploading_user_iid':self.current_user['id'], 'updated_at':datetime.now()}},multi=True)
+                imgsetrc = yield self.settings['db'].imagesets.update(
+                    {'uploading_user_iid': iid},
+                    {'$set':
+                        {'uploading_user_iid': self.current_user['id'],
+                        'updated_at': datetime.now()}},
+                    multi=True)
+                info(imgsetrc)
                 try:
                     updobj = yield self.settings['db'].users.remove(query)
                     self.response(200, 'User successfully deleted.')
