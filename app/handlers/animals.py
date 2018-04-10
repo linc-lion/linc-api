@@ -187,7 +187,7 @@ class AnimalsHandler(BaseHandler):
                             locations.append(
                                 {'id': i['iid'], 'label': 'Image Set ' + str(i['iid']), 'name': lname['name'],
                                  'latitude': i['location'][0][0], 'longitude': i['location'][0][1], 'tag_location': tag_location,
-                                 'updated_at': i['updated_at'].date().isoformat(), 'date_stamp': i['date_stamp'], 
+                                 'updated_at': i['updated_at'].date().isoformat(), 'date_stamp': i['date_stamp'],
                                  'geopos_private': geop, 'organization_id': i['owner_organization_iid']})
                 self.response(200, 'Location list.', {'count': litems, 'locations': locations})
                 return
