@@ -24,31 +24,32 @@ from random import choice
 from base64 import b64encode, b64decode
 from string import printable, whitespace, digits, ascii_letters
 from itertools import cycle
-from logging import info
 
 safechars = ''.join(sorted(set(printable) - set(whitespace)))
 
-# Stupid XOR demo
-from itertools import cycle
 
 def gen_token(token_size=100):
     token = ''.join(choice(ascii_letters + digits) for x in range(token_size))
     return token
 
+
 def mksecret(length=50):
     return ''.join(choice(safechars) for i in range(length))
 
+
 def str_xor(word, secret):
-    if isinstance(word,bytes):
+    if isinstance(word, bytes):
         word = word.decode('utf-8')
-    return ''.join(chr(ord(c)^ord(k)) for c,k in zip(word, cycle(secret)))
+    return ''.join(chr(ord(c) ^ ord(k)) for c, k in zip(word, cycle(secret)))
+
 
 def token_encode(word, secret):
     altchars = bytearray('-_'.encode('utf-8'))
     encoded = str_xor(word, secret)
-    return b64encode(bytearray(encoded.encode('utf-8')),altchars).decode('utf-8')
+    return b64encode(bytearray(encoded.encode('utf-8')), altchars).decode('utf-8')
+
 
 def token_decode(word, secret):
     altchars = bytearray('-_'.encode('utf-8'))
-    decoded = str_xor(b64decode(word,altchars),secret)
+    decoded = str_xor(b64decode(word, altchars), secret)
     return decoded
