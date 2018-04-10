@@ -21,16 +21,16 @@
 # For more information or to contact visit linclion.org or email tech@linclion.org
 
 from tornado.web import asynchronous
-from tornado.gen import engine,coroutine,Task
+from tornado.gen import engine, coroutine, Task
 from handlers.base import BaseHandler
 from models.imageset import Image
 from bson import ObjectId as ObjId
-from datetime import datetime,timedelta
+from datetime import datetime
 from schematics.exceptions import ValidationError
-from os.path import realpath,dirname
+from os.path import realpath, dirname
 from lib.image_utils import generate_images
 from os import remove
-from lib.rolecheck import allowedRole, refusedRole, api_authenticated
+from lib.rolecheck import api_authenticated
 from logging import info
 from uuid import uuid4
 from hashlib import md5
@@ -38,6 +38,7 @@ from tornadoist import ProcessMixin
 from base64 import b64decode
 from json import dumps
 from lib.upload_s3 import upload_to_s3, s3_copy, s3_delete
+
 
 class ImagesHandler(BaseHandler, ProcessMixin):
     """A class that handles requests about images informartion
@@ -49,19 +50,18 @@ class ImagesHandler(BaseHandler, ProcessMixin):
         if self.request.method == 'POST' and self.process:
             fupdname = self.dt.date().isoformat() + '_image_' + self.imgid + '_' + self.imgobjid
             generate_images(self.imgname)
-            t = timedelta(days=1)
             for suf in ['_full.jpg', '_icon.jpg', '_medium.jpg', '_thumbnail.jpg']:
                 keynames3 = self.settings['S3_FOLDER'] + '/' + self.folder_name + '/' + fupdname + suf
                 info(str(keynames3))
-                f = open(self.imgname[:-4]+suf, 'rb')
-                #self.s3con.upload(keynames3,f,expires=t,content_type='image/jpeg',public=True)
-                resp = upload_to_s3(self.settings['S3_ACCESS_KEY'],self.settings['S3_SECRET_KEY'], f, self.settings['S3_BUCKET'], keynames3)
+                f = open(self.imgname[:-4] + suf, 'rb')
+                # self.s3con.upload(keynames3,f,expires=t,content_type='image/jpeg',public=True)
+                resp = upload_to_s3(self.settings['S3_ACCESS_KEY'], self.settings['S3_SECRET_KEY'], f, self.settings['S3_BUCKET'], keynames3)
                 if resp:
-                    info('File upload OK: '+str(keynames3))
+                    info('File upload OK: ' + str(keynames3))
                 else:
-                    info('FAIL to upload: '+str(keynames3))
+                    info('FAIL to upload: ' + str(keynames3))
                 f.close()
-                remove(self.imgname[:-4]+suf)
+                remove(self.imgname[:-4] + suf)
 
     def query_id(self, image_id):
         """This method configures the query that will find an object"""
@@ -88,16 +88,16 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                 suf = '_full.jpg'
                 urls = list()
                 for x in limgs:
-                    iurl = s3url+x['url']+suf
+                    iurl = s3url + x['url'] + suf
                     if 'filename' not in x.keys() or x['filename'] == '':
-                        fname = 'imageset_'+str(x['image_set_iid'])+'_image_'+str(x['iid'])+'.jpg'
+                        fname = 'imageset_' + str(x['image_set_iid']) + '_image_' + str(x['iid']) + '.jpg'
                     else:
                         fname = x['filename']
-                    urls.append({'url':iurl , 'filename':fname})
-                self.response(200, 'Links for the requested images with id='+download+'.',urls)
+                    urls.append({'url': iurl, 'filename': fname})
+                self.response(200, 'Links for the requested images with id=' + download + '.', urls)
                 return
             else:
-                self.response(400,"you need to pass image's ids separated by commas")
+                self.response(400, "you need to pass image's ids separated by commas")
                 return
         else:
             info(image_id)
@@ -105,7 +105,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                 if image_id == 'list':
                     objs = yield self.settings['db'].images.find().to_list(None)
                     self.set_status(200)
-                    self.finish(self.json_encode({'status': 'success', 'data':self.list(objs)}))
+                    self.finish(self.json_encode({'status': 'success', 'data': self.list(objs)}))
                 else:
                     # return a specific image accepting as id the integer id, hash and name
                     query = self.query_id(image_id)
@@ -114,9 +114,9 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                     if objs:
                         objimage = objs
                         self.switch_iid(objimage)
-                        #objimage['id'] = objs['iid']
+                        # objimage['id'] = objs['iid']
                         objimage['obj_id'] = str(objs['_id'])
-                        #del objimage['iid']
+                        # del objimage['iid']
                         del objimage['_id']
                         objimage['image_set_id'] = objimage['image_set_iid']
                         del objimage['image_set_iid']
@@ -141,7 +141,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                     obj['url'] = self.imgurl(obj['url'], 'medium')
                     output.append(obj)
                 self.set_status(200)
-                self.finish(self.json_encode({'status': 'success', 'data':output}))
+                self.finish(self.json_encode({'status': 'success', 'data': output}))
 
     @asynchronous
     @engine
@@ -215,7 +215,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
             self.response(400,"image set id referenced doesn't exist")
             return
         try:
-            folder_name = 'imageset_'+str(isexists['iid'])+'_'+str(isexists['_id'])
+            folder_name = 'imageset_' + str(isexists['iid']) +'_' + str(isexists['_id'])
             url = folder_name+'/'+dt.date().isoformat() + '_image_' + str(newobj['iid']) + '_'
             newobj['url'] = url
             # adding the hash pre calculed
@@ -254,11 +254,11 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                 self.response(201, 'New image saved. The image processing will start for this new image.',output)
             except ValidationError as e:
                 self.remove_file(imgname)
-                self.response(400, 'Fail to save image. Errors: '+str(e)+'.')
+                self.response(400, 'Fail to save image. Errors: ' + str(e) +'.')
         except ValidationError as e:
             self.remove_file(imgname)
             # received data is invalid in some way
-            self.response(400, 'Invalid input data. Errors: '+str(e)+'.')
+            self.response(400, 'Invalid input data. Errors: ' + str(e) +'.')
 
     @asynchronous
     @coroutine
@@ -291,8 +291,8 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                             if anim['iid'] == imgset['animal_iid']:
                                 id_imgset = anim['primary_image_set_iid']
                                 break
-                        info('joined value = '+str(self.input_data['joined']))
-                        info('joined type = '+str(type(self.input_data['joined'])))
+                        info('joined value = ' + str(self.input_data['joined']))
+                        info('joined type = ' + str(type(self.input_data['joined'])))
                         vjoined = None
                         try:
                             if self.input_data['joined']:
@@ -349,13 +349,13 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                 try:
                     if updurl:
                         # The url will be changed since the imageset will be other
-                        folder_name = 'imageset_'+str(imgset['iid'])+'_'+str(imgset['_id'])
+                        folder_name = 'imageset_' + str(imgset['iid']) +'_' + str(imgset['_id'])
                         url = folder_name+'/'+updobj['created_at'].date().isoformat() + '_image_' + str(updobj['iid']) + '_' + str(updobj['_id'])
                         # copy image
                         # No need to specify the target bucket if we're copying inside the same bucket
                         oldimgset = yield self.settings['db'].imagesets.find_one({'iid':orig_imgset_id})
-                        srcurl = self.settings['S3_FOLDER'] + '/imageset_'+str(oldimgset['iid'])+'_'+str(oldimgset['_id'])+'/'
-                        srcurl = srcurl + updobj['created_at'].date().isoformat() + '_image_'+str(updobj['iid'])+'_'+str(updobj['_id'])
+                        srcurl = self.settings['S3_FOLDER'] + '/imageset_' + str(oldimgset['iid']) +'_' + str(oldimgset['_id']) +'/'
+                        srcurl = srcurl + updobj['created_at'].date().isoformat() + '_image_' + str(updobj['iid']) +'_' + str(updobj['_id'])
                         desurl = self.settings['S3_FOLDER'] + '/' + url
                     objupdid = ObjId(str(updobj['_id']))
                     del updobj['_id']
@@ -379,32 +379,32 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                             and updobj['image_set_iid'] != imgiid:
                             # image set was changed
                             try:
-                                bkpcopy = self.settings['S3_FOLDER']+'/backup/'+updobj['created_at'].date().isoformat() + '_image_'+str(updobj['iid'])+'_'+str(updobj['_id'])
+                                bkpcopy = self.settings['S3_FOLDER']+'/backup/'+updobj['created_at'].date().isoformat() + '_image_' + str(updobj['iid']) +'_' + str(updobj['_id'])
                             except Exception as e:
                                 pass
-                            #self.s3con.copy(srcurl+'_full.jpg',self.settings['S3_BUCKET'],bkpcopy+'_full.jpg')
-                            if not s3_copy(self.settings['S3_ACCESS_KEY'],self.settings['S3_SECRET_KEY'], self.settings['S3_BUCKET'],srcurl+'_full.jpg',bkpcopy+'_full.jpg'):
-                                info('Fail to copy '+str(srcurl)+' to '+str(bkpcopy+'_full.jpg'))
+                            #self.s3con.copy(srcurl+'_full.jpg', self.settings['S3_BUCKET'],bkpcopy+'_full.jpg')
+                            if not s3_copy(self.settings['S3_ACCESS_KEY'], self.settings['S3_SECRET_KEY'], self.settings['S3_BUCKET'],srcurl+'_full.jpg',bkpcopy+'_full.jpg'):
+                                info('Fail to copy ' + str(srcurl) +' to ' + str(bkpcopy+'_full.jpg'))
                             for suf in ['_full.jpg', '_icon.jpg', '_medium.jpg', '_thumbnail.jpg']:
                                 # Copy the files
-                                #self.s3con.copy(srcurl+suf,self.settings['S3_BUCKET'],desurl+suf)
-                                if not s3_copy(self.settings['S3_ACCESS_KEY'],self.settings['S3_SECRET_KEY'], self.settings['S3_BUCKET'],srcurl+suf,desurl+suf):
-                                        info('Fail to copy '+str(srcurl+suf)+' to '+str(desurl+suf))
+                                # self.s3con.copy(srcurl+suf, self.settings['S3_BUCKET'],desurl+suf)
+                                if not s3_copy(self.settings['S3_ACCESS_KEY'], self.settings['S3_SECRET_KEY'], self.settings['S3_BUCKET'],srcurl+suf,desurl+suf):
+                                        info('Fail to copy ' + str(srcurl+suf) +' to ' + str(desurl+suf))
                                 # Delete the source file
-                                #self.s3con.delete(srcurl+suf,self.settings['S3_BUCKET'])
-                                if not s3_delete(self.settings['S3_ACCESS_KEY'],self.settings['S3_SECRET_KEY'], self.settings['S3_BUCKET'],srcurl+suf):
-                                    info('Fail to delete '+str(srcurl+suf))
+                                #self.s3con.delete(srcurl+suf, self.settings['S3_BUCKET'])
+                                if not s3_delete(self.settings['S3_ACCESS_KEY'], self.settings['S3_SECRET_KEY'], self.settings['S3_BUCKET'],srcurl+suf):
+                                    info('Fail to delete ' + str(srcurl + suf))
                         output['image_set_id'] = output['image_set_iid']
                         del output['image_set_iid']
 
                         #self.finish(self.json_encode({'status': 'success', 'message': 'image updated', 'data':output}))
-                        self.response(200, 'Image id '+str(output['id'])+ ' updated successfully.',output)
+                        self.response(200, 'Image id ' + str(output['id']) + ' updated successfully.',output)
                     except Exception as e:
                         # duplicated index error
-                        self.response(409, 'Key violation. Errors: '+str(e)+'.')
+                        self.response(409, 'Key violation. Errors: ' + str(e) +'.')
                 except ValidationError as e:
                     # received data is invalid in some way
-                    self.response(400, 'Invalid input data. Errors: '+str(e)+'.')
+                    self.response(400, 'Invalid input data. Errors: ' + str(e) +'.')
             else:
                 self.response(404, 'Image not found.')
         else:
@@ -426,12 +426,12 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                     info(updobj)
                     delobj = yield self.settings['db'].images.remove(query)
                     # Delete the source file
-                    bkpcopy = self.settings['S3_FOLDER']+'/backup/'+updobj['created_at'].date().isoformat() + '_image_'+str(updobj['iid'])+'_'+str(updobj['_id'])+'_full.jpg'
+                    bkpcopy = self.settings['S3_FOLDER']+'/backup/'+updobj['created_at'].date().isoformat() + '_image_' + str(updobj['iid']) +'_' + str(updobj['_id']) +'_full.jpg'
                     imgset = yield self.settings['db'].imagesets.find_one({'iid':updobj['image_set_iid']})
-                    srcurl = self.settings['S3_FOLDER'] + '/imageset_'+str(imgset['iid'])+'_'+str(imgset['_id'])+'/'
-                    srcurl = srcurl + updobj['created_at'].date().isoformat() + '_image_'+str(updobj['iid'])+'_'+str(updobj['_id'])
+                    srcurl = self.settings['S3_FOLDER'] + '/imageset_' + str(imgset['iid']) +'_' + str(imgset['_id']) +'/'
+                    srcurl = srcurl + updobj['created_at'].date().isoformat() + '_image_' + str(updobj['iid']) +'_' + str(updobj['_id'])
                     #try:
-                    #    self.s3con.delete(bkpcopy,self.settings['S3_BUCKET'])
+                    #    self.s3con.delete(bkpcopy, self.settings['S3_BUCKET'])
                     #except Exception as e:
                     #    pass
                     # Remove joined info from imagesets
@@ -439,16 +439,16 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                     rmlist = list()
                     try:
                         for suf in ['_full.jpg', '_icon.jpg', '_medium.jpg', '_thumbnail.jpg']:
-                            #self.s3con.delete(srcurl+suf,self.settings['S3_BUCKET'])
+                            #self.s3con.delete(srcurl+suf, self.settings['S3_BUCKET'])
                             rmlist.append(srcurl+suf)
                     except Exception as e:
-                        self.response(200, 'Image successfully deleted but can\'t remove files from S3. Errors: '+str(e)+'.')
+                        self.response(200, 'Image successfully deleted but can\'t remove files from S3. Errors: ' + str(e) +'.')
                         return
                     if len(rmlist):
                         rmladd = yield self.settings['db'].dellist.insert({'list':rmlist, 'ts':datetime.now()})
                     self.response(200, 'Image successfully deleted.')
                 except Exception as e:
-                    self.response(500, 'Fail to delete image. Errors: '+str(e)+'.')
+                    self.response(500, 'Fail to delete image. Errors: ' + str(e) +'.')
             else:
                 self.response(404, 'Image not found.')
         else:

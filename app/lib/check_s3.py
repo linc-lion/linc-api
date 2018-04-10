@@ -17,18 +17,14 @@
 #
 # For more information or to contact visit linclion.org or email tech@linclion.org
 
-from tornado.httpclient import AsyncHTTPClient,HTTPRequest,HTTPError
 from tornado import gen
-from tornado.web import asynchronous
-from tornado.escape import json_decode
 from logging import info
-from datetime import datetime
-from json import dumps,loads
 import boto
 from boto.s3.connection import Bucket, Key, OrdinaryCallingFormat
 
+
 @gen.coroutine
-def checkS3(db,api):
+def checkS3(db, api):
     # Get list for DELETE
     dellist = db.dellist.find()
     dellist = [x for x in dellist]
@@ -38,27 +34,29 @@ def checkS3(db,api):
         S3_SECRET_KEY = api['S3_SECRET_KEY']
         S3_BUCKET = api['S3_BUCKET']
         try:
-            conn = boto.connect_s3(S3_ACCESS_KEY,S3_SECRET_KEY,is_secure=False,calling_format=OrdinaryCallingFormat())
+            conn = boto.connect_s3(S3_ACCESS_KEY, S3_SECRET_KEY, is_secure=False, calling_format=OrdinaryCallingFormat())
             bucket = Bucket(conn, S3_BUCKET)
             info('\nConnected to S3')
-        except:
+        except Exception as e:
+            info(e)
             info('\nFail to connect to S3')
             return
         for rmlist in dellist:
             if rmlist['list']:
-                info('Removing files from: '+str(rmlist['ts']))
-                reqs = list()
+                info('Removing files from: ' + str(rmlist['ts']))
                 try:
                     alldeleted = True
                     for key in rmlist['list']:
                         info(str(key))
                         info(str(S3_BUCKET))
-                        k = Key(bucket = bucket, name=key)
+                        k = Key(bucket=bucket, name=key)
                         if k.exists():
                             k.delete()
                         if k.exists():
                             alldeleted = False
                     if alldeleted:
-                        res = db.dellist.remove({'_id':rmlist['_id']})
-                except:
+                        res = db.dellist.remove({'_id': rmlist['_id']})
+                        info(res)
+                except Exception as e:
+                    info(e)
                     info('Error in the deletion of images')

@@ -110,8 +110,8 @@ class ImageSetsHandler(BaseHandler):
                 else:
                     output['age'] = '-'
 
-                #output['organization_id'] = output['organization_iid']
-                #del output['organization_iid']
+                # output['organization_id'] = output['organization_iid']
+                # del output['organization_iid']
                 output['uploading_organization_id'] = output['uploading_user_iid']
                 del output['uploading_user_iid']
                 output['uploading_organization_id'] = output['uploading_organization_iid']
@@ -389,7 +389,7 @@ class ImageSetsHandler(BaseHandler):
                     self.response(
                         400, 'A request for indentification of this imageset already exists in the database.')
                     return
-                if not self.animals in self.input_data.keys():
+                if self.animals not in self.input_data.keys():
                     self.response(400, 'The cvrequest needs a list of ' + self.settings[
                                   'animals'] + ' id like: { "' + self.animals + '" : [<id>,...] }.')
                     return
@@ -427,10 +427,11 @@ class ImageSetsHandler(BaseHandler):
                     sbody = dumps(body)
                     # info(sbody)
                     try:
-                        response = yield Task(self.api, 
-                                              url=self.settings['CVSERVER_URL_IDENTIFICATION'], 
+                        response = yield Task(self.api,
+                                              url=self.settings['CVSERVER_URL_IDENTIFICATION'],
                                               method='POST',
-                                              body=sbody, auth_username=self.settings['CV_USERNAME'], 
+                                              body=sbody,
+                                              auth_username=self.settings['CV_USERNAME'],
                                               auth_password=self.settings['CV_PASSWORD'])
                         rbody = json_decode(response.body)
                         # Create a cvrequest mongodb object for this ImageSet
@@ -491,7 +492,7 @@ class ImageSetsHandler(BaseHandler):
                         primimgsetid = yield self.settings['db'][self.animals].find_one({'iid':assocanimalid})
                         if primimgsetid:
                             primimgsetid = primimgsetid['primary_image_set_iid']
-                            resp = yield self.settings['db'].images.update({'$and':[{'image_set_iid': objimgset['iid']},  {'joined':{'$ne':None}}]},{'$set':{'joined':None}},multi=True)
+                            resp = yield self.settings['db'].images.update({'$and': [{'image_set_iid': objimgset['iid']},  {'joined':{'$ne':None}}]},{'$set':{'joined':None}},multi=True)
                             imgslist = yield self.settings['db'].images.find({'image_set_iid':objimgset['iid']}).to_list(None)
                             imgslist = [int(x['iid']) for x in imgslist]
                             resp = self.settings['db'].imagesets.update({'main_image_iid':{'$in':imgslist}},{'$set':{'main_image_iid':None}},multi=True)
@@ -600,7 +601,7 @@ class ImageSetsHandler(BaseHandler):
                                 msg = """From: %s\nTo: %s\nSubject: LINC Lion: Request for verification\n\nThis email was created by the system due to an association request of an image set with a lion from another organization.\nThe image set was associated with the lion:\n\nId: %s\nName: %s\nOrganization: %s\n\nThe image set is presented below:\n\nId: %s\nOrganization: %s\nLink: %s (accessible for previous logged users)\n\nPlease, go to the LINC website to verify (accept) or remove the request for association.\n\nLinc Lion Team\nhttps://linc.linclion.org/\n
 
                                 """
-                                msg = msg % (self.settings['EMAIL_FROM'],eaddr,aniexists['iid'],aniexists['name'],aniorg['name'],imageset_id,orgname, 'https://linc.linclion.org/#/imageset/'+str(imageset_id))
+                                msg = msg % (self.settings['EMAIL_FROM'],eaddr,aniexists['iid'],aniexists['name'],aniorg['name'],imageset_id,orgname, 'https://linc.linclion.org/#/imageset/' + str(imageset_id))
                                 pemail = yield Task(self.sendEmail,eaddr,msg)
                 if 'is_verified' in self.input_data.keys() and self.input_data['is_verified'] == True:
                     imgset2ver = yield self.settings['db'].imagesets.find_one(query)
@@ -616,7 +617,7 @@ class ImageSetsHandler(BaseHandler):
                                 \nLinc Lion Team\nhttps://linc.linclion.org/\n
 
                                 """
-                                msg = msg % (self.settings['EMAIL_FROM'],eaddr,imageset_id,imageset_id,imgorg['name'], 'https://linc.linclion.org/#/imageset/'+str(imageset_id),animobj['iid'],animobj['name'],aniorg['name'],)
+                                msg = msg % (self.settings['EMAIL_FROM'],eaddr,imageset_id,imageset_id,imgorg['name'], 'https://linc.linclion.org/#/imageset/' + str(imageset_id),animobj['iid'],animobj['name'],aniorg['name'],)
                                 pemail = yield Task(self.sendEmail,eaddr,msg)
                 try:
                     imgid = ObjId(objimgset['_id'])
@@ -693,6 +694,7 @@ class ImageSetsHandler(BaseHandler):
                         return
                 if len(rmlist) > 0:
                     rmladd = yield self.settings['db'].dellist.insert({'list': rmlist, 'ts': datetime.now()})
+                    info(rmladd)
                 rmved = yield self.settings['db'].images.remove({'image_set_iid': imgobj['iid']}, multi=True)
                 info(str(rmved))
                 # 3 - Removing cvrequests and cvresults
