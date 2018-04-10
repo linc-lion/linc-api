@@ -23,11 +23,14 @@
 
 import sys
 from schematics.models import Model
-from schematics.types import StringType, IntType, DateTimeType,\
+from schematics.types import ModelType, StringType, IntType, DateTimeType,\
     FloatType, BooleanType
 from schematics.types.compound import ListType
 from datetime import datetime
 
+class TagLocation(Model):
+    title = StringType(required=True, default='Home')
+    value = IntType(required=True, default=10000)
 
 class ImageSet(Model):
     animal_iid = IntType(required=False, default=None)
@@ -44,6 +47,7 @@ class ImageSet(Model):
     date_stamp = StringType(required=False, default=None)
     notes = StringType(required=False)
     geopos_private = BooleanType(required=False, default=False)
+    tag_location = ModelType(TagLocation, required=False)
     created_at = DateTimeType(required=True, default=datetime.now())
     updated_at = DateTimeType(required=True, default=datetime.now())
 

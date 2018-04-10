@@ -473,7 +473,7 @@ class ImageSetsHandler(BaseHandler):
                 objimgset['updated_at'] = dt
                 # validate the input
                 fields_allowed = ['uploading_user_id', 'uploading_organization_id', 'owner_organization_id',
-                                  'is_verified', 'latitude', 'longitude', 'gender', 'date_of_birth',
+                                  'is_verified', 'latitude', 'longitude', 'tag_location', 'gender', 'date_of_birth',
                                   'tags', 'date_stamp', 'notes', self.animal + '_id', 'main_image_id', 'geopos_private']
                 update_data = dict()
                 # Remove join reference when remove association
@@ -780,6 +780,11 @@ class ImageSetsHandler(BaseHandler):
             else:
                 imgset_obj['latitude'] = None
                 imgset_obj['longitude'] = None
+
+            if obj['tag_location']:
+                imgset_obj['tag_location'] = obj['tag_location']
+            else:
+                imgset_obj['tag_location'] = {}
 
             if obj['owner_organization_iid']:
                 objo = yield self.settings['db'].organizations.find_one({'iid': obj['owner_organization_iid']})
