@@ -166,7 +166,7 @@ class AnimalsHandler(BaseHandler):
                 lname = yield self.settings['db'][self.animals].find_one({'iid': iid}, {'name': 1})
                 cursor = self.settings['db'].imagesets.find(
                     {'animal_iid': iid},
-                    {'iid': 1, 'location': 1, 'date_stamp': 1, 'updated_at': 1,
+                    {'iid': 1, 'location': 1, 'tag_location':1, 'date_stamp': 1, 'updated_at': 1,
                      'geopos_private': 1, 'owner_organization_iid': 1})
                 cursor.sort('updated_at', DESCENDING)
                 imgsets = yield cursor.to_list(None)
