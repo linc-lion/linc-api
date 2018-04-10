@@ -156,6 +156,8 @@ class ImageSetsHandler(BaseHandler):
                     output['latitude'] = None
                     output['longitude'] = None
                 del output['location']
+                if 'tag_location' not in output.keys():
+                    output['tag_location'] = None
 
                 # Getting cvrequest for this imageset
                 info(output['id'])
@@ -261,6 +263,10 @@ class ImageSetsHandler(BaseHandler):
                         output['latitude'] = None
                         output['longitude'] = None
                     del output['location']
+                    if 'tag_location' in objimgset.keys():
+                        output['tag_location'] = objimgset['tag_location']
+                    else:
+                        output['tag_location'] = None
                     if 'geopos_private' in objimgset.keys():
                         output['geopos_private'] = objimgset['geopos_private']
                     else:
@@ -781,10 +787,10 @@ class ImageSetsHandler(BaseHandler):
                 imgset_obj['latitude'] = None
                 imgset_obj['longitude'] = None
 
-            if obj['tag_location']:
+            if 'tag_location' in obj.keys():
                 imgset_obj['tag_location'] = obj['tag_location']
             else:
-                imgset_obj['tag_location'] = {}
+                imgset_obj['tag_location'] = None
 
             if obj['owner_organization_iid']:
                 objo = yield self.settings['db'].organizations.find_one({'iid': obj['owner_organization_iid']})

@@ -134,6 +134,9 @@ class AnimalsHandler(BaseHandler):
                         output['longitude'] = None
                     del output['location']
 
+                    if 'tag_location' not in output.keys():
+                        output['tag_location'] = None
+
                     # Geo Position Private
                     if 'geopos_private' not in output.keys():
                         output['geopos_private'] = False
@@ -177,11 +180,14 @@ class AnimalsHandler(BaseHandler):
                                 geop = False
                             else:
                                 geop = i['geopos_private']
+                            if 'tag_location' in i.keys():
+                                tag_location = i['tag_location']
+                            else:
+                                tag_location = None
                             locations.append(
-                                {'id': i['iid'], 'label': 'Image Set ' + str(i['iid']),
-                                 'latitude': i['location'][0][0], 'longitude': i['location'][0][1],
-                                 'updated_at': i['updated_at'].date().isoformat(),
-                                 'date_stamp': i['date_stamp'], 'name': lname['name'],
+                                {'id': i['iid'], 'label': 'Image Set ' + str(i['iid']), 'name': lname['name'],
+                                 'latitude': i['location'][0][0], 'longitude': i['location'][0][1], 'tag_location': tag_location,
+                                 'updated_at': i['updated_at'].date().isoformat(), 'date_stamp': i['date_stamp'], 
                                  'geopos_private': geop, 'organization_id': i['owner_organization_iid']})
                 self.response(200, 'Location list.', {'count': litems, 'locations': locations})
                 return
@@ -535,10 +541,10 @@ class AnimalsHandler(BaseHandler):
                         obj['latitude'] = None
                         obj['longitude'] = None
 
-                    if imgset['tag_location']:
+                    if 'tag_location' in imgset.keys():
                         obj['tag_location'] = imgset['tag_location']
                     else:
-                        obj['tag_location'] = {}
+                        obj['tag_location'] = None
 
                     obj['gender'] = imgset['gender']
                     # obj['is_verified'] = imgset['is_verified']
@@ -576,6 +582,10 @@ class AnimalsHandler(BaseHandler):
             else:
                 obj['latitude'] = None
                 obj['longitude'] = None
+            if 'tag_location' in oimgst.keys():
+                obj['tag_location'] = oimgst['tag_location']
+            else:
+                obj['tag_location'] = None
             obj['gender'] = oimgst['gender']
             if oimgst['date_of_birth']:
                 obj['date_of_birth'] = oimgst['date_of_birth'].strftime('%Y-%m-%dT%H:%M:%S.%fZ')

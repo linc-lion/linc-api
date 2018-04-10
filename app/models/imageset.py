@@ -47,7 +47,7 @@ class ImageSet(Model):
     date_stamp = StringType(required=False, default=None)
     notes = StringType(required=False)
     geopos_private = BooleanType(required=False, default=False)
-    tag_location = ModelType(TagLocation, required=False)
+    tag_location = ModelType(TagLocation, required=False, default=None)
     created_at = DateTimeType(required=True, default=datetime.now())
     updated_at = DateTimeType(required=True, default=datetime.now())
 
