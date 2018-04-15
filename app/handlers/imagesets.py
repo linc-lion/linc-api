@@ -24,16 +24,14 @@
 from tornado.web import asynchronous
 from tornado.gen import coroutine, Task, engine
 from handlers.base import BaseHandler
-from models.organization import Organization
-from models.animal import Animal
-from models.imageset import ImageSet, Image
-from models.cv import CVRequest, CVResult
+from models.imageset import ImageSet
+from models.cv import CVRequest
 from bson import ObjectId as ObjId
 from datetime import datetime
 from json import dumps, loads
 from tornado.escape import json_decode
 from schematics.exceptions import ValidationError
-from lib.rolecheck import allowedRole, refusedRole, api_authenticated
+from lib.rolecheck import api_authenticated
 from logging import info
 
 
@@ -57,6 +55,11 @@ class ImageSetsHandler(BaseHandler):
     @coroutine
     @api_authenticated
     def get(self, imageset_id=None, param=None):
+
+        current_user = yield self.settings['db'].users.find_one({'email' : self.current_user['username']})
+        is_admin = current_user['admin']
+        current_organization = yield self.settings['db'].organizations.find_one({'iid': current_user['organization_iid']})
+
         if param == 'cvrequest':
             self.response(400, 'To request cv identification you must use POST method.')
             return
@@ -149,16 +152,22 @@ class ImageSetsHandler(BaseHandler):
                 #         imgset_obj['thumbnail'] = ''
                 #         imgset_obj['image'] = ''
 
-                if output['location']:
-                    output['latitude'] = output['location'][0][0]
-                    output['longitude'] = output['location'][0][1]
+                can_show = (True if (is_admin or current_organization['iid'] == org['iid']) else False) if output['geopos_private'] else True
+                if can_show:
+                    if output['location']:
+                        output['latitude'] = output['location'][0][0]
+                        output['longitude'] = output['location'][0][1]
+                    else:
+                        output['latitude'] = None
+                        output['longitude'] = None
+                    if 'tag_location' not in output.keys():
+                        output['tag_location'] = None
                 else:
                     output['latitude'] = None
                     output['longitude'] = None
-                del output['location']
-                if 'tag_location' not in output.keys():
                     output['tag_location'] = None
-
+                del output['location']
+                
                 # Getting cvrequest for this imageset
                 info(output['id'])
                 cvreq = yield self.settings['db'].cvrequests.find_one({'image_set_iid': output['id']})
@@ -256,6 +265,7 @@ class ImageSetsHandler(BaseHandler):
                     del output['owner_organization_iid']
                     output['uploading_organization_id'] = objimgset['uploading_organization_iid']
                     del output['uploading_organization_iid']
+
                     if objimgset['location']:
                         output['latitude'] = objimgset['location'][0][0]
                         output['longitude'] = objimgset['location'][0][1]
@@ -271,6 +281,8 @@ class ImageSetsHandler(BaseHandler):
                         output['geopos_private'] = objimgset['geopos_private']
                     else:
                         output['geopos_private'] = False
+                    
+
                     if 'joined' in objimgset.keys():
                         output['joined'] = objimgset['joined']
                     else:
@@ -714,6 +726,11 @@ class ImageSetsHandler(BaseHandler):
     @asynchronous
     @engine
     def list(self, callback=None):
+
+        current_user = yield self.settings['db'].users.find_one({'email' : self.current_user['username']})
+        is_admin = current_user['admin']
+        current_organization = yield self.settings['db'].organizations.find_one({'iid': current_user['organization_iid']})
+
         objs_imgsets = yield self.settings['db'].imagesets.find().to_list(None)
         animals = yield self.settings['db'][self.animals].find().to_list(None)
         primary_imgsets_list = list()
@@ -782,17 +799,6 @@ class ImageSetsHandler(BaseHandler):
                 imgset_obj['joined'] = obj['joined']
             else:
                 imgset_obj['joined'] = []
-            if obj['location']:
-                imgset_obj['latitude'] = obj['location'][0][0]
-                imgset_obj['longitude'] = obj['location'][0][1]
-            else:
-                imgset_obj['latitude'] = None
-                imgset_obj['longitude'] = None
-
-            if 'tag_location' in obj.keys():
-                imgset_obj['tag_location'] = obj['tag_location']
-            else:
-                imgset_obj['tag_location'] = None
 
             if obj['owner_organization_iid']:
                 objo = yield self.settings['db'].organizations.find_one({'iid': obj['owner_organization_iid']})
@@ -806,6 +812,24 @@ class ImageSetsHandler(BaseHandler):
             imgset_obj['gender'] = obj['gender']
             imgset_obj['is_verified'] = obj['is_verified']
             imgset_obj['is_primary'] = (obj['iid'] in primary_imgsets_list)
+
+            can_show = (True if (is_admin or current_organization['iid'] == imgset_obj['organization_id']) else False) if imgset_obj['geopos_private'] else True
+            if can_show:
+                if obj['location']:
+                    imgset_obj['latitude'] = obj['location'][0][0]
+                    imgset_obj['longitude'] = obj['location'][0][1]
+                else:
+                    imgset_obj['latitude'] = None
+                    imgset_obj['longitude'] = None
+
+                if 'tag_location' in obj.keys():
+                    imgset_obj['tag_location'] = obj['tag_location']
+                else:
+                    imgset_obj['tag_location'] = None
+            else:
+                imgset_obj['latitude'] = None
+                imgset_obj['longitude'] = None
+                imgset_obj['tag_location'] = None
 
             objcvreq = yield self.settings['db'].cvrequests.find_one({'image_set_iid': obj['iid']})
             if objcvreq:
