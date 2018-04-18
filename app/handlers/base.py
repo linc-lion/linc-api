@@ -41,9 +41,7 @@ import csv
 
 
 class BaseHandler(RequestHandler):
-    """A class to collect common handler methods - all other handlers should
-    inherit this one.
-    """
+    # A class to collect common handler methods - all other handlers should inherit this one.
 
     def initialize(self):
         self.animal = self.settings['animal']
@@ -304,8 +302,8 @@ class DataExportHandler(BaseHandler):
 
     def check_structure(self, key, data):
         if key in data:
-            if isinstance(data, list):
-                if all([True if isinstance(x, int) else False for x in data]):
+            if isinstance(data[key], list):
+                if all([True if isinstance(x, int) else False for x in data[key]]):
                     return True
         return False
 

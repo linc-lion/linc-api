@@ -42,7 +42,7 @@ def url_patterns(animals='lions'):
         (r"/auth/recover", RestorePassword),
         (r"/auth/requestaccess", RequestAccessHandler),
         (r"/auth/changepassword", ChangePasswordHandler),
-        (r"/data/export", DataExportHandler),
+        (r"/data/export/?$", DataExportHandler),
         (r"/documentation.html", DocHandler),
 
         (r"/" + animals + "/?$", AnimalsHandler),
