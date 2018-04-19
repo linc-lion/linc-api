@@ -41,6 +41,11 @@ class AnimalsHandler(BaseHandler):
     @asynchronous
     @coroutine
     def get(self, animal_id=None, xurl=None):
+
+        current_user = yield self.settings['db'].users.find_one({'email' : self.current_user['username']})
+        is_admin = current_user['admin']
+        current_organization = yield self.settings['db'].organizations.find_one({'iid': current_user['organization_iid']})
+
         apiout = self.get_argument('api', None)
         noimages = self.get_argument('no_images', '')
         if noimages.lower() == 'true':
@@ -122,24 +127,31 @@ class AnimalsHandler(BaseHandler):
                     img = yield self.settings['db'].images.find_one({'iid': output['main_image_id']})
                     if img:
                         output['image'] = self.settings['S3_URL'] + img['url'] + '_thumbnail.jpg'
+                        output['thumbnail'] = self.settings['S3_URL'] + img['url'] + '_icon.jpg'
                     else:
                         output['image'] = ''
-
-                    # Location
-                    if output['location']:
-                        output['latitude'] = output['location'][0][0]
-                        output['longitude'] = output['location'][0][1]
-                    else:
-                        output['latitude'] = None
-                        output['longitude'] = None
-                    del output['location']
-
-                    if 'tag_location' not in output.keys():
-                        output['tag_location'] = None
+                        output['thumbnail'] = ''
 
                     # Geo Position Private
                     if 'geopos_private' not in output.keys():
                         output['geopos_private'] = False
+
+                    can_show = (True if (is_admin or current_organization['iid'] == output['organization_id']) else False) if output['geopos_private'] else True
+                    if can_show:
+                        # Location
+                        if output['location']:
+                            output['latitude'] = output['location'][0][0]
+                            output['longitude'] = output['location'][0][1]
+                        else:
+                            output['latitude'] = None
+                            output['longitude'] = None
+                        if 'tag_location' not in output.keys():
+                            output['tag_location'] = None
+                    else:
+                        output['latitude'] = None
+                        output['longitude'] = None
+                        output['tag_location'] = None
+                    del output['location']
 
                     # Check verified
                     ivcquery = {'animal_iid': output['id'],
@@ -166,7 +178,7 @@ class AnimalsHandler(BaseHandler):
                 lname = yield self.settings['db'][self.animals].find_one({'iid': iid}, {'name': 1})
                 cursor = self.settings['db'].imagesets.find(
                     {'animal_iid': iid},
-                    {'iid': 1, 'location': 1, 'date_stamp': 1, 'updated_at': 1,
+                    {'iid': 1, 'location': 1, 'tag_location':1, 'date_stamp': 1, 'updated_at': 1,
                      'geopos_private': 1, 'owner_organization_iid': 1})
                 cursor.sort('updated_at', DESCENDING)
                 imgsets = yield cursor.to_list(None)
@@ -180,13 +192,23 @@ class AnimalsHandler(BaseHandler):
                                 geop = False
                             else:
                                 geop = i['geopos_private']
-                            if 'tag_location' in i.keys():
-                                tag_location = i['tag_location']
+
+                            can_show = (True if (is_admin or current_organization['iid'] == i['owner_organization_iid']) else False) if geop else True
+                            if can_show:
+                                latitude = i['location'][0][0]
+                                longitude = i['location'][0][1]
+                                if 'tag_location' in i.keys():
+                                    tag_location = i['tag_location']
+                                else:
+                                    tag_location = None
                             else:
+                                latitude = None
+                                longitude = None
                                 tag_location = None
+
                             locations.append(
                                 {'id': i['iid'], 'label': 'Image Set ' + str(i['iid']), 'name': lname['name'],
-                                 'latitude': i['location'][0][0], 'longitude': i['location'][0][1], 'tag_location': tag_location,
+                                 'latitude': latitude, 'longitude': longitude, 'tag_location': tag_location,
                                  'updated_at': i['updated_at'].date().isoformat(), 'date_stamp': i['date_stamp'],
                                  'geopos_private': geop, 'organization_id': i['owner_organization_iid']})
                 self.response(200, 'Location list.', {'count': litems, 'locations': locations})
@@ -488,6 +510,10 @@ class AnimalsHandler(BaseHandler):
     @engine
     def list(self, objs, orgnames, callback=None):
         """ Implements the list output used for UI in the website """
+        current_user = yield self.settings['db'].users.find_one({'email' : self.current_user['username']})
+        is_admin = current_user['admin']
+        current_organization = yield self.settings['db'].organizations.find_one({'iid': current_user['organization_iid']})
+
         output = list()
         for x in objs:
             obj = dict()
@@ -534,16 +560,22 @@ class AnimalsHandler(BaseHandler):
                     else:
                         obj['geopos_private'] = False
 
-                    if imgset['location']:
-                        obj['latitude'] = imgset['location'][0][0]
-                        obj['longitude'] = imgset['location'][0][1]
+                    can_show = (True if (is_admin or current_organization['iid'] == obj['organization_id']) else False) if obj['geopos_private'] else True
+                    if can_show:
+                        if imgset['location']:
+                            obj['latitude'] = imgset['location'][0][0]
+                            obj['longitude'] = imgset['location'][0][1]
+                        else:
+                            obj['latitude'] = None
+                            obj['longitude'] = None
+
+                        if 'tag_location' in imgset.keys():
+                            obj['tag_location'] = imgset['tag_location']
+                        else:
+                            obj['tag_location'] = None
                     else:
                         obj['latitude'] = None
                         obj['longitude'] = None
-
-                    if 'tag_location' in imgset.keys():
-                        obj['tag_location'] = imgset['tag_location']
-                    else:
                         obj['tag_location'] = None
 
                     obj['gender'] = imgset['gender']
@@ -559,6 +591,11 @@ class AnimalsHandler(BaseHandler):
     @asynchronous
     @engine
     def prepareOutput(self, objs, noimages=False, callback=None):
+
+        current_user = yield self.settings['db'].users.find_one({'email' : self.current_user['username']})
+        is_admin = current_user['admin']
+        current_organization = yield self.settings['db'].organizations.find_one({'iid': current_user['organization_iid']})
+
         objanimal = dict()
         objanimal['id'] = objs['iid']
         objanimal['name'] = objs['name']
@@ -576,16 +613,29 @@ class AnimalsHandler(BaseHandler):
             obj = dict()
             obj['id'] = oimgst['iid']
             obj['is_verified'] = oimgst['is_verified']
-            if 'location' in oimgst.keys() and oimgst['location']:
-                obj['latitude'] = oimgst['location'][0][0]
-                obj['longitude'] = oimgst['location'][0][1]
+
+            if 'geopos_private' in oimgst.keys():
+                obj['geopos_private'] = oimgst['geopos_private']
+            else:
+                obj['geopos_private'] = False
+
+            can_show = (True if (is_admin or current_organization['iid'] == objs['organization_id']) else False) if obj['geopos_private'] else True
+            if can_show:
+                if 'location' in oimgst.keys() and oimgst['location']:
+                    obj['latitude'] = oimgst['location'][0][0]
+                    obj['longitude'] = oimgst['location'][0][1]
+                else:
+                    obj['latitude'] = None
+                    obj['longitude'] = None
+                if 'tag_location' in oimgst.keys():
+                    obj['tag_location'] = oimgst['tag_location']
+                else:
+                    obj['tag_location'] = None
             else:
                 obj['latitude'] = None
                 obj['longitude'] = None
-            if 'tag_location' in oimgst.keys():
-                obj['tag_location'] = oimgst['tag_location']
-            else:
                 obj['tag_location'] = None
+
             obj['gender'] = oimgst['gender']
             if oimgst['date_of_birth']:
                 obj['date_of_birth'] = oimgst['date_of_birth'].strftime('%Y-%m-%dT%H:%M:%S.%fZ')
