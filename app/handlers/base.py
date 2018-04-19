@@ -48,6 +48,7 @@ class BaseHandler(RequestHandler):
     def initialize(self):
         self.animal = self.settings['animal']
         self.animals = self.settings['animals']
+        self.db = self.settings['db']
 
     def prepare(self):
         # self.auth_check()
@@ -282,6 +283,24 @@ class BaseHandler(RequestHandler):
         except Exception as e:
             resp = False
         callback(resp)
+
+    @engine
+    def get_animal_by_id(self, animal_id, callback=None):
+        try:
+            lobj = yield self.db[self.animals].find_one({'iid': int(animal_id)})
+        except Exception as e:
+            info(e)
+            lobj = None
+        callback(lobj)
+
+    @engine
+    def check_relative(self, animal_id, relative_id, callback=None):
+        try:
+            lobj = yield self.db.relatives.find_one({'id_from': int(animal_id), 'id_to': int(relative_id)})
+        except Exception as e:
+            info(e)
+            lobj = None
+        callback(lobj)
 
 
 class VersionHandler(BaseHandler):

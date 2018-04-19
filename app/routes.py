@@ -24,6 +24,7 @@ from handlers.base import VersionHandler, DocHandler, DataExportHandler
 from handlers.auth import LoginHandler, LogoutHandler, CheckAuthHandler
 from handlers.auth import RestorePassword, ChangePasswordHandler, RequestAccessHandler
 from handlers.animals import AnimalsHandler
+from handlers.animals_relatives import AnimalsRelativesHandler
 from handlers.organizations import OrganizationsHandler
 from handlers.users import UsersHandler
 from handlers.imagesets import ImageSetsHandler
@@ -47,8 +48,10 @@ def url_patterns(animals='lions'):
 
         (r"/" + animals + "/?$", AnimalsHandler),
         (r"/" + animals + "/(\w+)/?$", AnimalsHandler),
-        (r"/" + animals + "/(\w+)/(profile)$", AnimalsHandler),
-        (r"/" + animals + "/(\w+)/(locations)$", AnimalsHandler),
+        (r"/" + animals + "/(\w+)/(profile)/?$", AnimalsHandler),
+        (r"/" + animals + "/(\w+)/(locations)/?$", AnimalsHandler),
+        (r"/" + animals + "/(\w+)/(relatives)/?$", AnimalsRelativesHandler),
+        (r"/" + animals + "/(\w+)/(relatives)/(\w+)/?$", AnimalsRelativesHandler),
 
         (r"/organizations/?$", OrganizationsHandler),
         (r"/organizations/(.*)$", OrganizationsHandler),

@@ -47,8 +47,7 @@ class Application(tornado.web.Application):
 # Run server
 def main():
     app = Application()
-
-    if (len(logger.handlers) > 0):
+    if len(logger.handlers) > 0:
         formatter = logging.Formatter("[%(levelname).1s %(asctime)s %(module)s:%(lineno)s] %(message)s", datefmt='%y%m%d %H:%M:%S')
         logger.handlers[0].setFormatter(formatter)
     if options.debug:
@@ -56,7 +55,7 @@ def main():
         for key, cfg in settings.items():
             logging.info(key + ' = ' + str(cfg))
         logging.info('=======================================================')
-
+    logging.info('Server listens on port: %d' % (options.port))
     logging.info('API handlers:')
     for h in url_routes:
         logging.info(h)
