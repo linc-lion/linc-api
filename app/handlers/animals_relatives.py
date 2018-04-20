@@ -48,7 +48,8 @@ def api_authenticated(method):
 
 
 class AnimalsRelativesHandler(BaseHandler):
-    """ A class that handles requests about animals informartion """
+    """A class that handles requests about animals informartion."""
+
     SUPPORTED_METHODS = ('GET', 'POST', 'PUT', 'DELETE')
 
     @asynchronous
@@ -61,6 +62,10 @@ class AnimalsRelativesHandler(BaseHandler):
         for obj in trelations:
             if obj['relation'] in ['suspected_father', 'mother']:
                 obj['relation'] = 'cub'
+                id_from = obj['id_from']
+                obj['id_from'] = obj['id_to']
+                obj['id_to'] = id_from
+
         relations += trelations
         fmsg = 'for the id: %d' % int(animal_id)
         if relations:
@@ -73,7 +78,7 @@ class AnimalsRelativesHandler(BaseHandler):
         # lobj = is the data object of the lion
         # robj = is the relative lion object
         valid_relations = [
-            'mother', 'suspected_father', 'sibbling', 'associate']
+            'mother', 'suspected_father', 'sibling', 'associate']
         # check gender
         try:
             gender = yield self.db.imagesets.find_one({'iid': lobj['primary_image_set_iid']}, {'gender': 1})
@@ -105,6 +110,9 @@ class AnimalsRelativesHandler(BaseHandler):
         # check data
         id_from = animal_id
         id_to = self.input_data.get('relative_id', None)
+        if id_from == id_to:
+            self.response(400, 'Lions need to be different to define kinship.')
+            return
         relation = self.input_data.get('relation', None)
         if not id_from or not id_to or not relation:
             self.response(400, 'Invalid request.')
@@ -123,7 +131,7 @@ class AnimalsRelativesHandler(BaseHandler):
         if already_relative:
             self.response(409, 'Relation already defined.', already_relative)
             return
-        valid, relation, gender = yield Task(self.relation_is_valid, lobj, robj, relation)
+        valid, relation, gender = yield Task(self.relation_is_valid, robj, lobj, relation)
         if not valid:
             self.response(400, 'Invalid relationship assignment request with the relation: %s. (The individual with the id %d is a "%s" animal.)' % (relation, int(animal_id), gender))
             return
