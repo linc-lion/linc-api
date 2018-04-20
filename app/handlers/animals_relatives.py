@@ -110,8 +110,8 @@ class AnimalsRelativesHandler(BaseHandler):
         # check data
         id_from = animal_id
         id_to = self.input_data.get('relative_id', None)
-        if id_from == id_to:
-            self.response(400, 'Lions need to be different to define kinship.')
+        if int(id_from) == int(id_to):
+            self.response(400, 'Animals need to be different to define kinship.')
             return
         relation = self.input_data.get('relation', None)
         if not id_from or not id_to or not relation:
