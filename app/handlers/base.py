@@ -46,7 +46,7 @@ class BaseHandler(RequestHandler):
     def initialize(self):
         self.animal = self.settings['animal']
         self.animals = self.settings['animals']
-        self.db = self.db
+        self.db = self.settings['db']
 
     def prepare(self):
         # self.auth_check()
