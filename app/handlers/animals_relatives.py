@@ -68,6 +68,14 @@ class AnimalsRelativesHandler(BaseHandler):
 
         relations += trelations
         fmsg = 'for the id: %d' % int(animal_id)
+        for obj in relations:
+            id_to = obj['id_to']
+            info(obj)
+            robj = yield self.db[self.animals].find_one({'iid': int(id_to)})
+            if(robj):
+                obj['name_to'] = robj['name']
+            else: 
+                obj['name_to'] = ''
         if relations:
             self.response(200, 'Relations found ' + fmsg, relations)
         else:
