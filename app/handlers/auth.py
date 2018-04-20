@@ -30,9 +30,6 @@ from tornado.escape import utf8
 from tornado import web
 from json import dumps
 from logging import info
-from schematics.exceptions import ValidationError
-from models.user import User
-from tornado.httpclient import AsyncHTTPClient
 
 
 class CheckAuthHandler(BaseHandler):
@@ -44,7 +41,7 @@ class CheckAuthHandler(BaseHandler):
             'login ip': self.current_user['ip'],
             'check ip': remote_ip,
         }
-        self.response(200, 
+        self.response(200,
                       'Token valid and the user ' + self.current_user['username'] + ' is still logged.',
                       output)
 
@@ -59,7 +56,7 @@ class LoginHandler(BaseHandler):
             password = self.input_data['password']
             wlist = self.settings['wait_list']
             count = self.settings['attempts']
-            ouser = yield self.settings['db'].users.find_one({'email': username})
+            ouser = yield self.db.users.find_one({'email': username})
             if username in wlist.keys():
                 dt = wlist[username]
                 if datetime.now() < dt + timedelta(minutes=30):
@@ -77,41 +74,43 @@ class LoginHandler(BaseHandler):
                         role = 'admin'
                     else:
                         role = 'user'
-                    org = yield self.settings['db'].organizations.find_one(
+                    org = yield self.db.organizations.find_one(
                         {'iid': ouser['organization_iid']})
                     orgname = ''
                     if org:
-                         orgname = org['name']
+                        orgname = org['name']
                     token = gen_token(24)
-                    objuser = { 'id': ouser['iid'],
-                                'username': ouser['email'],
-                                'orgname': orgname,
-                                'org_id': ouser['organization_iid'],
-                                'role': role,
-                                'token': token,
-                                'ip': remote_ip,
-                                'timestamp': datetime.now().isoformat()}
+                    objuser = {
+                        'id': ouser['iid'],
+                        'username': ouser['email'],
+                        'orgname': orgname,
+                        'org_id': ouser['organization_iid'],
+                        'role': role,
+                        'token': token,
+                        'ip': remote_ip,
+                        'timestamp': datetime.now().isoformat()}
                     # update user info about the login
-                    datupd = {'$set':{'updated_at': datetime.now(),
-                                      'sign_in_count': int(ouser['sign_in_count']) +1,
-                                      'last_sign_in_ip': ouser['current_sign_in_ip'],
-                                      'last_sign_in_at': ouser['current_sign_in_at'],
-                                      'current_sign_in_at': datetime.now(),
-                                      'current_sign_in_ip': remote_ip
-                                      }
-                             }
-                    upduser = self.settings['db'].users.update({'iid': ouser['iid']}, datupd)
+                    datupd = {'$set': {
+                        'updated_at': datetime.now(),
+                        'sign_in_count': int(ouser['sign_in_count']) + 1,
+                        'last_sign_in_ip': ouser['current_sign_in_ip'],
+                        'last_sign_in_at': ouser['current_sign_in_at'],
+                        'current_sign_in_at': datetime.now(),
+                        'current_sign_in_ip': remote_ip
+                    }}
+                    upduser = self.db.users.update({'iid': ouser['iid']}, datupd)
+                    info(upduser)
                     authtoken = web.create_signed_value(
                         self.settings['cookie_secret'], 'authtoken', dumps(objuser))
                     if username in wlist.keys():
                         del wlist[username]
                     if username in count.keys():
                         del count[username]
-                    self.settings['tokens'][username] = { 'token' : token, 'dt' : datetime.now() }
+                    self.settings['tokens'][username] = {'token': token, 'dt': datetime.now()}
                     # Encode to output
                     outputtoken = token_encode(authtoken, self.settings['token_secret'])
                     # Output Response
-                    outputdata = {'token':outputtoken,
+                    outputdata = {'token': outputtoken,
                                   'role': role, 'orgname': orgname,
                                   'id': ouser['iid'],
                                   'organization_id': ouser['organization_iid']}
@@ -126,14 +125,18 @@ class LoginHandler(BaseHandler):
                     count[username]['d'] = datetime.now()
                     if count[username]['c'] > 3:
                         wlist[username] = datetime.now()
-                        self.response(401,
-                                      'Authentication failure, and you have more than three attempts in 30 minutes, so you will need to wait 30 minutes to try to login again.')
+                        self.response(
+                            401,
+                            'Authentication failure, and you have more than three attempts in 30 minutes, so you will need to wait 30 minutes to try to login again.')
                     else:
-                        self.response(401, 'Authentication failure, password incorrect.')
+                        self.response(
+                            401,
+                            'Authentication failure, password incorrect.')
             else:
                 self.response(401, 'Authentication failure. Username or password are incorrect or maybe the user are disabled.')
         else:
             self.response(400, 'Authentication requires username and password')
+
 
 class LogoutHandler(BaseHandler):
     @api_authenticated
@@ -147,6 +150,7 @@ class LogoutHandler(BaseHandler):
         else:
             self.response(400, 'Authentication token invalid. User already logged off.')
 
+
 class ChangePasswordHandler(BaseHandler):
     @asynchronous
     @coroutine
@@ -154,11 +158,11 @@ class ChangePasswordHandler(BaseHandler):
     def post(self):
         if 'new_password' in self.input_data.keys():
             if len(self.input_data['new_password']) >= 6:
-                resp = self.settings['db']
-                ouser = yield self.settings['db'].users.find_one({'email':self.current_user['username']})
+                resp = self.db
+                ouser = yield self.db.users.find_one({'email': self.current_user['username']})
                 if ouser:
-                    resp = yield Task(self.changePassword,ouser, self.input_data['new_password'])
-                    self.response(resp[0],resp[1])
+                    resp = yield Task(self.changePassword, ouser, self.input_data['new_password'])
+                    self.response(resp[0], resp[1])
                 else:
                     self.response(400, 'Invalid user requesting password change.')
             else:
@@ -166,22 +170,23 @@ class ChangePasswordHandler(BaseHandler):
         else:
             self.response(400, 'To change your password, you must send it in a json object with the key \'new_password\'.')
 
+
 class RestorePassword(BaseHandler):
     @asynchronous
     @coroutine
     def post(self):
         if 'email' in self.input_data.keys():
             email = self.input_data['email']
-            ouser = yield self.settings['db'].users.find_one({'email':email})
+            ouser = yield self.db.users.find_one({'email': email})
             if ouser:
                 try:
                     newpass = gen_token(10)
-                    resp = yield Task(self.changePassword,ouser,newpass)
+                    resp = yield Task(self.changePassword, ouser, newpass)
                     if resp[0] != 200:
-                        self.response(resp[0],resp[1])
+                        self.response(resp[0], resp[1])
                         return
                     emails = [email]
-                    admin_emails = yield self.settings['db'].users.find({'admin':True}).to_list(None)
+                    admin_emails = yield self.db.users.find({'admin': True}).to_list(None)
                     for i in admin_emails:
                         emails.append(i['email'])
                     emails = list(set(emails))
@@ -192,8 +197,8 @@ class RestorePassword(BaseHandler):
 A password recovery was requested for the email %s.\nYou can use the credentials:\n\nUsername: %s\nPassword: %s\n\nto log-in the system in https://linc.linclion.org/ \n\nLinc Lion Team\n
 
                         """
-                        msg = msg % (self.settings['EMAIL_FROM'],emailaddress,email,email,newpass)
-                        pemail = yield Task(self.sendEmail,emailaddress,msg)
+                        msg = msg % (self.settings['EMAIL_FROM'], emailaddress, email, email, newpass)
+                        pemail = yield Task(self.sendEmail, emailaddress, msg)
                     if pemail:
                         self.response(200, 'A new password was sent to the user.')
                     else:
@@ -202,7 +207,7 @@ A password recovery was requested for the email %s.\nYou can use the credentials
                 except Exception as e:
                     self.response(400, 'Fail to generate new password.')
             else:
-                self.response(404, 'No user found with email: '+email)
+                self.response(404, 'No user found with email: %s' % (email))
         else:
             self.response(400, 'An email is required to restart user\'s passwords.')
 
@@ -213,19 +218,23 @@ class RequestAccessHandler(BaseHandler):
     @asynchronous
     @coroutine
     def post(self):
-        if 'email' in self.input_data.keys():            
+        if 'email' in self.input_data.keys():
             msg = """From: %s\nTo: %s\nSubject: LINC Lion: Request New Access to Linc\n
 
 A new user is requesting access to Linc.\nThe user data is:\nemail: %s\nFull Name: %s\nOrganization: %s\nGeographical Study Area: %s\n\nLinc Lion Team\n
 
                 """
-            msg = msg % (self.settings['EMAIL_FROM'], self.settings['EMAIL_NEWUSER'],
-                self.input_data['email'], self.input_data['fullname'], self.input_data['organization'], self.input_data['geographical'])
+            msg = msg % (
+                self.settings['EMAIL_FROM'],
+                self.settings['EMAIL_NEWUSER'],
+                self.input_data['email'],
+                self.input_data['fullname'],
+                self.input_data['organization'],
+                self.input_data['geographical'])
             pemail = yield Task(self.sendEmail, self.settings['EMAIL_NEWUSER'], msg)
             if pemail:
-                self.response(200, 'A new access request email was sent to ' + self.settings['EMAIL_NEWUSER'])
+                self.response(200, 'A new access request email was sent to %s.' % (self.settings['EMAIL_NEWUSER']))
             else:
                 self.response(400, 'The system can not send the access request. Ask for support in info@lionguardians.org')
         else:
             self.response(400, 'An email is required to request access')
-

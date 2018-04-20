@@ -46,7 +46,7 @@ class BaseHandler(RequestHandler):
     def initialize(self):
         self.animal = self.settings['animal']
         self.animals = self.settings['animals']
-        self.db = self.settings['db']
+        self.db = self.db
 
     def prepare(self):
         # self.auth_check()
@@ -94,7 +94,7 @@ class BaseHandler(RequestHandler):
     @asynchronous
     @engine
     def new_iid(self, collection, callback=None):
-        iid = yield self.settings['db'].counters.find_and_modify(
+        iid = yield self.db.counters.find_and_modify(
             query={'_id': collection},
             update={'$inc': {'next': 1}},
             new=True, upsert=True)
@@ -250,7 +250,7 @@ class BaseHandler(RequestHandler):
             try:
                 updobj = updobj.to_native()
                 updobj['_id'] = updid
-                saved = yield self.settings['db'].users.update({'_id': updid}, updobj)
+                saved = yield self.db.users.update({'_id': updid}, updobj)
                 info(saved)
                 resp = [200, 'Password changed successfully.']
             except Exception as e:
