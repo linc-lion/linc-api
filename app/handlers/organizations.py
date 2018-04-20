@@ -21,15 +21,14 @@
 # For more information or to contact visit linclion.org or email tech@linclion.org
 
 from tornado.web import asynchronous
-from tornado.gen import coroutine,engine,Task
+from tornado.gen import coroutine, engine, Task
 from handlers.base import BaseHandler
 from models.organization import Organization
 from bson import ObjectId as ObjId
-from json import loads
-from tornado.escape import json_decode
 from datetime import datetime
-from lib.rolecheck import allowedRole, refusedRole, api_authenticated
+from lib.rolecheck import allowedRole, api_authenticated
 from logging import info
+
 
 class OrganizationsHandler(BaseHandler):
     """A class that handles requests about organizations informartion"""
@@ -51,17 +50,16 @@ class OrganizationsHandler(BaseHandler):
     def get(self, org_id=None):
         if org_id:
             if org_id == 'list':
-                # return a list of organizations for the website
-                # ORM way
-                #objs = yield Organization.objects.find_all()
-                # Motor way
-                objs = yield self.settings['db'].organizations.find().to_list(None)
+                objs = yield self.db.organizations.find().to_list(None)
                 self.set_status(200)
-                self.finish(self.json_encode({'status': 'success', 'data':self.list(objs)}))
+                self.finish(
+                    self.json_encode(
+                        {'status': 'success',
+                         'data': self.list(objs)}))
             else:
                 # return a specific organization accepting as id the integer id, hash and name
                 query = self.query_id(org_id)
-                objs = yield self.settings['db'].organizations.find_one(query)
+                objs = yield self.db.organizations.find_one(query)
                 if objs:
                     objorg = objs
                     objorg['id'] = objs['iid']
@@ -69,13 +67,13 @@ class OrganizationsHandler(BaseHandler):
                     del objorg['iid']
                     del objorg['_id']
                     self.set_status(200)
-                    self.finish(self.json_encode({'status': 'success', 'data':objorg}))
+                    self.finish(self.json_encode({'status': 'success', 'data': objorg}))
                 else:
                     self.set_status(404)
                     self.finish(self.json_encode({'status': 'error', 'message': 'not found'}))
         else:
             # return a list of organizations
-            objs = yield self.settings['db'].organizations.find().to_list(None)
+            objs = yield self.db.organizations.find().to_list(None)
             output = list()
             for x in objs:
                 obj = dict(x)
@@ -84,7 +82,7 @@ class OrganizationsHandler(BaseHandler):
                 self.switch_iid(obj)
                 output.append(obj)
             self.set_status(200)
-            self.finish(self.json_encode({'status': 'success', 'data':output}))
+            self.finish(self.json_encode({'status': 'success', 'data': output}))
 
     @asynchronous
     @engine
@@ -95,19 +93,19 @@ class OrganizationsHandler(BaseHandler):
         # parse data recept by POST and get only fields of the object
         newobj = self.parseInput(Organization)
         # getting new integer id
-        newobj['iid'] = yield Task(self.new_iid,Organization.collection())
+        newobj['iid'] = yield Task(self.new_iid, Organization.collection())
         try:
             neworg = Organization(newobj)
             neworg.validate()
             # the new object is valid, so try to save
             try:
-                newsaved = yield self.settings['db'].organizations.insert(neworg.to_native())
+                newsaved = yield self.db.organizations.insert(neworg.to_native())
                 output = neworg.to_native()
                 info(output)
                 output['obj_id'] = str(newsaved)
                 # Change iid to id in the output
                 self.switch_iid(output)
-                self.finish(self.json_encode({'status': 'success', 'message': 'new organization saved', 'data':output}))
+                self.finish(self.json_encode({'status': 'success', 'message': 'new organization saved', 'data': output}))
             except Exception as e:
                 # duplicated index error
                 self.response(409, 'Duplicated name for an organization.')
@@ -132,7 +130,7 @@ class OrganizationsHandler(BaseHandler):
                 break
         if org_id and update_ok:
             query = self.query_id(org_id)
-            updobj = yield self.settings['db'].organizations.find_one(query)
+            updobj = yield self.db.organizations.find_one(query)
             if updobj:
                 updict = dict()
                 for field in fields_allowed_to_be_update:
@@ -144,15 +142,18 @@ class OrganizationsHandler(BaseHandler):
                         updid = updobj['_id']
                         # the object is valid, so try to save
                         try:
-                            saved = yield self.settings['db'].organizations.update({'_id':updid},{'$set' : updict})
+                            saved = yield self.db.organizations.update(
+                                {'_id': updid},
+                                {'$set': updict})
+                            info(saved)
                             output = updobj
                             output['obj_id'] = str(updid)
                             del output['_id']
-                            for k,v in updict.items():
+                            for k, v in updict.items():
                                 output[k] = v
                             # Change iid to id in the output
                             self.switch_iid(output)
-                            self.finish(self.json_encode({'status': 'success', 'message': 'organization updated', 'data':output}))
+                            self.finish(self.json_encode({'status': 'success', 'message': 'organization updated', 'data': output}))
                         except Exception as e:
                             # duplicated index error
                             self.response(409, 'Duplicated name for an organization.')
@@ -174,22 +175,36 @@ class OrganizationsHandler(BaseHandler):
         # delete an organization
         if org_id:
             query = self.query_id(org_id)
-            updobj = yield self.settings['db'].organizations.find_one(query)
+            updobj = yield self.db.organizations.find_one(query)
             if updobj:
                 # check for references
                 iid = updobj['iid']
                 # user - organization_iid
-                userrc = yield self.settings['db'].users.update({'organization_iid':iid},{'$set':{'organization_iid':self.current_user['org_id'], 'updated_at':datetime.now()}},multi=True)
+                userrc = yield self.db.users.update(
+                    {'organization_iid': iid},
+                    {'$set': {'organization_iid': self.current_user['org_id'],
+                              'updated_at': datetime.now()}},
+                    multi=True)
+                info(userrc)
                 # imageset - uploading_organization_iid
                 # imageset - owner_organization_iid
-                imgsetrc1 = yield self.settings['db'].imagesets.update({'uploading_organization_iid':iid},{'$set':{'uploading_organization_iid':self.current_user['org_id'], 'updated_at':datetime.now()}},multi=True)
-                imgsetrc2 = yield self.settings['db'].imagesets.update({'owner_organization_iid':iid},{'$set':{'owner_organization_iid':self.current_user['org_id'], 'updated_at':datetime.now()}},multi=True)
+                imgsetrc1 = yield self.db.imagesets.update(
+                    {'uploading_organization_iid': iid},
+                    {'$set':
+                        {'uploading_organization_iid': self.current_user['org_id'],
+                         'updated_at': datetime.now()}},
+                    multi=True)
+                info(imgsetrc1)
+                imgsetrc2 = yield self.db.imagesets.update({'owner_organization_iid': iid}, {'$set': {'owner_organization_iid': self.current_user['org_id'], 'updated_at': datetime.now()}}, multi=True)
+                info(imgsetrc2)
                 # animal - organization_iid
-                animalsrc = yield self.settings['db'][self.animals].update({'organization_iid':iid},{'$set':{'organization_iid':self.current_user['org_id'], 'updated_at':datetime.now()}},multi=True)
+                animalsrc = yield self.db[self.animals].update({'organization_iid': iid}, {'$set': {'organization_iid': self.current_user['org_id'], 'updated_at': datetime.now()}}, multi=True)
+                info(animalsrc)
                 # cvrequest - uploading_organization_iid
-                cvreqrc = yield self.settings['db'].cvrequests.update({'requesting_organization_iid':iid},{'$set':{'requesting_organization_iid':self.current_user['org_id'], 'updated_at':datetime.now()}},multi=True)
+                cvreqrc = yield self.db.cvrequests.update({'requesting_organization_iid': iid}, {'$set': {'requesting_organization_iid': self.current_user['org_id'], 'updated_at': datetime.now()}}, multi=True)
+                info(cvreqrc)
                 try:
-                    updobj = yield self.settings['db'].organizations.remove(query)
+                    updobj = yield self.db.organizations.remove(query)
                     self.response(200, 'Organization successfully deleted.')
                 except Exception as e:
                     self.response(500, 'Fail to delete organization.')
@@ -198,7 +213,7 @@ class OrganizationsHandler(BaseHandler):
         else:
             self.response(400, 'Remove requests (DELETE) must have a resource ID.')
 
-    def list(self,objs):
+    def list(self, objs):
         """ Implements the list output used for UI in the website
         """
         output = list()

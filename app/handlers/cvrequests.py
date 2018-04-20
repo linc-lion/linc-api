@@ -37,13 +37,13 @@ class CVRequestsHandler(BaseHandler):
     def get(self, req_id=None):
         if req_id:
             if req_id == 'list':
-                objs = yield self.settings['db'].cvrequests.find().to_list(None)
+                objs = yield self.db.cvrequests.find().to_list(None)
                 self.set_status(200)
                 output = yield Task(self.list, objs)
                 self.finish(self.json_encode({'status': 'success', 'data': output}))
             else:
                 query = self.query_id(req_id)
-                obj = yield self.settings['db'].cvrequests.find_one(query)
+                obj = yield self.db.cvrequests.find_one(query)
                 if obj:
                     objreq = obj
                     objreq['id'] = obj['iid']
@@ -60,7 +60,7 @@ class CVRequestsHandler(BaseHandler):
                     self.set_status(404)
                     self.finish(self.json_encode({'status': 'error', 'message': 'not found'}))
         else:
-            objs = yield self.settings['db'].cvrequests.find().to_list(None)
+            objs = yield self.db.cvrequests.find().to_list(None)
             output = list()
             for x in objs:
                 obj = dict(x)
@@ -90,24 +90,24 @@ class CVRequestsHandler(BaseHandler):
         # delete a req
         if req_id:
             query = self.query_id(req_id)
-            updobj = yield self.settings['db'].cvrequests.find_one(query)
+            updobj = yield self.db.cvrequests.find_one(query)
             if updobj:
                 # removing cvrequest and cvresult related and they will be added in
                 # a history collection
                 try:
                     # get cvresult if it exists
-                    cvres = yield self.settings['db'].cvresults.find_one({'cvrequest_iid': req_id})
+                    cvres = yield self.db.cvresults.find_one({'cvrequest_iid': req_id})
                     if cvres:
                         info(cvres)
                         idcvres = ObjId(cvres['_id'])
                         del cvres['_id']
                         info(cvres)
-                        newhres = yield self.settings['db'].cvresults_history.insert(cvres)
+                        newhres = yield self.db.cvresults_history.insert(cvres)
                         info(newres)
-                        cvres = yield self.settings['db'].cvresults.remove({'_id': idcvres})
+                        cvres = yield self.db.cvresults.remove({'_id': idcvres})
                     del updobj['_id']
-                    newhreq = yield self.settings['db'].cvrequests_history.insert(updobj)
-                    cvreq = yield self.settings['db'].cvrequests.remove(query)
+                    newhreq = yield self.db.cvrequests_history.insert(updobj)
+                    cvreq = yield self.db.cvrequests.remove(query)
                     self.response(200, 'CVrequest successfully deleted.')
                 except Exception as e:
                     self.response(500, 'Fail to delete cvrequest.')
@@ -122,7 +122,7 @@ class CVRequestsHandler(BaseHandler):
         """ Implements the list output used for UI in the website
         """
         output = list()
-        cvresl = yield self.settings['db'].cvresults.find().to_list(None)
+        cvresl = yield self.db.cvresults.find().to_list(None)
         cvresd = dict()
         for cvres in cvresl:
             cvresd[cvres['cvrequest_iid']] = {'cvres_id': cvres['iid'], 

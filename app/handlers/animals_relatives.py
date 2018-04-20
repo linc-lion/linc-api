@@ -160,7 +160,7 @@ class AnimalsRelativesHandler(BaseHandler):
         if already_relative:
             try:
                 resp = self.db.relatives.remove(
-                    {'id_from': already_relative['id_from'], 
+                    {'id_from': already_relative['id_from'],
                      'id_to': already_relative['id_to']})
             except Exception as e:
                 info(e)
