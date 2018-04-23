@@ -36,8 +36,7 @@ from logging import info
 
 
 class ImageSetsHandler(BaseHandler):
-    """A class that handles requests about image sets informartion
-    """
+    """A class that handles requests about image sets informartion."""
 
     def query_id(self, imageset_id):
         """This method configures the query that will find an object"""
@@ -305,92 +304,12 @@ class ImageSetsHandler(BaseHandler):
     @api_authenticated
     def post(self, imageset_id=None, cvrequest=None):
         if not imageset_id:
-            # create a new imageset or new cvrequest
-            # parse data recept by POST and get only fields of the object
-            newobj = self.parseInput(ImageSet)
-            # getting new integer id
-            newobj['iid'] = yield Task(self.new_iid, ImageSet.collection())
-            dt = datetime.now()
-            newobj['created_at'] = dt
-            newobj['updated_at'] = dt
-            # validate the input
-            fields_needed = ['uploading_user_id', 'uploading_organization_id', 'owner_organization_id',
-                             'is_verified', 'gender', 'date_of_birth',
-                             'tags', 'date_stamp', 'notes', self.animal + '_id', 'main_image_id', 'geopos_private']
-            keys = list(self.input_data.keys())
-            for field in fields_needed:
-                if field not in keys:
-                    self.response(400, 'You must provide the key for ' +
-                                  field + ' even it has the value = null.')
-                    return
-            # check if date_stamp are valid
-            if newobj['date_stamp']:
-                try:
-                    dts = datetime.strptime(newobj['date_stamp'], "%Y-%m-%d").date()
-                    newobj['date_stamp'] = str(dts)
-                except Exception as e:
-                    self.response(
-                        400, 'Invalid date_stamp. you must provide it in format YYYY-MM-DD.')
-                    return
-            if newobj['date_of_birth']:
-                try:
-                    newobj['date_of_birth'] = datetime.strptime(newobj['date_of_birth'], "%Y-%m-%d")
-                except Exception as e:
-                    self.response(
-                        400, 'Invalid date_of_birth. you must provide it in format YYYY-MM-DD.')
-                    return
-            # check if user exists
-            useriid = self.input_data['uploading_user_id']
-            userexists = yield self.db.users.find_one({'iid': useriid})
-            if userexists:
-                newobj['uploading_user_iid'] = useriid
-            else:
-                self.response(409, "Uploading user id referenced doesn't exist.")
+            response = yield Task(self.create_imageset, self.input_data)
+            if response and response['code'] != 200:
+                self.response(response['code'], response['message'])
                 return
-            # check if organizations exists
-            orgiid = self.input_data['uploading_organization_id']
-            orgexists = yield self.db.organizations.find_one({'iid': orgiid})
-            if orgexists:
-                newobj['uploading_organization_iid'] = orgiid
-            else:
-                self.response(409, "Uploading organization id referenced doesn't exist.")
-                return
-            oorgiid = self.input_data['owner_organization_id']
-            oorgexists = yield self.db.organizations.find_one({'iid': oorgiid})
-            if oorgexists['iid'] == orgiid:
-                newobj['owner_organization_iid'] = oorgiid
-            else:
-                self.response(409, "Owner organization id referenced doesn't exist.")
-                return
-            if 'latitude' in self.input_data.keys() and self.input_data['latitude'] and \
-                    'longitude' in self.input_data.keys() and self.input_data['longitude']:
-                newobj['location'] = [[self.input_data['latitude'], self.input_data['longitude']]]
-            newobj['animal_iid'] = self.input_data[self.animal + '_id']
-            try:
-                newimgset = ImageSet(newobj)
-                newimgset.validate()
-
-                newobj = yield self.db.imagesets.insert(newimgset.to_native())
-                output = newimgset.to_native()
-                self.switch_iid(output)
-                output['obj_id'] = str(newobj)
-                output['owner_organization_id'] = output['owner_organization_iid']
-                del output['owner_organization_iid']
-                output['uploading_organization_id'] = output['uploading_organization_iid']
-                del output['uploading_organization_iid']
-                output['uploading_user_id'] = output['uploading_user_iid']
-                del output['uploading_user_iid']
-                output['main_image_id'] = output['main_image_iid']
-                del output['main_image_iid']
-                output[self.animal + '_id'] = output['animal_iid']
-                del output['animal_iid']
-
-                self.set_status(200)
-                self.finish(self.json_encode(
-                    {'status': 'success', 'message': 'new image set added', 'data': output}))
-            except ValidationError as e:
-                self.response(400, "Invalid input data. Error: " + str(e) + '.')
-                return
+            self.set_status(200)
+            self.finish(self.json_encode({'status': 'success', 'message': response['message'], 'data': response['data']}))
         else:
             query = self.query_id(imageset_id)
             imgchk = yield self.db.imagesets.find_one(query)

@@ -41,9 +41,10 @@ from lib.upload_s3 import upload_to_s3, s3_copy, s3_delete
 
 
 class ImagesHandler(BaseHandler, ProcessMixin):
-    """A class that handles requests about images informartion
-    """
+    """A class that handles requests about images informartion."""
+
     def initialize(self):
+        super().initialize()
         self.process = False
 
     def on_finish(self):
@@ -64,14 +65,14 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                 remove(self.imgname[:-4] + suf)
 
     def query_id(self, image_id):
-        """This method configures the query that will find an object"""
+        """The method configures the query that will find an object."""
         try:
             query = {'iid': int(image_id)}
         except Exception as e:
             try:
                 query = {'_id': ObjId(image_id)}
             except Exception as e:
-                self.response(400, 'Invalid id key.')
+                self.response(400, 'Invalid id key. Error: ' + str(e) + '.')
                 return
         return query
 
@@ -459,8 +460,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
             self.response(400, 'Remove requests (DELETE) must have a resource ID.')
 
     def list(self, objs, callback=None):
-        """ Implements the list output used for UI in the website
-        """
+        """Implement the list output used for UI in the website."""
         output = list()
         for x in objs:
             obj = dict()

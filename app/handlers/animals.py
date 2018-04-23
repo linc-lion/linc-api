@@ -35,7 +35,8 @@ from json import loads, dumps
 
 
 class AnimalsHandler(BaseHandler):
-    """ A class that handles requests about animals informartion """
+    """A class that handles requests about animals informartion."""
+
     SUPPORTED_METHODS = ('GET', 'POST', 'PUT', 'DELETE')
 
     @asynchronous
@@ -231,7 +232,7 @@ class AnimalsHandler(BaseHandler):
                         objanimal['primary_image_set_id'] = objanimal['primary_image_set_iid']
                         del objanimal['primary_image_set_iid']
                     else:
-                        objanimal = yield Task(self.prepareOutput, objs, noimages)
+                        objanimal = yield Task(self.prepare_output, objs, noimages)
                     self.set_status(200)
                     self.finish(self.json_encode(objanimal))
                 else:
@@ -259,7 +260,7 @@ class AnimalsHandler(BaseHandler):
                             datetime.strptime(queryfilter['dob_end'], "%Y-%m-%d").date(), time.min)
                         del queryfilter['dob_end']
             except Exception as e:
-                self.response(400, 'Invalid value for dob_start/dob_end.')
+                self.response(400, 'Invalid value for dob_start/dob_end. Error: ' + str(e) + '.')
                 return
             info(queryfilter)
             objs = yield self.db.imagesets.find(queryfilter).to_list(None)
@@ -280,7 +281,7 @@ class AnimalsHandler(BaseHandler):
                     del obj['primary_image_set_iid']
                     self.switch_iid(obj)
                 else:
-                    obj = yield Task(self.prepareOutput, x, noimages)
+                    obj = yield Task(self.prepare_output, x, noimages)
                 output.append(obj)
             self.set_status(200)
             if apiout:
@@ -293,32 +294,53 @@ class AnimalsHandler(BaseHandler):
     @engine
     @api_authenticated
     def post(self):
-        # create a new animal
+        # create a new animal and imageset
         # parse data recept by POST and get only fields of the object
-        newobj = self.parseInput(Animal)
-        # getting new integer id
-        newobj['iid'] = yield Task(self.new_iid, self.animals)
-        # checking for required fields
-        if 'organization_id' in self.input_data.keys() and \
-           'primary_image_set_id' in self.input_data.keys() and 'name' in self.input_data.keys():
-            newobj['organization_iid'] = self.input_data['organization_id']
-            newobj['primary_image_set_iid'] = self.input_data['primary_image_set_id']
-            check_org = yield self.db.organizations.find_one(
-                {'iid': newobj['organization_iid']})
+        animal = dict()
+        if 'lion' in self.input_data.keys():
+            valid_fields = Animal._fields.keys()
+            for k, v in self.input_data['lion'].items():
+                if k in valid_fields:
+                    animal[k] = v
+        else:
+            self.response(400, 'Invalid lion data.')
+            return
+        if 'name' not in animal.keys():
+            self.response(400, 'You must define name for the new lion.')
+            return
+        else:
+            response = yield self.db[self.animals].find_one({'name': animal['name']})
+            if response:
+                self.response(409, 'Check if you are using a name from a lion that already exists in the database.')
+                return
+
+        # Create a Imageset first
+        if 'imageset' in self.input_data.keys():
+            response = yield Task(self.create_imageset, self.input_data['imageset'])
+
+        if response and response['code'] != 200:
+            self.response(response['code'], response['message'])
+            return
+
+        # Primary Imageset
+        imageset = response['data']
+        info(imageset)
+
+        # Create a Lion now
+        dt = datetime.now()
+        animal['iid'] = yield Task(self.new_iid, self.animals)
+        animal['created_at'] = dt
+        animal['updated_at'] = dt
+        animal['primary_image_set_iid'] = imageset['id']
+        # # checking for required fields
+        if 'organization_id' in self.input_data['lion'].keys():
+            animal['organization_iid'] = self.input_data['lion']['organization_id']
+            check_org = yield self.db.organizations.find_one({'iid': animal['organization_iid']})
             if not check_org:
                 self.response(409, 'Invalid organization_id.')
                 return
-            check_imageset = yield self.db.imagesets.find_one(
-                {'iid': newobj['primary_image_set_iid']})
-            if not check_imageset:
-                self.response(409, 'Invalid primary_image_set_id.')
-                return
-        else:
-            self.response(
-                400,
-                'You must define name, organization_id and primary_image_set_id for the new lion.')
         try:
-            newanimal = Animal(newobj)
+            newanimal = Animal(animal)
             newanimal.collection(self.animals)
             newanimal.validate()
             # the new object is valid, so try to save
@@ -327,14 +349,25 @@ class AnimalsHandler(BaseHandler):
                 output = newanimal.to_primitive()
                 output['obj_id'] = str(newsaved)
                 self.switch_iid(output)
+
                 output['organization_id'] = output['organization_iid']
                 del output['organization_iid']
                 output['primary_image_set_id'] = output['primary_image_set_iid']
                 del output['primary_image_set_iid']
-                self.finish(self.json_encode(
-                    {'status': 'success',
-                     'message': 'new %s saved.' % (self.animal),
-                     'data': output}))
+
+                # Set Lion Id to Imageset
+                try:
+                    updnobj = yield self.db.imagesets.update({'iid': imageset['id']}, {'$set': {'lion_id': output['id']}})
+                    info(updnobj)
+                    self.finish(self.json_encode({
+                        'status': 'success',
+                        'message': 'new %s saved.' % (self.animal),
+                        'data': output
+                    }))
+                except ValidationError as e:
+                    self.response(400, "Invalid input data. Error: " + str(e) + '.')
+                    return
+
             except Exception as e:
                 # duplicated index error
                 self.response(
@@ -409,13 +442,13 @@ class AnimalsHandler(BaseHandler):
                 try:
                     updid = ObjId(updobj['_id'])
                     del updobj['_id']
-                    Animals = Animal(updobj)
-                    Animals.collection(self.animals)
-                    Animals.validate()
+                    animals = Animal(updobj)
+                    animals.collection(self.animals)
+                    animals.validate()
                     # the object is valid, so try to save
                     try:
                         updated = yield self.db[self.animals].update(
-                            {'_id': updid}, Animals.to_native())
+                            {'_id': updid}, animals.to_native())
                         info(updated)
                         output = updobj
                         output['obj_id'] = str(updid)
@@ -510,7 +543,7 @@ class AnimalsHandler(BaseHandler):
     @asynchronous
     @engine
     def list(self, objs, orgnames, callback=None):
-        """ Implements the list output used for UI in the website """
+        """Implement the list output used for UI in the website."""
         current_user = yield self.db.users.find_one({'email': self.current_user['username']})
         is_admin = current_user['admin']
         current_organization = yield self.db.organizations.find_one({'iid': current_user['organization_iid']})
@@ -591,7 +624,7 @@ class AnimalsHandler(BaseHandler):
 
     @asynchronous
     @engine
-    def prepareOutput(self, objs, noimages=False, callback=None):
+    def prepare_output(self, objs, noimages=False, callback=None):
         current_user = yield self.db.users.find_one({'email': self.current_user['username']})
         is_admin = current_user['admin']
         current_organization = yield self.db.organizations.find_one({'iid': current_user['organization_iid']})
