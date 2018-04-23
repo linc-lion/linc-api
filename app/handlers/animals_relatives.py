@@ -70,12 +70,14 @@ class AnimalsRelativesHandler(BaseHandler):
         fmsg = 'for the id: %d' % int(animal_id)
         for obj in relations:
             id_to = obj['id_to']
-            info(obj)
-            robj = yield self.db[self.animals].find_one({'iid': int(id_to)})
-            if(robj):
-                obj['name_to'] = robj['name']
+            animal = yield self.db[self.animals].find_one({'iid': int(id_to)})
+            image_set = yield self.db['imagesets'].find_one({'iid': int(animal['primary_image_set_iid'])})
+            if(animal):
+                obj['name_to'] = animal['name']
+                obj['gender_to'] = image_set['gender']
             else:
-                obj['name_to'] = ''
+                obj['name_to'] = None
+                obj['gender_to'] = None
         if relations:
             self.response(200, 'Relations found ' + fmsg, relations)
         else:
@@ -89,7 +91,7 @@ class AnimalsRelativesHandler(BaseHandler):
             'mother', 'suspected_father', 'sibling', 'associate']
         # check gender
         try:
-            gender = yield self.db.imagesets.find_one({'iid': lobj['primary_image_set_iid']}, {'gender': 1})
+            gender = yield self.db.imagesets.find_one({'iid': robj['primary_image_set_iid']}, {'gender': 1})
             gender = gender.get('gender', None)
             if gender not in ['female', 'male']:
                 gender = None
@@ -141,7 +143,7 @@ class AnimalsRelativesHandler(BaseHandler):
             return
         valid, relation, gender = yield Task(self.relation_is_valid, lobj, robj, relation)
         if not valid:
-            self.response(400, 'Invalid relationship assignment request with the relation: %s. (The individual with the id %d is a "%s" animal.)' % (relation, int(animal_id), gender))
+            self.response(400, 'Invalid relationship assignment request with the relation: %s. (The individual with the id %d is a "%s" animal.)' % (relation, int(id_to), gender))
             return
         try:
             radd = yield self.db.relatives.insert(
@@ -169,29 +171,34 @@ class AnimalsRelativesHandler(BaseHandler):
             return
         already_relative = yield Task(self.check_relative, animal_id, relid)
         if not already_relative:
-            self.response(404, 'Relation not found.')
-        else:
-            lobj = yield Task(self.get_animal_by_id, animal_id)
-            robj = yield Task(self.get_animal_by_id, relid)
-            valid, relation, gender = yield Task(self.relation_is_valid, lobj, robj, relation)
-            if not valid:
-                self.response(400, 'Invalid relationship assignment request with the relation: %s. (The individual with the id %d is a "%s" animal.)' % (
-                    relation, int(animal_id), gender))
+            already_relative = yield Task(self.check_relative, relid, animal_id)
+            if not already_relative:
+                self.response(404, 'Relation not found.')
                 return
-            try:
-                radd = yield self.db.relatives.update(
-                    {'id_from': int(animal_id),
-                     'id_to': int(relid)},
-                    {'$set': {'relation': relation.lower(),
-                              'updated_at': datetime.now()}})
-                info(radd)
-            except Exception as e:
-                info(e)
-                radd = None
-            if radd:
-                self.response(200, 'Relation updated.')
-            else:
-                self.response(500, 'Fail to change relation.')
+
+        lobj = yield Task(self.get_animal_by_id, animal_id)
+        robj = yield Task(self.get_animal_by_id, relid)
+        valid, relation, gender = yield Task(self.relation_is_valid, lobj, robj, relation)
+        if not valid:
+            self.response(400, 'Invalid relationship assignment request with the relation: %s. (The individual with the id %d is a "%s" animal.)' % (
+                relation, int(relid), gender))
+            return
+        try:
+            radd = yield self.db.relatives.update(
+                {'_id': already_relative['_id']},
+                {'$set': {
+                    'relation': relation.lower(),
+                    'id_from': int(animal_id),
+                    'id_to': int(relid),
+                    'updated_at': datetime.now()}})
+            info(radd)
+        except Exception as e:
+            info(e)
+            radd = None
+        if radd:
+            self.response(200, 'Relation updated.')
+        else:
+            self.response(500, 'Fail to change relation.')
 
     @asynchronous
     @coroutine

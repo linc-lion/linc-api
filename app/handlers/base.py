@@ -21,7 +21,7 @@
 # For more information or to contact visit linclion.org or email tech@linclion.org
 
 from tornado.web import RequestHandler, asynchronous
-from tornado.gen import engine
+from tornado.gen import engine, Task
 from tornado import web
 import string
 from datetime import date, datetime
@@ -36,6 +36,8 @@ from tornado.httputil import HTTPHeaders
 from bson import ObjectId as ObjId
 from schematics.exceptions import ValidationError
 from models.user import User
+from models.imageset import ImageSet
+
 import smtplib
 import csv
 
@@ -80,6 +82,7 @@ class BaseHandler(RequestHandler):
                 token = token_decode(token, self.settings['token_secret'])
                 vtoken = web.decode_signed_value(self.settings["cookie_secret"], 'authtoken', token, max_age_days=max_days_valid)
             except Exception as e:
+                info(e)
                 vtoken = None
             if vtoken:
                 dtoken = loads(vtoken.decode('utf-8'))
@@ -101,7 +104,7 @@ class BaseHandler(RequestHandler):
         callback(int(iid['next']))
 
     def query_id(self, req_id):
-        """ This method configures the query to find an object """
+        """The method configures the query to find an object."""
         query = None
         try:
             query = {'iid': int(req_id)}
@@ -279,6 +282,7 @@ class BaseHandler(RequestHandler):
             server.sendmail(fromaddr, toaddr, msg)
             server.quit()
         except Exception as e:
+            info(e)
             resp = False
         callback(resp)
 
@@ -299,6 +303,91 @@ class BaseHandler(RequestHandler):
             info(e)
             lobj = None
         callback(lobj)
+
+    @engine
+    def create_imageset(self, input_data, callback=None):
+        # Create a Imageset first
+        newobj = dict()
+        valid_fields = ImageSet._fields.keys()
+        for k, v in input_data.items():
+            if k in valid_fields:
+                newobj[k] = v
+
+        newobj['iid'] = yield Task(self.new_iid, ImageSet.collection())
+        dt = datetime.now()
+        newobj['created_at'] = dt
+        newobj['updated_at'] = dt
+        # validate the input
+        fields_needed = ['uploading_user_id', 'uploading_organization_id', 'owner_organization_id',
+                         'is_verified', 'gender', 'date_of_birth',
+                         'tags', 'date_stamp', 'notes', self.animal + '_id', 'main_image_id', 'geopos_private']
+        keys = list(input_data.keys())
+        for field in fields_needed:
+            if field not in keys:
+                callback({'code': 400, 'message': 'You must provide the key for ' + field + ' even it has the value = null.'})
+
+        if newobj['date_stamp']:
+            try:
+                dts = datetime.strptime(newobj['date_stamp'], "%Y-%m-%d").date()
+                newobj['date_stamp'] = str(dts)
+            except Exception as e:
+                callback({'code': 400, 'message': 'Invalid date_stamp. you must provide it in format YYYY-MM-DD.'})
+
+        if newobj['date_of_birth']:
+            try:
+                newobj['date_of_birth'] = datetime.strptime(newobj['date_of_birth'], "%Y-%m-%d")
+            except Exception as e:
+                callback({'code': 400, 'message': 'Invalid date_of_birth. you must provide it in format YYYY-MM-DD.'})
+
+        # check if user exists
+        useriid = input_data['uploading_user_id']
+        userexists = yield self.db.users.find_one({'iid': useriid})
+        if userexists:
+            newobj['uploading_user_iid'] = useriid
+        else:
+            callback({'code': 409, 'message': "Uploading user id referenced doesn't exist."})
+
+        # check if organizations exists
+        orgiid = input_data['uploading_organization_id']
+        orgexists = yield self.db.organizations.find_one({'iid': orgiid})
+        if orgexists:
+            newobj['uploading_organization_iid'] = orgiid
+        else:
+            callback({'code': 409, 'message': "Uploading organization id referenced doesn't exist."})
+
+        oorgiid = input_data['owner_organization_id']
+        oorgexists = yield self.db.organizations.find_one({'iid': oorgiid})
+        if oorgexists['iid'] == oorgiid:
+            newobj['owner_organization_iid'] = oorgiid
+        else:
+            callback({'code': 409, 'message': "Owner organization id referenced doesn't exist."})
+
+        if 'latitude' in input_data.keys() and input_data['latitude'] and \
+                'longitude' in input_data.keys() and input_data['longitude']:
+            newobj['location'] = [[input_data['latitude'], input_data['longitude']]]
+
+        newobj['animal_iid'] = input_data[self.animal + '_id']
+
+        try:
+            newimgset = ImageSet(newobj)
+            newimgset.validate()
+            newobj = yield self.db.imagesets.insert(newimgset.to_native())
+            output = newimgset.to_native()
+            self.switch_iid(output)
+            output['obj_id'] = str(newobj)
+            output['owner_organization_id'] = output['owner_organization_iid']
+            del output['owner_organization_iid']
+            output['uploading_organization_id'] = output['uploading_organization_iid']
+            del output['uploading_organization_iid']
+            output['uploading_user_id'] = output['uploading_user_iid']
+            del output['uploading_user_iid']
+            output['main_image_id'] = output['main_image_iid']
+            del output['main_image_iid']
+            output[self.animal + '_id'] = output['animal_iid']
+            del output['animal_iid']
+            callback({'code': 200, 'message': 'new image set added', 'data': output})
+        except ValidationError as e:
+            callback({'code': 400, 'message': "Invalid input data. Error: " + str(e) + "."})
 
 
 class VersionHandler(BaseHandler):
