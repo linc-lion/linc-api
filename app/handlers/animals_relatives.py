@@ -62,9 +62,9 @@ class AnimalsRelativesHandler(BaseHandler):
         for obj in trelations:
             if obj['relation'] in ['suspected_father', 'mother']:
                 obj['relation'] = 'cub'
-                id_from = obj['id_from']
-                obj['id_from'] = obj['id_to']
-                obj['id_to'] = id_from
+            id_from = obj['id_from']
+            obj['id_from'] = obj['id_to']
+            obj['id_to'] = id_from
 
         relations += trelations
         fmsg = 'for the id: %d' % int(animal_id)
