@@ -699,7 +699,7 @@ class AnimalsHandler(BaseHandler):
                 for image in images:
                     obji = dict()
                     obji['id'] = image['iid']
-                    obji['image_type'] = image['image_type']
+                    obji['image_tags'] = image['image_tags']
                     obji['is_public'] = image['is_public']
                     # This will be recoded
                     obji['thumbnail_url'] = ''
