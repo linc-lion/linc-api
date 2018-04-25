@@ -39,14 +39,14 @@ class ImageSetsHandler(BaseHandler):
     """A class that handles requests about image sets informartion."""
 
     def query_id(self, imageset_id):
-        """This method configures the query that will find an object"""
+        """The method configures the query that will find an object."""
         try:
             query = {'iid': int(imageset_id)}
         except Exception as e:
             try:
                 query = {'_id': ObjId(imageset_id)}
             except Exception as e:
-                self.response(400, 'Invalid id key.')
+                self.response(400, 'Invalid id key. Error: ' + str(e) + '.')
                 return
         return query
 
@@ -218,9 +218,8 @@ class ImageSetsHandler(BaseHandler):
                         vjoined = False
                     else:
                         vjoined = (img['joined'] is not None)
-                    imgout = {'id': img['iid'], 'type': img[
-                        'image_type'], 'is_public': img['is_public'],
-                        'joined': vjoined}
+                    imgout = {'id': img['iid'], 'tags': img['image_tags'],
+                              'is_public': img['is_public'], 'joined': vjoined}
                     if vjoined:
                         imgout['joined_from'] = img['image_set_iid']
                     if 'filename' in img.keys() and img['filename'] != '':
@@ -229,14 +228,14 @@ class ImageSetsHandler(BaseHandler):
                         imgout['filename'] = 'undefined'
                     imgout['imgset_date_stamp'] = objimgset['date_stamp']
                     imgout['imgset_updated_at'] = objimgset['updated_at'].date().isoformat()
-                    imgout['img_updated_at'] = img['updated_at'].date().isoformat()
-                    imgout['img_created_at'] = img['created_at'].date().isoformat()
-                    imgout['img_date_stamp'] = None
+                    imgout['updated_at'] = img['updated_at'].date().isoformat()
+                    imgout['created_at'] = img['created_at'].date().isoformat()
+                    imgout['date_stamp'] = None
                     if 'exif_data' in img.keys():
                         exifd = loads(img['exif_data'])
                         info(exifd)
                         if 'date_stamp' in exifd.keys() and exifd['date_stamp']:
-                            imgout['img_date_stamp'] = datetime.strptime(
+                            imgout['date_stamp'] = datetime.strptime(
                                 exifd['date_stamp'], '%Y-%m-%dT%H:%M:%S').date().isoformat()
                     for suf in ['_icon.jpg', '_medium.jpg', '_thumbnail.jpg']:
                         imgout[suf[1:-4]] = self.settings['S3_URL'] + img['url'] + suf
@@ -341,7 +340,7 @@ class ImageSetsHandler(BaseHandler):
                     imgs = yield self.Images.find(query_images).to_list(None)
                     limgs = list()
                     for img in imgs:
-                        limgs.append({'id': img['iid'], 'type': img['image_type'], 'url': self.settings[
+                        limgs.append({'id': img['iid'], 'tags': img['image_tags'], 'url': self.settings[
                                      'S3_URL'] + img['url'] + '_full.jpg'})
                     animals = self.input_data[self.animals]
                     animalscheck = yield self.Animals.find({'iid': {'$in': animals}}).to_list(None)

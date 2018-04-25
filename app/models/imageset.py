@@ -21,16 +21,17 @@
 # For more information or to contact visit linclion.org or
 # email tech@linclion.org
 
-import sys
 from schematics.models import Model
 from schematics.types import ModelType, StringType, IntType, DateTimeType,\
     FloatType, BooleanType
 from schematics.types.compound import ListType
 from datetime import datetime
 
+
 class TagLocation(Model):
     title = StringType(required=True, default='Home')
     value = IntType(required=True, default=10000)
+
 
 class ImageSet(Model):
     animal_iid = IntType(required=False, default=None)
@@ -67,7 +68,7 @@ class ImageSet(Model):
 
 
 class Image(Model):
-    image_type = StringType(required=True)
+    image_tags = ListType(StringType, required=True, default=[])
     iid = IntType(required=True)
     image_set_iid = IntType(required=True, default=None)
     is_public = BooleanType(required=True, default=False)
