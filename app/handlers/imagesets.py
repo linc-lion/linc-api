@@ -55,7 +55,7 @@ class ImageSetsHandler(BaseHandler):
     @api_authenticated
     def get(self, imageset_id=None, param=None):
 
-        current_user = yield self.db.users.find_one({'email': self.current_user['username']})
+        current_user = yield self.Users.find_one({'email': self.current_user['username']})
         is_admin = current_user['admin']
         current_organization = yield self.db.organizations.find_one({'iid': current_user['organization_iid']})
 
@@ -69,9 +69,9 @@ class ImageSetsHandler(BaseHandler):
             self.response(200, 'Imagesets list.', output)
         elif imageset_id and param == 'profile':
             query = self.query_id(imageset_id)
-            imgset = yield self.db.imagesets.find_one(query)
+            imgset = yield self.ImageSets.find_one(query)
             if imgset:
-                imgprim = yield self.db[self.animals].find({}, {'primary_image_set_iid': 1}).to_list(None)
+                imgprim = yield self.Animals.find({}, {'primary_image_set_iid': 1}).to_list(None)
                 imgprim = [x['primary_image_set_iid'] for x in imgprim]
                 output = imgset
                 if 'geopos_private' in output.keys():
@@ -97,7 +97,7 @@ class ImageSetsHandler(BaseHandler):
                 else:
                     output['is_primary'] = False
                     queryani = {'iid': output['animal_iid']}
-                animalobj = yield self.db[self.animals].find_one(queryani)
+                animalobj = yield self.Animals.find_one(queryani)
                 if animalobj:
                     output['name'] = animalobj['name']
                     if 'dead' in animalobj.keys():
@@ -124,12 +124,12 @@ class ImageSetsHandler(BaseHandler):
                 del output['main_image_iid']
 
                 # Get image
-                img = yield self.db.images.find_one({'iid': output['main_image_id']})
+                img = yield self.Images.find_one({'iid': output['main_image_id']})
                 if img:
                     output['image'] = self.settings['S3_URL'] + img['url'] + '_thumbnail.jpg'
                     output['thumbnail'] = self.settings['S3_URL'] + img['url'] + '_icon.jpg'
                 else:
-                    img = yield self.db.images.find(
+                    img = yield self.Images.find(
                         {'image_set_iid': output['id']}).to_list(None)
                     if len(img) > 0:
                         output['image'] = self.settings['S3_URL'] + img[0]['url'] + '_thumbnail.jpg'
@@ -138,12 +138,12 @@ class ImageSetsHandler(BaseHandler):
                         output['image'] = ''
                         output['thumbnail'] = ''
 
-                # obji = yield self.db.images.find_one({'iid':obj['main_image_iid']})
+                # obji = yield self.Images.find_one({'iid':obj['main_image_iid']})
                 # if obji:
                 #     imgset_obj['thumbnail'] = self.settings['S3_URL']+obji['url']+'_icon.jpg'
                 #     imgset_obj['image'] = self.settings['S3_URL']+obji['url']+'_medium.jpg'
                 # else:
-                #     obji = yield self.db.images.find({'image_set_iid':obj['iid']}).to_list(None)
+                #     obji = yield self.Images.find({'image_set_iid':obj['iid']}).to_list(None)
                 #     if len(obji) > 0:
                 #         imgset_obj['thumbnail'] = self.settings['S3_URL']+obji[0]['url']+'_icon.jpg'
                 #         imgset_obj['image'] = self.settings['S3_URL']+obji[0]['url']+'_medium.jpg'
@@ -169,12 +169,12 @@ class ImageSetsHandler(BaseHandler):
 
                 # Getting cvrequest for this imageset
                 info(output['id'])
-                cvreq = yield self.db.cvrequests.find_one({'image_set_iid': output['id']})
+                cvreq = yield self.CVRequests.find_one({'image_set_iid': output['id']})
                 info(cvreq)
                 if cvreq:
                     output['cvrequest'] = str(cvreq['_id'])
                     output['req_status'] = cvreq['status']
-                    cvres = yield self.db.cvresults.find_one({'cvrequest_iid': cvreq['iid']})
+                    cvres = yield self.CVResults.find_one({'cvrequest_iid': cvreq['iid']})
                     if cvres:
                         output['cvresults'] = str(cvres['_id'])
                     else:
@@ -185,7 +185,7 @@ class ImageSetsHandler(BaseHandler):
                     output['cvresults'] = None
                 output[self.animals + '_org_id'] = ''
                 if output['animal_iid']:
-                    animal_org_iid = yield self.db[self.animals].find_one({'iid': output['animal_iid']})
+                    animal_org_iid = yield self.Animals.find_one({'iid': output['animal_iid']})
                     if animal_org_iid:
                         output[self.animals +
                                '_org_id'] = animal_org_iid['organization_iid']
@@ -199,12 +199,12 @@ class ImageSetsHandler(BaseHandler):
                 return
         elif imageset_id and param == 'gallery':
             query = self.query_id(imageset_id)
-            objimgset = yield self.db.imagesets.find_one(query)
+            objimgset = yield self.ImageSets.find_one(query)
             if objimgset:
-                # images = yield self.db.images.find(
+                # images = yield self.Images.find(
                 #    {'image_set_iid': objimgset['iid']}).to_list(None)
                 images = yield \
-                    self.db.images.find(
+                    self.Images.find(
                         {'$or': [
                             {'image_set_iid': int(objimgset['iid'])},
                             {'joined': int(objimgset['iid'])}
@@ -230,6 +230,7 @@ class ImageSetsHandler(BaseHandler):
                     imgout['imgset_date_stamp'] = objimgset['date_stamp']
                     imgout['imgset_updated_at'] = objimgset['updated_at'].date().isoformat()
                     imgout['img_updated_at'] = img['updated_at'].date().isoformat()
+                    imgout['img_created_at'] = img['created_at'].date().isoformat()
                     imgout['img_date_stamp'] = None
                     if 'exif_data' in img.keys():
                         exifd = loads(img['exif_data'])
@@ -249,9 +250,9 @@ class ImageSetsHandler(BaseHandler):
         else:
             if imageset_id:
                 query = self.query_id(imageset_id)
-                objimgsets = yield self.db.imagesets.find(query).to_list(None)
+                objimgsets = yield self.ImageSets.find(query).to_list(None)
             else:
-                objimgsets = yield self.db.imagesets.find().to_list(None)
+                objimgsets = yield self.ImageSets.find().to_list(None)
             if len(objimgsets) > 0:
                 loutput = list()
                 for objimgset in objimgsets:
@@ -312,9 +313,9 @@ class ImageSetsHandler(BaseHandler):
             self.finish(self.json_encode({'status': 'success', 'message': response['message'], 'data': response['data']}))
         else:
             query = self.query_id(imageset_id)
-            imgchk = yield self.db.imagesets.find_one(query)
+            imgchk = yield self.ImageSets.find_one(query)
             if imgchk:
-                cvreqchk = yield self.db.cvrequests.find_one({'image_set_iid': imgchk['iid']})
+                cvreqchk = yield self.CVRequests.find_one({'image_set_iid': imgchk['iid']})
                 if cvreqchk:
                     self.response(
                         400, 'A request for indentification of this imageset already exists in the database.')
@@ -337,13 +338,13 @@ class ImageSetsHandler(BaseHandler):
                              }
                             }
                     query_images = {'image_set_iid': imgchk['iid']}
-                    imgs = yield self.db.images.find(query_images).to_list(None)
+                    imgs = yield self.Images.find(query_images).to_list(None)
                     limgs = list()
                     for img in imgs:
                         limgs.append({'id': img['iid'], 'type': img['image_type'], 'url': self.settings[
                                      'S3_URL'] + img['url'] + '_full.jpg'})
                     animals = self.input_data[self.animals]
-                    animalscheck = yield self.db[self.animals].find({'iid': {'$in': animals}}).to_list(None)
+                    animalscheck = yield self.Animals.find({'iid': {'$in': animals}}).to_list(None)
                     if not animalscheck:
                         self.response(400, 'No id valid in the list of ' +
                                       self.animals + ' passed.')
@@ -375,7 +376,7 @@ class ImageSetsHandler(BaseHandler):
                         newobj['request_body'] = sbody
                         newsaved = CVRequest(newobj)
                         newsaved.validate()
-                        newreqadd = yield self.db.cvrequests.insert(newsaved.to_native())
+                        newreqadd = yield self.CVRequests.insert(newsaved.to_native())
                         output = newsaved.to_native()
                         output['obj_id'] = str(newreqadd)
                         self.switch_iid(output)
@@ -404,7 +405,7 @@ class ImageSetsHandler(BaseHandler):
         if imageset_id:
             # getting the object
             query = self.query_id(imageset_id)
-            objimgset = yield self.db.imagesets.find_one(query)
+            objimgset = yield self.ImageSets.find_one(query)
             if objimgset:
                 dt = datetime.now()
                 objimgset['updated_at'] = dt
@@ -419,18 +420,18 @@ class ImageSetsHandler(BaseHandler):
                     if self.input_data[animal_cfg] is None:
                         # Remove joined referenced
                         assocanimalid = objimgset['animal_iid']
-                        primimgsetid = yield self.db[self.animals].find_one({'iid': assocanimalid})
+                        primimgsetid = yield self.Animals.find_one({'iid': assocanimalid})
                         if primimgsetid:
                             primimgsetid = primimgsetid['primary_image_set_iid']
-                            resp = yield self.db.images.update(
+                            resp = yield self.Images.update(
                                 {'$and': [{'image_set_iid': objimgset['iid']},
                                           {'joined': {'$ne': None}}]},
                                 {'$set': {'joined': None}},
                                 multi=True)
                             info(resp)
-                            imgslist = yield self.db.images.find({'image_set_iid': objimgset['iid']}).to_list(None)
+                            imgslist = yield self.Images.find({'image_set_iid': objimgset['iid']}).to_list(None)
                             imgslist = [int(x['iid']) for x in imgslist]
-                            resp = self.db.imagesets.update(
+                            resp = self.ImageSets.update(
                                 {'main_image_iid': {'$in': imgslist}}, {'$set': {'main_image_iid': None}},
                                 multi=True)
                             info(resp)
@@ -487,7 +488,7 @@ class ImageSetsHandler(BaseHandler):
                 # check if user exists
                 useriid = objimgset['uploading_user_iid']
                 userexists = yield \
-                    self.db.users.find_one({'iid': useriid})
+                    self.Users.find_one({'iid': useriid})
                 if not userexists:
                     self.response(409, "Uploading user id \
                         referenced doesn't exist.")
@@ -510,7 +511,7 @@ class ImageSetsHandler(BaseHandler):
                     return
                 if objimgset['animal_iid']:
                     aniexists = yield \
-                        self.db[self.animals].find_one(
+                        self.Animals.find_one(
                             {'iid': objimgset['animal_iid']})
                     if aniexists['iid'] != objimgset['animal_iid']:
                         self.response(409, 'The ' + self.animal +
@@ -519,14 +520,14 @@ class ImageSetsHandler(BaseHandler):
                 # Check for Verification request
                 if animal_cfg in self.input_data.keys() and self.input_data[animal_cfg] is not None:
                     aniexists = yield \
-                        self.db[self.animals].find_one(
+                        self.Animals.find_one(
                             {'iid': self.input_data[animal_cfg]})
                     animal_org_iid = aniexists['organization_iid']
                     imageset_org_iid = objimgset['owner_organization_iid']
                     if animal_org_iid != imageset_org_iid:
                         # Request Verification
                         # Get emails from the
-                        userslist = yield self.db.users.find({'organization_iid': animal_org_iid}).to_list(None)
+                        userslist = yield self.Users.find({'organization_iid': animal_org_iid}).to_list(None)
                         emails = [user['email'] for user in userslist]
                         orgname = yield self.db.organizations.find_one({'iid': int(imageset_org_iid)})
                         aniorg = yield self.db.organizations.find_one({'iid': int(aniexists['organization_iid'])})
@@ -551,9 +552,9 @@ class ImageSetsHandler(BaseHandler):
                                 pemail = yield Task(self.sendEmail, eaddr, msg)
                                 info(pemail)
                 if 'is_verified' in self.input_data.keys() and self.input_data['is_verified'] is True:
-                    imgset2ver = yield self.db.imagesets.find_one(query)
-                    userslist = yield self.db.users.find({'organization_iid': imgset2ver['owner_organization_iid']}).to_list(None)
-                    animobj = yield self.db[self.animals].find_one({'iid': imgset2ver['animal_iid']})
+                    imgset2ver = yield self.ImageSets.find_one(query)
+                    userslist = yield self.Users.find({'organization_iid': imgset2ver['owner_organization_iid']}).to_list(None)
+                    animobj = yield self.Animals.find_one({'iid': imgset2ver['animal_iid']})
                     if animobj:
                         aniorg = yield self.db.organizations.find_one({'iid': animobj['organization_iid']})
                         imgorg = yield self.db.organizations.find_one({'iid': imgset2ver['owner_organization_iid']})
@@ -585,7 +586,7 @@ class ImageSetsHandler(BaseHandler):
                     objimgset = objimgset.to_native()
                     # objimgset['_id'] = imgid
                     updnobj = yield \
-                        self.db.imagesets.update(
+                        self.ImageSets.update(
                             {'_id': imgid}, {'$set': objimgset}, upsert=True)
                     info(updnobj)
                     output = objimgset
@@ -620,24 +621,24 @@ class ImageSetsHandler(BaseHandler):
         # delete an imageset
         if imageset_id:
             query = self.query_id(imageset_id)
-            imgobj = yield self.db.imagesets.find_one(query)
+            imgobj = yield self.ImageSets.find_one(query)
             if imgobj:
                 # check if it's a primary image set
-                imgprim = yield self.db[self.animals].find({}, {'primary_image_set_iid': 1}).to_list(None)
+                imgprim = yield self.Animals.find({}, {'primary_image_set_iid': 1}).to_list(None)
                 imgprim = [int(x['primary_image_set_iid']) for x in imgprim]
                 if int(imageset_id) in imgprim:
                     self.response(400, 'The image set ' + str(imageset_id) +
                                   ' is a primary one, it must be deleted through its ' + self.animal + '.')
                     return
                 # 1 - Remove imaget set
-                rmved = yield self.db.imagesets.remove({'iid': imgobj['iid']})
+                rmved = yield self.ImageSets.remove({'iid': imgobj['iid']})
                 info(str(rmved))
                 # 2 - Remove images of the image set
-                imgl = yield self.db.images.find({'image_set_iid': imgobj['iid']}).to_list(None)
+                imgl = yield self.Images.find({'image_set_iid': imgobj['iid']}).to_list(None)
                 rmlist = list()
                 for img in imgl:
                     # Remove joined referenced
-                    resp = yield self.db.imagesets.update({'main_image_iid': img['iid']}, {'$set': {'main_image_iid': None}})
+                    resp = yield self.ImageSets.update({'main_image_iid': img['iid']}, {'$set': {'main_image_iid': None}})
                     info(resp)
                     # Delete the source file
                     srcurl = self.settings['S3_FOLDER'] + '/imageset_' + \
@@ -653,16 +654,16 @@ class ImageSetsHandler(BaseHandler):
                 if len(rmlist) > 0:
                     rmladd = yield self.db.dellist.insert({'list': rmlist, 'ts': datetime.now()})
                     info(rmladd)
-                rmved = yield self.db.images.remove({'image_set_iid': imgobj['iid']}, multi=True)
+                rmved = yield self.Images.remove({'image_set_iid': imgobj['iid']}, multi=True)
                 info(str(rmved))
                 # 3 - Removing cvrequests and cvresults
-                cvreql = yield self.db.cvrequests.find({'image_set_iid': imgobj['iid']}).to_list(None)
+                cvreql = yield self.CVRequests.find({'image_set_iid': imgobj['iid']}).to_list(None)
                 for cvreq in cvreql:
                     # Removing cvresult
-                    rmved = yield self.db.cvresults.remove({'cvrequest_iid': cvreq['iid']})
+                    rmved = yield self.CVResults.remove({'cvrequest_iid': cvreq['iid']})
                     info(str(rmved))
                     # Removing cvrequest
-                    rmved = yield self.db.cvrequests.remove({'_id': cvreq['_id']})
+                    rmved = yield self.CVRequests.remove({'_id': cvreq['_id']})
                     info(str(rmved))
             else:
                 self.response(404, 'Image set not found.')
@@ -673,12 +674,12 @@ class ImageSetsHandler(BaseHandler):
     @engine
     def list(self, callback=None):
 
-        current_user = yield self.db.users.find_one({'email': self.current_user['username']})
+        current_user = yield self.Users.find_one({'email': self.current_user['username']})
         is_admin = current_user['admin']
         current_organization = yield self.db.organizations.find_one({'iid': current_user['organization_iid']})
 
-        objs_imgsets = yield self.db.imagesets.find().to_list(None)
-        animals = yield self.db[self.animals].find().to_list(None)
+        objs_imgsets = yield self.ImageSets.find().to_list(None)
+        animals = yield self.Animals.find().to_list(None)
         primary_imgsets_list = list()
         animals_names = dict()
         dead_dict = dict()
@@ -700,7 +701,7 @@ class ImageSetsHandler(BaseHandler):
                 imgset_obj['name'] = animals_names[obj['animal_iid']]
                 imgset_obj['dead'] = dead_dict[obj['animal_iid']]
                 imgset_obj[self.animal + '_id'] = obj['animal_iid']
-                animal_org_iid = yield self.db[self.animals].find_one({'iid': obj['animal_iid']})
+                animal_org_iid = yield self.Animals.find_one({'iid': obj['animal_iid']})
                 if animal_org_iid:
                     imgset_obj[self.animals +
                                '_org_id'] = animal_org_iid['organization_iid']
@@ -709,12 +710,12 @@ class ImageSetsHandler(BaseHandler):
                 imgset_obj['dead'] = None
                 imgset_obj[self.animal + '_id'] = None
 
-            obji = yield self.db.images.find_one({'iid': obj['main_image_iid']})
+            obji = yield self.Images.find_one({'iid': obj['main_image_iid']})
             if obji:
                 imgset_obj['thumbnail'] = self.settings['S3_URL'] + obji['url'] + '_icon.jpg'
                 imgset_obj['image'] = self.settings['S3_URL'] + obji['url'] + '_medium.jpg'
             else:
-                obji = yield self.db.images.find({'image_set_iid': obj['iid']}).to_list(None)
+                obji = yield self.Images.find({'image_set_iid': obj['iid']}).to_list(None)
                 if len(obji) > 0:
                     imgset_obj['thumbnail'] = self.settings['S3_URL'] + obji[0]['url'] + '_icon.jpg'
                     imgset_obj['image'] = self.settings['S3_URL'] + obji[0]['url'] + '_medium.jpg'
@@ -777,7 +778,7 @@ class ImageSetsHandler(BaseHandler):
                 imgset_obj['longitude'] = None
                 imgset_obj['tag_location'] = None
 
-            objcvreq = yield self.db.cvrequests.find_one({'image_set_iid': obj['iid']})
+            objcvreq = yield self.CVRequests.find_one({'image_set_iid': obj['iid']})
             if objcvreq:
                 imgset_obj['cvrequest'] = str(objcvreq['_id'])
                 imgset_obj['req_status'] = objcvreq['status']
@@ -787,7 +788,7 @@ class ImageSetsHandler(BaseHandler):
 
             imgset_obj['cvresults'] = None
             if objcvreq:
-                objcvres = yield self.db.cvresults.find_one({'cvrequest_iid': objcvreq['iid']})
+                objcvres = yield self.CVResults.find_one({'cvrequest_iid': objcvreq['iid']})
                 if objcvres:
                     imgset_obj['cvresults'] = str(objcvres['_id'])
             output.append(imgset_obj)

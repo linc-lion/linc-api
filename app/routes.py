@@ -20,7 +20,8 @@
 #
 # For more information or to contact visit linclion.org or email tech@linclion.org
 
-from handlers.base import VersionHandler, DocHandler, DataExportHandler
+from handlers.base import VersionHandler, DocHandler
+from handlers.data_export import DataExportHandler
 from handlers.auth import LoginHandler, LogoutHandler, CheckAuthHandler
 from handlers.auth import RestorePassword, ChangePasswordHandler, RequestAccessHandler
 from handlers.animals import AnimalsHandler

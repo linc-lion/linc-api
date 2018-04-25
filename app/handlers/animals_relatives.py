@@ -57,8 +57,8 @@ class AnimalsRelativesHandler(BaseHandler):
     @api_authenticated
     @check_relative_endpoint
     def get(self, animal_id=None, rurl=None, relid=None):
-        relations = yield self.db.relatives.find({'id_from': int(animal_id)}).to_list(None)
-        trelations = yield self.db.relatives.find({'id_to': int(animal_id)}).to_list(None)
+        relations = yield self.Relatives.find({'id_from': int(animal_id)}).to_list(None)
+        trelations = yield self.Relatives.find({'id_to': int(animal_id)}).to_list(None)
         for obj in trelations:
             if obj['relation'] in ['suspected_father', 'mother']:
                 obj['relation'] = 'cub'
@@ -70,8 +70,8 @@ class AnimalsRelativesHandler(BaseHandler):
         fmsg = 'for the id: %d' % int(animal_id)
         for obj in relations:
             id_to = obj['id_to']
-            animal = yield self.db[self.animals].find_one({'iid': int(id_to)})
-            image_set = yield self.db['imagesets'].find_one({'iid': int(animal['primary_image_set_iid'])})
+            animal = yield self.Animals.find_one({'iid': int(id_to)})
+            image_set = yield self.ImageSets.find_one({'iid': int(animal['primary_image_set_iid'])})
             if(animal):
                 obj['name_to'] = animal['name']
                 obj['gender_to'] = image_set['gender']
@@ -91,7 +91,7 @@ class AnimalsRelativesHandler(BaseHandler):
             'mother', 'suspected_father', 'sibling', 'associate']
         # check gender
         try:
-            gender = yield self.db.imagesets.find_one({'iid': robj['primary_image_set_iid']}, {'gender': 1})
+            gender = yield self.ImageSets.find_one({'iid': robj['primary_image_set_iid']}, {'gender': 1})
             gender = gender.get('gender', None)
             if gender not in ['female', 'male']:
                 gender = None
@@ -146,7 +146,7 @@ class AnimalsRelativesHandler(BaseHandler):
             self.response(400, 'Invalid relationship assignment request with the relation: %s. (The individual with the id %d is a "%s" animal.)' % (relation, int(id_to), gender))
             return
         try:
-            radd = yield self.db.relatives.insert(
+            radd = yield self.Relatives.insert(
                 {'id_from': int(animal_id),
                  'id_to': int(id_to),
                  'relation': relation.lower(),
@@ -184,7 +184,7 @@ class AnimalsRelativesHandler(BaseHandler):
                 relation, int(relid), gender))
             return
         try:
-            radd = yield self.db.relatives.update(
+            radd = yield self.Relatives.update(
                 {'_id': already_relative['_id']},
                 {'$set': {
                     'relation': relation.lower(),
@@ -210,7 +210,7 @@ class AnimalsRelativesHandler(BaseHandler):
         already_relative = already_relative_f or already_relative_t
         if already_relative:
             try:
-                resp = self.db.relatives.remove(
+                resp = self.Relatives.remove(
                     {'id_from': already_relative['id_from'],
                      'id_to': already_relative['id_to']})
             except Exception as e:

@@ -122,9 +122,9 @@ api['SMTP_USERNAME'] = os.environ.get('SMTP_USERNAME', '')
 api['SMTP_PASSWORD'] = os.environ.get('SMTP_PASSWORD')
 api['SMPT_PORT'] = os.environ.get('SMTP_PORT', '587')
 
-api['url'] = os.environ.get('APPURL', '')
+api['url'] = os.environ.get('API_URL', 'http://localhost:5050/')
 api['scheduler'] = TornadoScheduler()
-api['scheduler'].start()
+# api['scheduler'].start()
 # Check CV Server results - every 30 seconds
 api['scheduler'].add_job(checkresults, 'interval', seconds=30, args=[sdb, api])
 # Delete files in S3

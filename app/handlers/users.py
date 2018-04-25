@@ -52,7 +52,7 @@ class UsersHandler(BaseHandler):
     def get(self, user_id=None):
         if user_id:
             if user_id == 'list':
-                objs = yield self.db.users.find().to_list(None)
+                objs = yield self.Users.find().to_list(None)
                 orgs = yield self.db.organizations.find().to_list(None)
                 orgnames = dict()
                 for org in orgs:
@@ -65,7 +65,7 @@ class UsersHandler(BaseHandler):
                      'data': self.list(objs, orgnames)}))
             elif user_id == 'conservationists':
                 orgs = yield self.db.organizations.find().to_list(None)
-                users = yield self.db.users.find().to_list(None)
+                users = yield self.Users.find().to_list(None)
                 orglist = dict()
                 for org in orgs:
                     if org['name'] not in orglist.keys():
@@ -84,7 +84,7 @@ class UsersHandler(BaseHandler):
             else:
                 # return a specific user accepting as id the integer id, hash and name
                 query = self.query_id(user_id)
-                objs = yield self.db.users.find_one(query)
+                objs = yield self.Users.find_one(query)
                 if objs:
                     objuser = objs
                     objuser['obj_id'] = str(objs['_id'])
@@ -100,7 +100,7 @@ class UsersHandler(BaseHandler):
                     self.set_status(404)
                     self.finish(self.json_encode({'status': 'error', 'message': 'not found'}))
         else:
-            objs = yield self.db.users.find().to_list(None)
+            objs = yield self.Users.find().to_list(None)
             output = list()
             for x in objs:
                 obj = dict(x)
@@ -138,7 +138,7 @@ class UsersHandler(BaseHandler):
             newuser.validate()
             # the new object is valid, so try to save
             try:
-                newsaved = yield self.db.users.insert(newuser.to_native())
+                newsaved = yield self.Users.insert(newuser.to_native())
                 output = newuser.to_native()
                 output['obj_id'] = str(newsaved)
                 output['organization_id'] = output['organization_iid']
@@ -181,7 +181,7 @@ class UsersHandler(BaseHandler):
                 break
         if user_id and update_ok:
             query = self.query_id(user_id)
-            updobj = yield self.db.users.find_one(query)
+            updobj = yield self.Users.find_one(query)
             if updobj:
                 for field in fields_allowed_to_be_update:
                     if field in update_data.keys():
@@ -198,7 +198,7 @@ class UsersHandler(BaseHandler):
                     try:
                         updobj = updobj.to_native()
                         updobj['_id'] = updid
-                        saved = yield self.db.users.update({'_id': updid}, updobj)
+                        saved = yield self.Users.update({'_id': updid}, updobj)
                         info(saved)
                         output = updobj
                         output['obj_id'] = str(updid)
@@ -228,12 +228,12 @@ class UsersHandler(BaseHandler):
         # delete an user
         if user_id:
             query = self.query_id(user_id)
-            updobj = yield self.db.users.find_one(query)
+            updobj = yield self.Users.find_one(query)
             if updobj:
                 iid = updobj['iid']
                 # imageset - uploading_user_iid
                 # Imagesets now will be uploaded by the admin iid
-                imgsetrc = yield self.db.imagesets.update(
+                imgsetrc = yield self.ImageSets.update(
                     {'uploading_user_iid': iid},
                     {'$set':
                         {'uploading_user_iid': self.current_user['id'],
@@ -241,7 +241,7 @@ class UsersHandler(BaseHandler):
                     multi=True)
                 info(imgsetrc)
                 try:
-                    updobj = yield self.db.users.remove(query)
+                    updobj = yield self.Users.remove(query)
                     self.response(200, 'User successfully deleted.')
                 except Exception as e:
                     self.response(500, 'Fail to delete user.')
