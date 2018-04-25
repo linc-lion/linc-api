@@ -180,7 +180,7 @@ class OrganizationsHandler(BaseHandler):
                 # check for references
                 iid = updobj['iid']
                 # user - organization_iid
-                userrc = yield self.db.users.update(
+                userrc = yield self.Users.update(
                     {'organization_iid': iid},
                     {'$set': {'organization_iid': self.current_user['org_id'],
                               'updated_at': datetime.now()}},
@@ -188,20 +188,20 @@ class OrganizationsHandler(BaseHandler):
                 info(userrc)
                 # imageset - uploading_organization_iid
                 # imageset - owner_organization_iid
-                imgsetrc1 = yield self.db.imagesets.update(
+                imgsetrc1 = yield self.ImageSets.update(
                     {'uploading_organization_iid': iid},
                     {'$set':
                         {'uploading_organization_iid': self.current_user['org_id'],
                          'updated_at': datetime.now()}},
                     multi=True)
                 info(imgsetrc1)
-                imgsetrc2 = yield self.db.imagesets.update({'owner_organization_iid': iid}, {'$set': {'owner_organization_iid': self.current_user['org_id'], 'updated_at': datetime.now()}}, multi=True)
+                imgsetrc2 = yield self.ImageSets.update({'owner_organization_iid': iid}, {'$set': {'owner_organization_iid': self.current_user['org_id'], 'updated_at': datetime.now()}}, multi=True)
                 info(imgsetrc2)
                 # animal - organization_iid
-                animalsrc = yield self.db[self.animals].update({'organization_iid': iid}, {'$set': {'organization_iid': self.current_user['org_id'], 'updated_at': datetime.now()}}, multi=True)
+                animalsrc = yield self.Animals.update({'organization_iid': iid}, {'$set': {'organization_iid': self.current_user['org_id'], 'updated_at': datetime.now()}}, multi=True)
                 info(animalsrc)
                 # cvrequest - uploading_organization_iid
-                cvreqrc = yield self.db.cvrequests.update({'requesting_organization_iid': iid}, {'$set': {'requesting_organization_iid': self.current_user['org_id'], 'updated_at': datetime.now()}}, multi=True)
+                cvreqrc = yield self.CVRequests.update({'requesting_organization_iid': iid}, {'$set': {'requesting_organization_iid': self.current_user['org_id'], 'updated_at': datetime.now()}}, multi=True)
                 info(cvreqrc)
                 try:
                     updobj = yield self.db.organizations.remove(query)

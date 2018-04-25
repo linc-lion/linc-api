@@ -21,34 +21,38 @@
 # For more information or to contact visit linclion.org or email tech@linclion.org
 
 from tornado.web import RequestHandler, asynchronous
-from tornado.gen import engine, Task
+from tornado.gen import engine
 from tornado import web
 import string
-from datetime import date, datetime
+from datetime import date
 from logging import info
 import bcrypt
 from json import loads, dumps
 from lib.tokens import token_decode
-from lib.rolecheck import api_authenticated
 from os import remove
-from tornado.httpclient import AsyncHTTPClient, HTTPRequest, HTTPError
-from tornado.httputil import HTTPHeaders
-from bson import ObjectId as ObjId
-from schematics.exceptions import ValidationError
-from models.user import User
-from models.imageset import ImageSet
-
+from lib.db import DBMethods
+from lib.http import HTTPMethods
 import smtplib
-import csv
 
 
-class BaseHandler(RequestHandler):
+class BaseHandler(RequestHandler, DBMethods, HTTPMethods):
     # A class to collect common handler methods - all other handlers should inherit this one.
 
     def initialize(self):
+        # Strings configured with the specific animal
         self.animal = self.settings['animal']
         self.animals = self.settings['animals']
+        # Database reference
         self.db = self.settings['db']
+        # Collections references
+        self.Animals = self.settings['db'][self.settings['animals'].lower()]
+        self.Users = self.settings['db'].users
+        self.Orgs = self.settings['db'].organizations
+        self.Relatives = self.settings['db'].relatives
+        self.ImageSets = self.settings['db'].imagesets
+        self.Images = self.settings['db'].images
+        self.CVRequests = self.settings['db'].cvrequests
+        self.CVResults = self.settings['db'].cvresults
 
     def prepare(self):
         # self.auth_check()
@@ -94,27 +98,6 @@ class BaseHandler(RequestHandler):
                 self.token_passed_but_invalid = True
         return res
 
-    @asynchronous
-    @engine
-    def new_iid(self, collection, callback=None):
-        iid = yield self.db.counters.find_and_modify(
-            query={'_id': collection},
-            update={'$inc': {'next': 1}},
-            new=True, upsert=True)
-        callback(int(iid['next']))
-
-    def query_id(self, req_id):
-        """The method configures the query to find an object."""
-        query = None
-        try:
-            query = {'iid': int(req_id)}
-        except Exception as e:
-            try:
-                query = {'_id': ObjId(req_id)}
-            except Exception as e:
-                query = {'name': str(req_id)}
-        return query
-
     def parseInput(self, objmodel):
         valid_fields = objmodel._fields.keys()
         newobj = dict()
@@ -126,25 +109,6 @@ class BaseHandler(RequestHandler):
     def switch_iid(self, obj):
         obj['id'] = obj['iid']
         del obj['iid']
-
-    def response(self, code, message="", data=None, headers=None):
-        output_response = {'status': None, 'message': message}
-        if data:
-            output_response['data'] = data
-        if code < 300:
-            output_response['status'] = 'success'
-        elif code >= 300 and code < 400:
-            output_response['status'] = 'redirect'
-        elif code >= 400 and code < 500:
-            output_response['status'] = 'error'
-        else:
-            output_response['status'] = 'fail'
-        if headers and isinstance(headers, dict):
-            for k, v in headers.items():
-                self.add_header(k, v)
-        self.set_status(code)
-        self.write(self.json_encode(output_response))
-        self.finish()
 
     def json_encode(self, value):
         return dumps(value, default=str).replace("</", "<\\/")
@@ -191,79 +155,6 @@ class BaseHandler(RequestHandler):
 
     @asynchronous
     @engine
-    def api(self, url, method, body=None, headers=None, auth_username=None, auth_password=None, callback=None):
-        AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient")
-        http_client = AsyncHTTPClient()
-        dictheaders = {"content-type": "application/json"}
-        if headers:
-            for k, v in headers.items():
-                dictheaders[k] = v
-        h = HTTPHeaders(dictheaders)
-        params = {
-            'headers': h,
-            'url': url,
-            'method': method,
-            'request_timeout': 720,
-            'validate_cert': False}
-        if method in ['POST', 'PUT']:
-            params['body'] = body
-        if auth_username:
-            params['auth_username'] = auth_username
-            params['auth_password'] = auth_password
-        request = HTTPRequest(**params)
-        try:
-            response = yield http_client.fetch(request)
-        except HTTPError as e:
-            info('HTTTP error returned... ')
-            info("Code: " + str(e.code))
-            info("Message: " + str(e.log_message))
-            if e.response:
-                info('URL: ' + str(e.response.effective_url))
-                info('Reason: ' + str(e.response.reason))
-                info('Body: ' + str(e.response.body))
-                response = e.response
-            else:
-                response = e
-        except Exception as e:
-            # Other errors are possible, such as IOError.
-            info("Other Errors: " + str(e))
-            response = e
-        callback(response)
-
-    def write_error(self, status_code, **kwargs):
-        if status_code == 404:
-            self.response(status_code, 'Resource not found. Check the URL.')
-        elif status_code == 405:
-            self.response(status_code, 'This request is not allowed in this resource. Check your verb (GET,POST,PUT and DELETE)')
-        else:
-            self.response(status_code, 'Request results is an error with the code: %d' % (status_code))
-
-    @asynchronous
-    @engine
-    def changePassword(self, ouser, newpass, callback=None):
-        encpass = self.encryptPassword(newpass)
-        ouser['encrypted_password'] = encpass
-        ouser['updated_at'] = datetime.now()
-        updid = ObjId(ouser['_id'])
-        del ouser['_id']
-        try:
-            updobj = User(ouser)
-            updobj.validate()
-            # the object is valid, so try to save
-            try:
-                updobj = updobj.to_native()
-                updobj['_id'] = updid
-                saved = yield self.db.users.update({'_id': updid}, updobj)
-                info(saved)
-                resp = [200, 'Password changed successfully.']
-            except Exception as e:
-                resp = [400, 'Fail to update password.']
-        except ValidationError as e:
-            resp = [400, 'Invalid input data. Errors: ' + str(e) + '.']
-        callback(resp)
-
-    @asynchronous
-    @engine
     def sendEmail(self, toaddr, msg, callback):
         resp = True
         try:
@@ -286,109 +177,6 @@ class BaseHandler(RequestHandler):
             resp = False
         callback(resp)
 
-    @engine
-    def get_animal_by_id(self, animal_id, callback=None):
-        try:
-            lobj = yield self.db[self.animals].find_one({'iid': int(animal_id)})
-        except Exception as e:
-            info(e)
-            lobj = None
-        callback(lobj)
-
-    @engine
-    def check_relative(self, animal_id, relative_id, callback=None):
-        try:
-            lobj = yield self.db.relatives.find_one({'id_from': int(animal_id), 'id_to': int(relative_id)})
-        except Exception as e:
-            info(e)
-            lobj = None
-        callback(lobj)
-
-    @engine
-    def create_imageset(self, input_data, callback=None):
-        # Create a Imageset first
-        newobj = dict()
-        valid_fields = ImageSet._fields.keys()
-        for k, v in input_data.items():
-            if k in valid_fields:
-                newobj[k] = v
-
-        newobj['iid'] = yield Task(self.new_iid, ImageSet.collection())
-        dt = datetime.now()
-        newobj['created_at'] = dt
-        newobj['updated_at'] = dt
-        # validate the input
-        fields_needed = ['uploading_user_id', 'uploading_organization_id', 'owner_organization_id',
-                         'is_verified', 'gender', 'date_of_birth',
-                         'tags', 'date_stamp', 'notes', self.animal + '_id', 'main_image_id', 'geopos_private']
-        keys = list(input_data.keys())
-        for field in fields_needed:
-            if field not in keys:
-                callback({'code': 400, 'message': 'You must provide the key for ' + field + ' even it has the value = null.'})
-
-        if newobj['date_stamp']:
-            try:
-                dts = datetime.strptime(newobj['date_stamp'], "%Y-%m-%d").date()
-                newobj['date_stamp'] = str(dts)
-            except Exception as e:
-                callback({'code': 400, 'message': 'Invalid date_stamp. you must provide it in format YYYY-MM-DD.'})
-
-        if newobj['date_of_birth']:
-            try:
-                newobj['date_of_birth'] = datetime.strptime(newobj['date_of_birth'], "%Y-%m-%d")
-            except Exception as e:
-                callback({'code': 400, 'message': 'Invalid date_of_birth. you must provide it in format YYYY-MM-DD.'})
-
-        # check if user exists
-        useriid = input_data['uploading_user_id']
-        userexists = yield self.db.users.find_one({'iid': useriid})
-        if userexists:
-            newobj['uploading_user_iid'] = useriid
-        else:
-            callback({'code': 409, 'message': "Uploading user id referenced doesn't exist."})
-
-        # check if organizations exists
-        orgiid = input_data['uploading_organization_id']
-        orgexists = yield self.db.organizations.find_one({'iid': orgiid})
-        if orgexists:
-            newobj['uploading_organization_iid'] = orgiid
-        else:
-            callback({'code': 409, 'message': "Uploading organization id referenced doesn't exist."})
-
-        oorgiid = input_data['owner_organization_id']
-        oorgexists = yield self.db.organizations.find_one({'iid': oorgiid})
-        if oorgexists['iid'] == oorgiid:
-            newobj['owner_organization_iid'] = oorgiid
-        else:
-            callback({'code': 409, 'message': "Owner organization id referenced doesn't exist."})
-
-        if 'latitude' in input_data.keys() and input_data['latitude'] and \
-                'longitude' in input_data.keys() and input_data['longitude']:
-            newobj['location'] = [[input_data['latitude'], input_data['longitude']]]
-
-        newobj['animal_iid'] = input_data[self.animal + '_id']
-
-        try:
-            newimgset = ImageSet(newobj)
-            newimgset.validate()
-            newobj = yield self.db.imagesets.insert(newimgset.to_native())
-            output = newimgset.to_native()
-            self.switch_iid(output)
-            output['obj_id'] = str(newobj)
-            output['owner_organization_id'] = output['owner_organization_iid']
-            del output['owner_organization_iid']
-            output['uploading_organization_id'] = output['uploading_organization_iid']
-            del output['uploading_organization_iid']
-            output['uploading_user_id'] = output['uploading_user_iid']
-            del output['uploading_user_iid']
-            output['main_image_id'] = output['main_image_iid']
-            del output['main_image_iid']
-            output[self.animal + '_id'] = output['animal_iid']
-            del output['animal_iid']
-            callback({'code': 200, 'message': 'new image set added', 'data': output})
-        except ValidationError as e:
-            callback({'code': 400, 'message': "Invalid input data. Error: " + str(e) + "."})
-
 
 class VersionHandler(BaseHandler):
     SUPPORTED_METHODS = ('GET')
@@ -403,38 +191,3 @@ class DocHandler(BaseHandler):
     def get(self):
         self.set_header('Content-Type', 'text/html; charset=UTF-8')
         self.render('documentation.html')
-
-
-class DataExportHandler(BaseHandler):
-    SUPPORTED_METHODS = ('POST')
-
-    def check_structure(self, key, data):
-        if key in data:
-            if isinstance(data[key], list):
-                if all([True if isinstance(x, int) else False for x in data[key]]):
-                    return True
-        return False
-
-    def write_csv(self, cursor):
-        fn = str(ObjId()) + '.csv'
-        with open(fn, 'w', newline='') as csvfile:
-            # Sample
-            fieldnames = ['first_name', 'last_name']
-            writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-            writer.writeheader()
-            writer.writerow({'first_name': 'Baked', 'last_name': 'Beans'})
-            writer.writerow({'first_name': 'Lovely', 'last_name': 'Spam'})
-            writer.writerow(
-                {'first_name': 'Wonderful', 'last_name': 'Spam'})
-        return fn
-
-    @api_authenticated
-    def post(self):
-        if self.check_structure('lions', self.input_data):
-            # Query mongodb
-            self.response(200, 'Will return a file to download.')
-        elif self.check_structure('imagesets', self.input_data):
-            # Query mongodb
-            self.response(200, 'Will return a file to download.')
-        else:
-            self.response(400, 'Invalid call.')

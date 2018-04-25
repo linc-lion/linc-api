@@ -33,6 +33,8 @@ from logging import info
 
 
 class CheckAuthHandler(BaseHandler):
+    SUPPORTED_METHODS = ('GET')
+
     @api_authenticated
     def get(self):
         x_real_ip = self.request.headers.get("X-Real-IP")
@@ -47,6 +49,8 @@ class CheckAuthHandler(BaseHandler):
 
 
 class LoginHandler(BaseHandler):
+    SUPPORTED_METHODS = ('POST')
+
     @asynchronous
     @coroutine
     def post(self):
@@ -56,7 +60,7 @@ class LoginHandler(BaseHandler):
             password = self.input_data['password']
             wlist = self.settings['wait_list']
             count = self.settings['attempts']
-            ouser = yield self.db.users.find_one({'email': username})
+            ouser = yield Task(self.get_user_by_email, username)
             if username in wlist.keys():
                 dt = wlist[username]
                 if datetime.now() < dt + timedelta(minutes=30):
@@ -74,8 +78,7 @@ class LoginHandler(BaseHandler):
                         role = 'admin'
                     else:
                         role = 'user'
-                    org = yield self.db.organizations.find_one(
-                        {'iid': ouser['organization_iid']})
+                    org = yield Task(self.get_org_by_id, ouser['organization_iid'])
                     orgname = ''
                     if org:
                         orgname = org['name']
@@ -98,7 +101,7 @@ class LoginHandler(BaseHandler):
                         'current_sign_in_at': datetime.now(),
                         'current_sign_in_ip': remote_ip
                     }}
-                    upduser = self.db.users.update({'iid': ouser['iid']}, datupd)
+                    upduser = self.Users.update({'iid': ouser['iid']}, datupd)
                     info(upduser)
                     authtoken = web.create_signed_value(
                         self.settings['cookie_secret'], 'authtoken', dumps(objuser))
@@ -139,6 +142,8 @@ class LoginHandler(BaseHandler):
 
 
 class LogoutHandler(BaseHandler):
+    SUPPORTED_METHODS = ('POST')
+
     @api_authenticated
     def post(self):
         info(self.settings['attempts'])
@@ -152,6 +157,8 @@ class LogoutHandler(BaseHandler):
 
 
 class ChangePasswordHandler(BaseHandler):
+    SUPPORTED_METHODS = ('POST')
+
     @asynchronous
     @coroutine
     @api_authenticated
@@ -159,7 +166,7 @@ class ChangePasswordHandler(BaseHandler):
         if 'new_password' in self.input_data.keys():
             if len(self.input_data['new_password']) >= 6:
                 resp = self.db
-                ouser = yield self.db.users.find_one({'email': self.current_user['username']})
+                ouser = yield Task(self.get_user_by_email, self.current_user['username'])
                 if ouser:
                     resp = yield Task(self.changePassword, ouser, self.input_data['new_password'])
                     self.response(resp[0], resp[1])
@@ -172,12 +179,14 @@ class ChangePasswordHandler(BaseHandler):
 
 
 class RestorePassword(BaseHandler):
+    SUPPORTED_METHODS = ('POST')
+
     @asynchronous
     @coroutine
     def post(self):
         if 'email' in self.input_data.keys():
             email = self.input_data['email']
-            ouser = yield self.db.users.find_one({'email': email})
+            ouser = yield self.Users.find_one({'email': email})
             if ouser:
                 try:
                     newpass = gen_token(10)
@@ -186,7 +195,7 @@ class RestorePassword(BaseHandler):
                         self.response(resp[0], resp[1])
                         return
                     emails = [email]
-                    admin_emails = yield self.db.users.find({'admin': True}).to_list(None)
+                    admin_emails = yield self.Users.find({'admin': True}).to_list(None)
                     for i in admin_emails:
                         emails.append(i['email'])
                     emails = list(set(emails))

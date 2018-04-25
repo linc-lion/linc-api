@@ -83,7 +83,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
         download = self.get_argument('download', None)
         if download:
             dimg = [int(x) for x in download.split(', ')]
-            limgs = yield self.db.images.find({'iid': {'$in': dimg}}).to_list(None)
+            limgs = yield self.Images.find({'iid': {'$in': dimg}}).to_list(None)
             if len(limgs) > 0:
                 s3url = self.settings['S3_URL']
                 suf = '_full.jpg'
@@ -104,14 +104,14 @@ class ImagesHandler(BaseHandler, ProcessMixin):
             info(image_id)
             if image_id:
                 if image_id == 'list':
-                    objs = yield self.db.images.find().to_list(None)
+                    objs = yield self.Images.find().to_list(None)
                     self.set_status(200)
                     self.finish(self.json_encode({'status': 'success', 'data': self.list(objs)}))
                 else:
                     # return a specific image accepting as id the integer id, hash and name
                     query = self.query_id(image_id)
                     info(query)
-                    objs = yield self.db.images.find_one(query)
+                    objs = yield self.Images.find_one(query)
                     if objs:
                         objimage = objs
                         self.switch_iid(objimage)
@@ -128,7 +128,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                         self.finish(self.json_encode({'status': 'error', 'message': 'not found'}))
             else:
                 # return a list of images
-                objs = yield self.db.images.find().to_list(None)
+                objs = yield self.Images.find().to_list(None)
                 output = list()
                 for x in objs:
                     obj = dict(x)
@@ -178,7 +178,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
         # Now, check if it already exists in the database
         image_file = open(imgname, 'rb').read()
         filehash = md5(image_file).hexdigest()
-        imgaexists = yield self.db.images.find_one(
+        imgaexists = yield self.Images.find_one(
             {'hashcheck': filehash})
         if imgaexists:
             self.remove_file(imgname)
@@ -205,7 +205,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
             else:
                 newobj[field] = self.input_data[field]
         imgsetid = self.input_data['image_set_id']
-        isexists = yield self.db.imagesets.find_one({'iid': imgsetid})
+        isexists = yield self.ImageSets.find_one({'iid': imgsetid})
         if isexists:
             newobj['image_set_iid'] = imgsetid
             del newobj['image_set_id']
@@ -230,8 +230,8 @@ class ImagesHandler(BaseHandler, ProcessMixin):
             newimage.validate()
             # the new object is valid, so try to save
             try:
-                newsaved = yield self.db.images.insert(newimage.to_native())
-                updurl = yield self.db.images.update({'_id': newsaved}, {'$set': {'url': url + str(newsaved)}})
+                newsaved = yield self.Images.insert(newimage.to_native())
+                updurl = yield self.Images.update({'_id': newsaved}, {'$set': {'url': url + str(newsaved)}})
                 info(updurl)
                 output = newimage.to_native()
                 # File data saved, now start to
@@ -242,7 +242,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                 self.switch_iid(output)
                 # if is Cover
                 if self.input_data['iscover']:
-                    updiscover = self.db.imagesets.update(
+                    updiscover = self.ImageSets.update(
                         {'iid': output['image_set_id']},
                         {'$set': {'updated_at': datetime.now(), 'main_image_iid': output['id']}})
                     info(updiscover)
@@ -276,15 +276,15 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                 self.response(400, 'When the "joined" is submitted, no other key should be sent together.')
                 return
             else:
-                imgobj = yield self.db.images.find_one(
+                imgobj = yield self.Images.find_one(
                     {'iid': int(image_id)})
                 if imgobj:
-                    imgset = yield self.db.imagesets.find_one(
+                    imgset = yield self.ImageSets.find_one(
                         {'$and': [{'iid': int(imgobj['image_set_iid'])},
                                   {'animal_iid': {'$ne': None}}]})
                     # Check if is Primary and its associated
                     if imgset:
-                        imgprim = yield self.db[self.animals].find({}, {'primary_image_set_iid': 1, 'iid': 1}).to_list(None)
+                        imgprim = yield self.Animals.find({}, {'primary_image_set_iid': 1, 'iid': 1}).to_list(None)
                         if imgset['iid'] in [x['primary_image_set_iid'] for x in imgprim]:
                             self.response(400, 'The image is already from a primary image set.')
                             return
@@ -302,10 +302,10 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                         except Exception as e:
                             vjoined = None
                         try:
-                            jimgset = yield self.db.imagesets.find_one(
+                            jimgset = yield self.ImageSets.find_one(
                                 {'iid': int(id_imgset)})
                             if jimgset:
-                                resp = yield self.db.images.update(
+                                resp = yield self.Images.update(
                                     {'iid': int(imgobj['iid'])},
                                     {'$set': {'joined': vjoined}})
                                 info(resp)
@@ -323,7 +323,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                     return
         if 'image_set_id' in self.input_data.keys():
             imgiid = self.input_data['image_set_id']
-            imgset = yield self.db.imagesets.find_one({'iid': imgiid})
+            imgset = yield self.ImageSets.find_one({'iid': imgiid})
             if imgset:
                 update_data['image_set_id'] = imgiid
             else:
@@ -337,7 +337,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                 break
         if image_id and update_ok:
             query = self.query_id(image_id)
-            updobj = yield self.db.images.find_one(query)
+            updobj = yield self.Images.find_one(query)
             updurl = False
             if updobj:
                 for field in fields_allowed_to_be_update:
@@ -356,7 +356,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                         url = folder_name + '/' + updobj['created_at'].date().isoformat() + '_image_' + str(updobj['iid']) + '_' + str(updobj['_id'])
                         # copy image
                         # No need to specify the target bucket if we're copying inside the same bucket
-                        oldimgset = yield self.db.imagesets.find_one({'iid': orig_imgset_id})
+                        oldimgset = yield self.ImageSets.find_one({'iid': orig_imgset_id})
                         srcurl = self.settings['S3_FOLDER'] + '/imageset_' + str(oldimgset['iid']) + '_' + str(oldimgset['_id']) + '/'
                         srcurl = srcurl + updobj['created_at'].date().isoformat() + '_image_' + str(updobj['iid']) + '_' + str(updobj['_id'])
                         desurl = self.settings['S3_FOLDER'] + '/' + url
@@ -368,7 +368,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                     # the object is valid, so try to save
                     try:
                         updobj['_id'] = objupdid
-                        saved = yield self.db.images.update(query, updobj)
+                        saved = yield self.Images.update(query, updobj)
                         info(saved)
                         # Ok, data saved so operate s3
                         # Copy the image to the new imageset
@@ -420,17 +420,17 @@ class ImagesHandler(BaseHandler, ProcessMixin):
         # delete an image
         if image_id:
             query = self.query_id(image_id)
-            updobj = yield self.db.images.find_one(query)
+            updobj = yield self.Images.find_one(query)
             if updobj:
                 # check for references
                 try:
                     info(updobj)
-                    delobj = yield self.db.images.remove(query)
+                    delobj = yield self.Images.remove(query)
                     info(delobj)
                     # Delete the source file
                     bkpcopy = self.settings['S3_FOLDER'] + '/backup/' + updobj['created_at'].date().isoformat() + '_image_' + str(updobj['iid']) + '_' + str(updobj['_id']) + '_full.jpg'
                     info(bkpcopy)
-                    imgset = yield self.db.imagesets.find_one({'iid': updobj['image_set_iid']})
+                    imgset = yield self.ImageSets.find_one({'iid': updobj['image_set_iid']})
                     srcurl = self.settings['S3_FOLDER'] + '/imageset_' + str(imgset['iid']) + '_' + str(imgset['_id']) + '/'
                     srcurl = srcurl + updobj['created_at'].date().isoformat() + '_image_' + str(updobj['iid']) + '_' + str(updobj['_id'])
                     # try:
@@ -438,7 +438,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                     # except Exception as e:
                     #    pass
                     # Remove joined info from imagesets
-                    resp = yield self.db.imagesets.update({'main_image_iid': updobj['iid']}, {'$set': {'main_image_iid': None}})
+                    resp = yield self.ImageSets.update({'main_image_iid': updobj['iid']}, {'$set': {'main_image_iid': None}})
                     info(resp)
                     rmlist = list()
                     try:
