@@ -94,7 +94,7 @@ class CVResultsHandler(BaseHandler):
                                 objres['primary_image_set_id'] = aobj['primary_image_set_iid']
                                 img = yield self.Images.find_one(
                                     {'image_set_iid': aobj['primary_image_set_iid'],
-                                     'image_type': 'main-id'})
+                                     'image_tags': 'main-id'})
                                 if img:
                                     objres['thumbnail'] = self.settings['S3_URL'] + img['url'] + '_icon.jpg'
                                     objres['image'] = self.settings['S3_URL'] + img['url'] + '_medium.jpg'
