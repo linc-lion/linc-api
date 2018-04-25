@@ -196,7 +196,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
         dt = datetime.now()
         newobj['created_at'] = dt
         newobj['updated_at'] = dt
-        fields_needed = ['image_set_id', 'is_public', 'image_type']
+        fields_needed = ['image_set_id', 'is_public', 'image_tags']
         for field in fields_needed:
             if field not in self.input_data.keys():
                 self.remove_file(imgname)
@@ -270,7 +270,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
         # update an image
         # parse data recept by PUT and get only fields of the object
         update_data = self.parseInput(Image)
-        fields_allowed_to_be_update = ['image_set_id', 'is_public', 'image_type', 'joined']
+        fields_allowed_to_be_update = ['image_set_id', 'is_public', 'image_tags', 'joined']
         if 'joined' in self.input_data.keys():
             if len(self.input_data.keys()) > 1:
                 self.response(400, 'When the "joined" is submitted, no other key should be sent together.')
