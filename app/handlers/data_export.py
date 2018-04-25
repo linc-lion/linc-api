@@ -45,7 +45,11 @@ class DataExportHandler(BaseHandler):
         try:
             fieldnames = list(keys.values())
             lines = list()
-            cursor = self.ImageSets.find({'iid': {'$in': idslist}})
+            query = {'iid': {'$in': idslist}}
+            if animals:
+                cursor = self.Animals.find(query)
+            else:
+                cursor = self.ImageSets.find(query)
             cursor.sort([('iid', ASCENDING)])
             while (yield cursor.fetch_next):
                 obj = cursor.next_object()
