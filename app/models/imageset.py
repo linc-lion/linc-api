@@ -68,6 +68,7 @@ class ImageSet(Model):
 
 
 class Image(Model):
+    image_type = StringType(required=True)  # old field
     image_tags = ListType(StringType, required=True, default=[])
     iid = IntType(required=True)
     image_set_iid = IntType(required=True, default=None)
