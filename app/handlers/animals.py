@@ -315,16 +315,18 @@ class AnimalsHandler(BaseHandler):
                 return
 
         # Create a Imageset first
+        imageset = None
         if 'imageset' in self.input_data.keys():
+            if 'id' in self.input_data['imageset']:
+                imageset = yield self.ImageSets.find_one({'iid': self.input_data['imageset']['id']})
+                imageset['id'] = imageset['iid']
+
+        if not imageset:
             response = yield Task(self.create_imageset, self.input_data['imageset'])
-
-        if response and response['code'] != 200:
-            self.response(response['code'], response['message'])
-            return
-
-        # Primary Imageset
-        imageset = response['data']
-        info(imageset)
+            if response and response['code'] != 200:
+                self.response(response['code'], response['message'])
+                return
+            imageset = response['data']
 
         # Create a Lion now
         dt = datetime.now()
@@ -357,8 +359,7 @@ class AnimalsHandler(BaseHandler):
 
                 # Set Lion Id to Imageset
                 try:
-                    updnobj = yield self.ImageSets.update({'iid': imageset['id']}, {'$set': {'lion_id': output['id']}})
-                    info(updnobj)
+                    updnobj = yield self.ImageSets.update({'iid': imageset['id']}, {'$set': {'animal_iid': output['id']}})
                     self.finish(self.json_encode({
                         'status': 'success',
                         'message': 'new %s saved.' % (self.animal),

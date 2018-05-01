@@ -201,8 +201,11 @@ class ImageSetsHandler(BaseHandler):
             query = self.query_id(imageset_id)
             objimgset = yield self.ImageSets.find_one(query)
             if objimgset:
-                # images = yield self.Images.find(
-                #    {'image_set_iid': objimgset['iid']}).to_list(None)
+                # Check if is Primary Imageset
+                imgprim = yield self.Animals.find_one({'iid': objimgset['animal_iid']}, {'primary_image_set_iid':1})
+                is_primary = False
+                if imgprim and imgprim['primary_image_set_iid'] == objimgset['animal_iid']:
+                    is_primary = True
                 images = yield \
                     self.Images.find(
                         {'$or': [
@@ -221,7 +224,12 @@ class ImageSetsHandler(BaseHandler):
                     imgout = {'id': img['iid'], 'tags': img['image_tags'],
                               'is_public': img['is_public'], 'joined': vjoined}
                     if vjoined:
-                        imgout['joined_from'] = img['image_set_iid']
+                        if is_primary:
+                            imgout['joined_from'] = objimgset['iid']
+                            imgout['joined_to'] = img['image_set_iid']
+                        else:
+                            imgout['joined_from'] = img['image_set_iid']
+                            imgout['joined_to'] = imgprim['primary_image_set_iid']
                     if 'filename' in img.keys() and img['filename'] != '':
                         imgout['filename'] = img['filename']
                     else:
