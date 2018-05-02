@@ -194,8 +194,16 @@ class BaseHandler(RequestHandler, DBMethods, HTTPMethods):
 
     @engine
     def cache_set(self, key, prefix, data=None, ttl=432000, callback=None):
-        if key and data:
+        resp = None
+        if key and prefix and data:
             resp = self.cache.set(str(prefix) + '-' + str(key), dumps(data), ttl)
+        callback(resp)
+
+    @engine
+    def cache_remove(self, key, prefix, callback=None):
+        resp = None
+        if key and prefix:
+            resp = self.cache.delete(str(prefix) + '-' + str(key))
         callback(resp)
 
 class VersionHandler(BaseHandler):
