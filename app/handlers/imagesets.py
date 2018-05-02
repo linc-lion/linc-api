@@ -52,7 +52,7 @@ class ImageSetsHandler(BaseHandler):
 
     @asynchronous
     @coroutine
-    # @api_authenticated
+    @api_authenticated
     def get(self, imageset_id=None, param=None):
         current_user = yield self.Users.find_one({'email': self.current_user['username']})
         is_admin = current_user['admin']
@@ -707,8 +707,6 @@ class ImageSetsHandler(BaseHandler):
                 imgset_obj['id'] = obj['iid']
                 imgset_obj[self.animals + '_org_id'] = ''
                 if obj['animal_iid']:
-                    info(animals_names)
-                    info(obj['animal_iid'])
                     imgset_obj['name'] = animals_names[obj['animal_iid']]
                     imgset_obj['dead'] = dead_dict[obj['animal_iid']]
                     imgset_obj[self.animal + '_id'] = obj['animal_iid']
@@ -803,7 +801,8 @@ class ImageSetsHandler(BaseHandler):
                     if objcvres:
                         imgset_obj['cvresults'] = str(objcvres['_id'])
                 output.append(imgset_obj)
-                addcache = yield Task(self.cache_set, obj['iid'], 'imgset', None)
+                addcache = yield Task(self.cache_set, obj['iid'], 'imgset', imgset_obj, None)
+                info(addcache)
         callback(output)
 
     @engine
@@ -820,10 +819,10 @@ class ImageSetsHandler(BaseHandler):
                 dead_dict[x['iid']] = x['dead']
             else:
                 dead_dict[x['iid']] = False
-        callback({
-            'animals': animals.copy(),
+        output = {
+            'animals': animals,
             'primary_imgsets_list': primary_imgsets_list.copy(),
-            'animals_names': animals_names.copy(),
-            'dead_dict': dead_dict.copy()
-        })
-        
+            'animals_names': animals_names,
+            'dead_dict': dead_dict
+        }
+        callback(output)
