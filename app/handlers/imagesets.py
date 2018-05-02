@@ -52,13 +52,11 @@ class ImageSetsHandler(BaseHandler):
 
     @asynchronous
     @coroutine
-    @api_authenticated
+    # @api_authenticated
     def get(self, imageset_id=None, param=None):
-
         current_user = yield self.Users.find_one({'email': self.current_user['username']})
         is_admin = current_user['admin']
         current_organization = yield self.db.organizations.find_one({'iid': current_user['organization_iid']})
-
         if param == 'cvrequest':
             self.response(400, 'To request cv identification you must use POST method.')
             return
@@ -202,7 +200,7 @@ class ImageSetsHandler(BaseHandler):
             objimgset = yield self.ImageSets.find_one(query)
             if objimgset:
                 # Check if is Primary Imageset
-                imgprim = yield self.Animals.find_one({'iid': objimgset['animal_iid']}, {'primary_image_set_iid':1})
+                imgprim = yield self.Animals.find_one({'iid': objimgset['animal_iid']}, {'primary_image_set_iid': 1})
                 is_primary = False
                 if imgprim and imgprim['primary_image_set_iid'] == objimgset['animal_iid']:
                     is_primary = True
@@ -680,12 +678,132 @@ class ImageSetsHandler(BaseHandler):
     @asynchronous
     @engine
     def list(self, callback=None):
-
         current_user = yield self.Users.find_one({'email': self.current_user['username']})
         is_admin = current_user['admin']
         current_organization = yield self.db.organizations.find_one({'iid': current_user['organization_iid']})
-
+        support_data = None
+        output = list()
         objs_imgsets = yield self.ImageSets.find().to_list(None)
+        for obj in objs_imgsets:
+            imgsetcache = yield Task(self.cache_read, obj['iid'], 'imgset')
+            if imgsetcache:
+                output.append(imgsetcache.copy())
+            else:
+                # prepare data
+                if not support_data:
+                    support_data = yield Task(self.get_support_data)
+                    animals = support_data['animals'].copy()
+                    primary_imgsets_list = support_data['primary_imgsets_list'].copy()
+                    animals_names = support_data['animals_names'].copy(),
+                    dead_dict = support_data['dead_dict'].copy()
+                    support_data = True
+                imgset_obj = dict()
+                imgset_obj['obj_id'] = str(obj['_id'])
+                imgset_obj['id'] = obj['iid']
+                imgset_obj[self.animals + '_org_id'] = ''
+                if obj['animal_iid']:
+                    info(animals_names)
+                    info(obj['animal_iid'])
+                    imgset_obj['name'] = animals_names[obj['animal_iid']]
+                    imgset_obj['dead'] = dead_dict[obj['animal_iid']]
+                    imgset_obj[self.animal + '_id'] = obj['animal_iid']
+                    animal_org_iid = yield self.Animals.find_one({'iid': obj['animal_iid']})
+                    if animal_org_iid:
+                        imgset_obj[self.animals +
+                                '_org_id'] = animal_org_iid['organization_iid']
+                else:
+                    imgset_obj['name'] = '-'
+                    imgset_obj['dead'] = None
+                    imgset_obj[self.animal + '_id'] = None
+
+                obji = yield self.Images.find_one({'iid': obj['main_image_iid']})
+                if obji:
+                    imgset_obj['thumbnail'] = self.settings['S3_URL'] + obji['url'] + '_icon.jpg'
+                    imgset_obj['image'] = self.settings['S3_URL'] + obji['url'] + '_medium.jpg'
+                else:
+                    obji = yield self.Images.find({'image_set_iid': obj['iid']}).to_list(None)
+                    if len(obji) > 0:
+                        imgset_obj['thumbnail'] = self.settings['S3_URL'] + obji[0]['url'] + '_icon.jpg'
+                        imgset_obj['image'] = self.settings['S3_URL'] + obji[0]['url'] + '_medium.jpg'
+                    else:
+                        imgset_obj['thumbnail'] = ''
+                        imgset_obj['image'] = ''
+
+                if obj['date_of_birth']:
+                    imgset_obj['age'] = self.age(born=obj['date_of_birth'])
+                else:
+                    imgset_obj['age'] = '-'
+
+                if obj['date_stamp']:
+                    imgset_obj['date_stamp'] = obj['date_stamp']
+                else:
+                    imgset_obj['date_stamp'] = '-'
+
+                if obj['tags']:
+                    imgset_obj['tags'] = obj['tags']
+                else:
+                    imgset_obj['tags'] = None
+
+                if 'geopos_private' in obj.keys():
+                    imgset_obj['geopos_private'] = obj['geopos_private']
+                else:
+                    imgset_obj['geopos_private'] = False
+                if 'joined' in obj.keys():
+                    imgset_obj['joined'] = obj['joined']
+                else:
+                    imgset_obj['joined'] = []
+
+                if obj['owner_organization_iid']:
+                    objo = yield self.db.organizations.find_one({'iid': obj['owner_organization_iid']})
+                    if objo:
+                        imgset_obj['organization'] = objo['name']
+                        imgset_obj['organization_id'] = obj['owner_organization_iid']
+                    else:
+                        imgset_obj['organization'] = '-'
+                        imgset_obj['organization_id'] = '-'
+
+                imgset_obj['gender'] = obj['gender']
+                imgset_obj['is_verified'] = obj['is_verified']
+                imgset_obj['is_primary'] = (obj['iid'] in primary_imgsets_list)
+
+                can_show = (True if (is_admin or current_organization['iid'] == imgset_obj['organization_id']) else False) if imgset_obj['geopos_private'] else True
+                if can_show:
+                    if obj['location']:
+                        imgset_obj['latitude'] = obj['location'][0][0]
+                        imgset_obj['longitude'] = obj['location'][0][1]
+                    else:
+                        imgset_obj['latitude'] = None
+                        imgset_obj['longitude'] = None
+
+                    if 'tag_location' in obj.keys():
+                        imgset_obj['tag_location'] = obj['tag_location']
+                    else:
+                        imgset_obj['tag_location'] = None
+                else:
+                    imgset_obj['latitude'] = None
+                    imgset_obj['longitude'] = None
+                    imgset_obj['tag_location'] = None
+
+                objcvreq = yield self.CVRequests.find_one({'image_set_iid': obj['iid']})
+                if objcvreq:
+                    imgset_obj['cvrequest'] = str(objcvreq['_id'])
+                    imgset_obj['req_status'] = objcvreq['status']
+                else:
+                    imgset_obj['cvrequest'] = None
+                    imgset_obj['req_status'] = None
+
+                imgset_obj['cvresults'] = None
+                if objcvreq:
+                    objcvres = yield self.CVResults.find_one({'cvrequest_iid': objcvreq['iid']})
+                    if objcvres:
+                        imgset_obj['cvresults'] = str(objcvres['_id'])
+                output.append(imgset_obj)
+                addcache = yield Task(self.cache_set, obj['iid'], 'imgset')
+                info('addcache')
+        callback(output)
+
+    @engine
+    def get_support_data(self, callback=None):
         animals = yield self.Animals.find().to_list(None)
         primary_imgsets_list = list()
         animals_names = dict()
@@ -698,105 +816,10 @@ class ImageSetsHandler(BaseHandler):
                 dead_dict[x['iid']] = x['dead']
             else:
                 dead_dict[x['iid']] = False
-        output = list()
-        for obj in objs_imgsets:
-            imgset_obj = dict()
-            imgset_obj['obj_id'] = str(obj['_id'])
-            imgset_obj['id'] = obj['iid']
-            imgset_obj[self.animals + '_org_id'] = ''
-            if obj['animal_iid']:
-                imgset_obj['name'] = animals_names[obj['animal_iid']]
-                imgset_obj['dead'] = dead_dict[obj['animal_iid']]
-                imgset_obj[self.animal + '_id'] = obj['animal_iid']
-                animal_org_iid = yield self.Animals.find_one({'iid': obj['animal_iid']})
-                if animal_org_iid:
-                    imgset_obj[self.animals +
-                               '_org_id'] = animal_org_iid['organization_iid']
-            else:
-                imgset_obj['name'] = '-'
-                imgset_obj['dead'] = None
-                imgset_obj[self.animal + '_id'] = None
-
-            obji = yield self.Images.find_one({'iid': obj['main_image_iid']})
-            if obji:
-                imgset_obj['thumbnail'] = self.settings['S3_URL'] + obji['url'] + '_icon.jpg'
-                imgset_obj['image'] = self.settings['S3_URL'] + obji['url'] + '_medium.jpg'
-            else:
-                obji = yield self.Images.find({'image_set_iid': obj['iid']}).to_list(None)
-                if len(obji) > 0:
-                    imgset_obj['thumbnail'] = self.settings['S3_URL'] + obji[0]['url'] + '_icon.jpg'
-                    imgset_obj['image'] = self.settings['S3_URL'] + obji[0]['url'] + '_medium.jpg'
-                else:
-                    imgset_obj['thumbnail'] = ''
-                    imgset_obj['image'] = ''
-
-            if obj['date_of_birth']:
-                imgset_obj['age'] = self.age(born=obj['date_of_birth'])
-            else:
-                imgset_obj['age'] = '-'
-
-            if obj['date_stamp']:
-                imgset_obj['date_stamp'] = obj['date_stamp']
-            else:
-                imgset_obj['date_stamp'] = '-'
-
-            if obj['tags']:
-                imgset_obj['tags'] = obj['tags']
-            else:
-                imgset_obj['tags'] = None
-
-            if 'geopos_private' in obj.keys():
-                imgset_obj['geopos_private'] = obj['geopos_private']
-            else:
-                imgset_obj['geopos_private'] = False
-            if 'joined' in obj.keys():
-                imgset_obj['joined'] = obj['joined']
-            else:
-                imgset_obj['joined'] = []
-
-            if obj['owner_organization_iid']:
-                objo = yield self.db.organizations.find_one({'iid': obj['owner_organization_iid']})
-                if objo:
-                    imgset_obj['organization'] = objo['name']
-                    imgset_obj['organization_id'] = obj['owner_organization_iid']
-                else:
-                    imgset_obj['organization'] = '-'
-                    imgset_obj['organization_id'] = '-'
-
-            imgset_obj['gender'] = obj['gender']
-            imgset_obj['is_verified'] = obj['is_verified']
-            imgset_obj['is_primary'] = (obj['iid'] in primary_imgsets_list)
-
-            can_show = (True if (is_admin or current_organization['iid'] == imgset_obj['organization_id']) else False) if imgset_obj['geopos_private'] else True
-            if can_show:
-                if obj['location']:
-                    imgset_obj['latitude'] = obj['location'][0][0]
-                    imgset_obj['longitude'] = obj['location'][0][1]
-                else:
-                    imgset_obj['latitude'] = None
-                    imgset_obj['longitude'] = None
-
-                if 'tag_location' in obj.keys():
-                    imgset_obj['tag_location'] = obj['tag_location']
-                else:
-                    imgset_obj['tag_location'] = None
-            else:
-                imgset_obj['latitude'] = None
-                imgset_obj['longitude'] = None
-                imgset_obj['tag_location'] = None
-
-            objcvreq = yield self.CVRequests.find_one({'image_set_iid': obj['iid']})
-            if objcvreq:
-                imgset_obj['cvrequest'] = str(objcvreq['_id'])
-                imgset_obj['req_status'] = objcvreq['status']
-            else:
-                imgset_obj['cvrequest'] = None
-                imgset_obj['req_status'] = None
-
-            imgset_obj['cvresults'] = None
-            if objcvreq:
-                objcvres = yield self.CVResults.find_one({'cvrequest_iid': objcvreq['iid']})
-                if objcvres:
-                    imgset_obj['cvresults'] = str(objcvres['_id'])
-            output.append(imgset_obj)
-        callback(output)
+        callback({
+            'animals': animals.copy(),
+            'primary_imgsets_list': primary_imgsets_list.copy(),
+            'animals_names': animals_names.copy(),
+            'dead_dict': dead_dict.copy()
+        })
+        

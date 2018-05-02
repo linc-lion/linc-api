@@ -34,6 +34,8 @@ from lib.tokens import gen_token, mksecret
 from apscheduler.schedulers.tornado import TornadoScheduler
 from pymongo import MongoClient
 from logging import info
+from redis import Redis, ConnectionPool
+
 
 # Adjusting path for the app
 
@@ -116,7 +118,7 @@ api['S3_SECRET_KEY'] = os.environ.get('S3_SECRET_KEY', '')
 
 api['EMAIL_FROM'] = os.environ.get('EMAIL_FROM', 'linclionproject@gmail.com')
 # new request access email address
-api['EMAIL_NEWUSER']  = os.environ.get('EMAIL_NEWUSER', 'info@lionguardians.org')
+api['EMAIL_NEWUSER'] = os.environ.get('EMAIL_NEWUSER', 'info@lionguardians.org')
 api['SMTP_SERVER'] = os.environ.get('SMTP_SERVER', 'email-smtp.us-east-1.amazonaws.com')
 api['SMTP_USERNAME'] = os.environ.get('SMTP_USERNAME', '')
 api['SMTP_PASSWORD'] = os.environ.get('SMTP_PASSWORD')
@@ -129,3 +131,6 @@ api['scheduler'] = TornadoScheduler()
 api['scheduler'].add_job(checkresults, 'interval', seconds=30, args=[sdb, api])
 # Delete files in S3
 api['scheduler'].add_job(checkS3, 'interval', seconds=50, args=[sdb, api])
+
+redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+api['cache'] = Redis(connection_pool=ConnectionPool.from_url(redis_url))

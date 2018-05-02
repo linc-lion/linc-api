@@ -33,6 +33,7 @@ from os import remove
 from lib.db import DBMethods
 from lib.http import HTTPMethods
 import smtplib
+from tornado.web import HTTPError
 
 
 class BaseHandler(RequestHandler, DBMethods, HTTPMethods):
@@ -53,6 +54,7 @@ class BaseHandler(RequestHandler, DBMethods, HTTPMethods):
         self.Images = self.settings['db'].images
         self.CVRequests = self.settings['db'].cvrequests
         self.CVResults = self.settings['db'].cvresults
+        self.cache = self.settings['cache']
 
     def prepare(self):
         # self.auth_check()
@@ -177,6 +179,24 @@ class BaseHandler(RequestHandler, DBMethods, HTTPMethods):
             resp = False
         callback(resp)
 
+    @engine
+    def cache_read(self, key, prefix, callback=None):
+        resp = None
+        if key:
+            val = self.cache.get(str(prefix) + '-' + str(key))
+            if val:
+                try:
+                    resp = loads(val)
+                except Exception as e:
+                    info(e)
+                    raise HTTPError('Fail to deserialize data from cache.')
+        callback(resp)
+
+    @engine
+    def cache_set(self, key, prefix, data=None, ttl=432000, callback=None):
+        if key and data:
+            resp = self.cache.set(str(prefix) + '-' + str(key), dumps(data), ttl)
+        callback(resp)
 
 class VersionHandler(BaseHandler):
     SUPPORTED_METHODS = ('GET')
