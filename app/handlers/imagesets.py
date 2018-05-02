@@ -412,6 +412,7 @@ class ImageSetsHandler(BaseHandler):
             query = self.query_id(imageset_id)
             objimgset = yield self.ImageSets.find_one(query)
             if objimgset:
+                objiid = objimgset['iid']
                 dt = datetime.now()
                 objimgset['updated_at'] = dt
                 # validate the input
@@ -607,6 +608,8 @@ class ImageSetsHandler(BaseHandler):
                     del output['main_image_iid']
                     output[self.animal + '_id'] = output['animal_iid']
                     del output['animal_iid']
+                    rem = yield Task(self.cache_remove, str(objiid), 'imgset')
+                    info(rem)
                     self.set_status(200)
                     self.finish(self.json_encode(
                         {'status': 'success', 'message': 'image set updated', 'data': output}))
@@ -638,6 +641,8 @@ class ImageSetsHandler(BaseHandler):
                 # 1 - Remove imaget set
                 rmved = yield self.ImageSets.remove({'iid': imgobj['iid']})
                 info(str(rmved))
+                rem = yield Task(self.cache_remove, imgobj['iid'], 'imgset')
+                info(rem)
                 # 2 - Remove images of the image set
                 imgl = yield self.Images.find({'image_set_iid': imgobj['iid']}).to_list(None)
                 rmlist = list()
@@ -692,10 +697,10 @@ class ImageSetsHandler(BaseHandler):
                 # prepare data
                 if not support_data:
                     support_data = yield Task(self.get_support_data)
-                    animals = support_data['animals'].copy()
+                    animals = support_data['animals']
                     primary_imgsets_list = support_data['primary_imgsets_list'].copy()
-                    animals_names = support_data['animals_names'].copy(),
-                    dead_dict = support_data['dead_dict'].copy()
+                    animals_names = support_data['animals_names']
+                    dead_dict = support_data['dead_dict']
                     support_data = True
                 imgset_obj = dict()
                 imgset_obj['obj_id'] = str(obj['_id'])
@@ -799,7 +804,6 @@ class ImageSetsHandler(BaseHandler):
                         imgset_obj['cvresults'] = str(objcvres['_id'])
                 output.append(imgset_obj)
                 addcache = yield Task(self.cache_set, obj['iid'], 'imgset')
-                info('addcache')
         callback(output)
 
     @engine
