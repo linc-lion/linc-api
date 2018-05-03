@@ -195,11 +195,7 @@ class BaseHandler(RequestHandler, DBMethods, HTTPMethods):
     @engine
     def cache_set(self, key, prefix, data=None, ttl=432000, callback=None):
         resp = None
-<<<<<<< HEAD
         if key and prefix and data:
-=======
-        if key and data:
->>>>>>> ef89333768aa96039c3f492b4e562c747dc62199
             resp = self.cache.set(str(prefix) + '-' + str(key), dumps(data), ttl)
         callback(resp)
 
