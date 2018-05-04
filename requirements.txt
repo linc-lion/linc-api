@@ -8,3 +8,5 @@ bcrypt
 APScheduler
 git+https://github.com/venidera/tornadoist.git
 boto
+redis
+
