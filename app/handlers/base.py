@@ -206,6 +206,18 @@ class BaseHandler(RequestHandler, DBMethods, HTTPMethods):
             resp = self.cache.delete(str(prefix) + '-' + str(key))
         callback(resp)
 
+    def write_error(self, status_code=404, **kwargs):
+        if status_code == 404:
+            self.response(
+                status_code, 'Resource not found.')
+        elif status_code == 405:
+            self.response(
+                status_code, 'Method not allowed in this resource. ' +
+                'Check your verb (GET, POST, PUT and DELETE).')
+        else:
+            info(kwargs)
+            self.response(status_code, 'Error: ' + str(kwargs))
+
 class VersionHandler(BaseHandler):
     SUPPORTED_METHODS = ('GET')
 
