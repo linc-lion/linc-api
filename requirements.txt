@@ -1,5 +1,5 @@
 dateutils
-tornado
+tornado==4.5.3
 Pillow
 motor
 pycurl
