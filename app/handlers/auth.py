@@ -101,7 +101,7 @@ class LoginHandler(BaseHandler):
                         'current_sign_in_at': datetime.now(),
                         'current_sign_in_ip': remote_ip
                     }}
-                    upduser = self.Users.update({'iid': ouser['iid']}, datupd)
+                    upduser = yield self.Users.update({'iid': ouser['iid']}, datupd)
                     info(upduser)
                     authtoken = web.create_signed_value(
                         self.settings['cookie_secret'], 'authtoken', dumps(objuser))
