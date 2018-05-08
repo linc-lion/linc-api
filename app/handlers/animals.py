@@ -360,6 +360,9 @@ class AnimalsHandler(BaseHandler):
                 # Set Lion Id to Imageset
                 try:
                     updnobj = yield self.ImageSets.update({'iid': imageset['id']}, {'$set': {'animal_iid': output['id']}})
+                    # Remove the imageset from the cache to be updated
+                    rem = yield Task(self.cache_remove, imageset['iid'], 'imgset')
+                    info(rem)
                     self.finish(self.json_encode({
                         'status': 'success',
                         'message': 'new %s saved.' % (self.animal),
