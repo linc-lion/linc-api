@@ -360,6 +360,9 @@ class AnimalsHandler(BaseHandler):
                 # Set Lion Id to Imageset
                 try:
                     updnobj = yield self.ImageSets.update({'iid': imageset['id']}, {'$set': {'animal_iid': output['id']}})
+                    # Remove the imageset from the cache to be updated
+                    rem = yield Task(self.cache_remove, imageset['iid'], 'imgset')
+                    info(rem)
                     self.finish(self.json_encode({
                         'status': 'success',
                         'message': 'new %s saved.' % (self.animal),
@@ -580,7 +583,12 @@ class AnimalsHandler(BaseHandler):
                 imgset = yield self.ImageSets.find_one(
                     {'iid': x['primary_image_set_iid']})
                 if imgset:
-                    obj['age'] = self.age(imgset['date_of_birth'])
+                    if imgset['date_of_birth']:
+                        obj['age'] = self.age(imgset['date_of_birth'])
+                        obj['date_of_birth'] = imgset['date_of_birth'].date().isoformat()
+                    else:
+                        obj['age'] = '-'
+                        obj['date_of_birth'] = '-'
                     if imgset['date_stamp']:
                         obj['date_stamp'] = imgset['date_stamp']
                     else:
