@@ -603,6 +603,11 @@ class AnimalsHandler(BaseHandler):
                     else:
                         obj['geopos_private'] = False
 
+                    if imgset['notes']:
+                        obj['notes'] = imgset['notes']
+                    else:
+                        obj['notes'] = ''
+
                     can_show = (True if (is_admin or current_organization['iid'] == obj['organization_id']) else False) if obj['geopos_private'] else True
                     if can_show:
                         if imgset['location']:
