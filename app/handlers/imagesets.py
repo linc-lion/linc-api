@@ -759,6 +759,11 @@ class ImageSetsHandler(BaseHandler):
                 else:
                     imgset_obj['joined'] = []
 
+                if 'notes' in obj.keys():
+                    imgset_obj['notes'] = obj['notes']
+                else:
+                    imgset_obj['notes'] = ''
+
                 if obj['owner_organization_iid']:
                     objo = yield self.db.organizations.find_one({'iid': obj['owner_organization_iid']})
                     if objo:
