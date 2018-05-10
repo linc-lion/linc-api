@@ -583,7 +583,12 @@ class AnimalsHandler(BaseHandler):
                 imgset = yield self.ImageSets.find_one(
                     {'iid': x['primary_image_set_iid']})
                 if imgset:
-                    obj['age'] = self.age(imgset['date_of_birth'])
+                    if imgset['date_of_birth']:
+                        obj['age'] = self.age(imgset['date_of_birth'])
+                        obj['date_of_birth'] = imgset['date_of_birth'].date().isoformat()
+                    else:
+                        obj['age'] = '-'
+                        obj['date_of_birth'] = '-'
                     if imgset['date_stamp']:
                         obj['date_stamp'] = imgset['date_stamp']
                     else:
