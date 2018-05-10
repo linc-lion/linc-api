@@ -688,8 +688,9 @@ class ImageSetsHandler(BaseHandler):
         current_organization = yield self.db.organizations.find_one({'iid': current_user['organization_iid']})
         support_data = None
         output = list()
-        objs_imgsets = yield self.ImageSets.find().to_list(None)
-        for obj in objs_imgsets:
+        cursor = self.ImageSets.find()
+        while (yield cursor.fetch_next):
+            obj = cursor.next_object()
             imgsetcache = yield Task(self.cache_read, obj['iid'], 'imgset')
             if imgsetcache:
                 output.append(imgsetcache.copy())
@@ -734,8 +735,10 @@ class ImageSetsHandler(BaseHandler):
 
                 if obj['date_of_birth']:
                     imgset_obj['age'] = self.age(born=obj['date_of_birth'])
+                    imgset_obj['date_of_birth'] = obj['date_of_birth'].date().isoformat()
                 else:
                     imgset_obj['age'] = '-'
+                    imgset_obj['date_of_birth'] = '-'
 
                 if obj['date_stamp']:
                     imgset_obj['date_stamp'] = obj['date_stamp']

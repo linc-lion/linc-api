@@ -84,6 +84,7 @@ class CVResultsHandler(BaseHandler):
                             objres['image'] = ''
                             objres['age'] = '-'
                             objres['gender'] = ''
+                            objres['tags'] = '[]'
                             objres['is_verified'] = False
                             objres['organization'] = ''
                             objres['organization_id'] = ''
@@ -111,6 +112,7 @@ class CVResultsHandler(BaseHandler):
                                 if imgss:
                                     objres['age'] = self.age(imgss['date_of_birth'])
                                     objres['gender'] = imgss['gender']
+                                    objres['tags'] = imgss['tags']
                                     objres['is_verified'] = imgss['is_verified']
                                 if aobj:
                                     objres['organization_id'] = aobj['organization_iid']
