@@ -740,8 +740,10 @@ class ImageSetsHandler(BaseHandler):
 
                 if obj['date_of_birth']:
                     imgset_obj['age'] = self.age(born=obj['date_of_birth'])
+                    imgset_obj['date_of_birth'] = obj['date_of_birth'].date().isoformat()
                 else:
                     imgset_obj['age'] = '-'
+                    imgset_obj['date_of_birth'] = '-'
 
                 if obj['date_stamp']:
                     imgset_obj['date_stamp'] = obj['date_stamp']
@@ -761,6 +763,11 @@ class ImageSetsHandler(BaseHandler):
                     imgset_obj['joined'] = obj['joined']
                 else:
                     imgset_obj['joined'] = []
+
+                if 'notes' in obj.keys():
+                    imgset_obj['notes'] = obj['notes']
+                else:
+                    imgset_obj['notes'] = ''
 
                 if obj['owner_organization_iid']:
                     objo = yield self.db.organizations.find_one({'iid': obj['owner_organization_iid']})
