@@ -336,7 +336,7 @@ class ImageSetsHandler(BaseHandler):
                     else:
                         age = None
                     body = {
-                        "identification": { 
+                        "identification": {
                             "images": list(),
                             "gender": imgchk['gender'],
                             "age": age,
@@ -388,7 +388,6 @@ class ImageSetsHandler(BaseHandler):
                             # Remove cache from this imageset
                             rem = yield Task(self.cache_remove, str(imageset_id), 'imgset')
                             info(rem)
-                            # 
                             output = newsaved.to_native()
                             output['obj_id'] = str(newreqadd)
                             self.switch_iid(output)
@@ -720,8 +719,7 @@ class ImageSetsHandler(BaseHandler):
                     imgset_obj[self.animal + '_id'] = obj['animal_iid']
                     animal_org_iid = yield self.Animals.find_one({'iid': obj['animal_iid']})
                     if animal_org_iid:
-                        imgset_obj[self.animals +
-                                '_org_id'] = animal_org_iid['organization_iid']
+                        imgset_obj[self.animals + '_org_id'] = animal_org_iid['organization_iid']
                 else:
                     imgset_obj['name'] = '-'
                     imgset_obj['dead'] = None
