@@ -335,18 +335,18 @@ class ImageSetsHandler(BaseHandler):
                         age = self.age(imgchk['date_of_birth'])
                     else:
                         age = None
-                    body = {"identification":
-                            {"images": list(),
-                             "gender": imgchk['gender'],
-                             "age": age,
-                             self.animals: list()
-                             }
-                            }
+                    body = {
+                        "identification": { 
+                            "images": list(),
+                            "gender": imgchk['gender'],
+                            "age": age,
+                            self.animals: list()
+                        }}
                     query_images = {'image_set_iid': imgchk['iid']}
                     imgs = yield self.Images.find(query_images).to_list(None)
                     limgs = list()
                     for img in imgs:
-                        limgs.append({'id': img['iid'], 'tags': img['image_tags'], 'url': self.settings[
+                        limgs.append({'id': img['iid'], 'type': img['image_type'], 'tags': img['image_tags'], 'url': self.settings[
                                      'S3_URL'] + img['url'] + '_full.jpg'})
                     animals = self.input_data[self.animals]
                     animalscheck = yield self.Animals.find({'iid': {'$in': animals}}).to_list(None)
@@ -369,34 +369,39 @@ class ImageSetsHandler(BaseHandler):
                                               body=sbody,
                                               auth_username=self.settings['CV_USERNAME'],
                                               auth_password=self.settings['CV_PASSWORD'])
-                        rbody = json_decode(response.body)
-                        # Create a cvrequest mongodb object for this ImageSet
-                        newobj = dict()
-                        newobj['iid'] = yield Task(self.new_iid, CVRequest.collection())
-                        # This will be get from the user that do the request
-                        newobj['requesting_organization_iid'] = self.current_user['org_id']
-                        newobj['image_set_iid'] = imageset_id
-                        newobj['status'] = rbody['status']
-                        newobj['server_uuid'] = rbody['id']
-                        newobj['request_body'] = sbody
-                        newsaved = CVRequest(newobj)
-                        newsaved.validate()
-                        newreqadd = yield self.CVRequests.insert(newsaved.to_native())
-                        output = newsaved.to_native()
-                        output['obj_id'] = str(newreqadd)
-                        self.switch_iid(output)
-                        del output['request_body']
-                        output['requesting_organization_id'] = output['requesting_organization_iid']
-                        del output['requesting_organization_iid']
-                        output['image_set_id'] = output['image_set_iid']
-                        del output['image_set_iid']
-                        self.set_status(response.code)
-                        self.finish(self.json_encode(
-                            {'status': 'success', 'message': response.reason, 'data': output}))
+                        if response and hasattr(response, 'code') and response.code == 200:
+                            rbody = json_decode(response.body)
+                            info(rbody)
+                            info(response)
+                            # Create a cvrequest mongodb object for this ImageSet
+                            newobj = dict()
+                            newobj['iid'] = yield Task(self.new_iid, CVRequest.collection())
+                            # This will be get from the user that do the request
+                            newobj['requesting_organization_iid'] = self.current_user['org_id']
+                            newobj['image_set_iid'] = imageset_id
+                            newobj['status'] = rbody['status']
+                            newobj['server_uuid'] = rbody['id']
+                            newobj['request_body'] = sbody
+                            newsaved = CVRequest(newobj)
+                            newsaved.validate()
+                            newreqadd = yield self.CVRequests.insert(newsaved.to_native())
+                            output = newsaved.to_native()
+                            output['obj_id'] = str(newreqadd)
+                            self.switch_iid(output)
+                            del output['request_body']
+                            output['requesting_organization_id'] = output['requesting_organization_iid']
+                            del output['requesting_organization_iid']
+                            output['image_set_id'] = output['image_set_iid']
+                            del output['image_set_iid']
+                            self.set_status(response.code)
+                            self.finish(self.json_encode(
+                                {'status': 'success', 'message': response.reason, 'data': output}))
+                        else:
+                            self.response(500, 'Request failed.')
                     except ValidationError as e:
-                        self.set_status(500)
-                        self.finish(
-                            {'status': 'error', 'message': 'Fail to execute the request for identification. Errors: ' + str(e)})
+                        self.response(
+                            500,
+                            'Fail to execute the request for identification.')
                 else:
                     self.response(400, 'Bad request.')
             else:
