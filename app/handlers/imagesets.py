@@ -385,6 +385,10 @@ class ImageSetsHandler(BaseHandler):
                             newsaved = CVRequest(newobj)
                             newsaved.validate()
                             newreqadd = yield self.CVRequests.insert(newsaved.to_native())
+                            # Remove cache from this imageset
+                            rem = yield Task(self.cache_remove, str(imageset_id), 'imgset')
+                            info(rem)
+                            # 
                             output = newsaved.to_native()
                             output['obj_id'] = str(newreqadd)
                             self.switch_iid(output)
@@ -393,9 +397,7 @@ class ImageSetsHandler(BaseHandler):
                             del output['requesting_organization_iid']
                             output['image_set_id'] = output['image_set_iid']
                             del output['image_set_iid']
-                            self.set_status(response.code)
-                            self.finish(self.json_encode(
-                                {'status': 'success', 'message': response.reason, 'data': output}))
+                            self.response(response.code, response.reason, output)
                         else:
                             self.response(500, 'Request failed.')
                     except ValidationError as e:
