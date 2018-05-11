@@ -583,7 +583,12 @@ class AnimalsHandler(BaseHandler):
                 imgset = yield self.ImageSets.find_one(
                     {'iid': x['primary_image_set_iid']})
                 if imgset:
-                    obj['age'] = self.age(imgset['date_of_birth'])
+                    if imgset['date_of_birth']:
+                        obj['age'] = self.age(imgset['date_of_birth'])
+                        obj['date_of_birth'] = imgset['date_of_birth'].date().isoformat()
+                    else:
+                        obj['age'] = '-'
+                        obj['date_of_birth'] = '-'
                     if imgset['date_stamp']:
                         obj['date_stamp'] = imgset['date_stamp']
                     else:
@@ -597,6 +602,11 @@ class AnimalsHandler(BaseHandler):
                         obj['geopos_private'] = imgset['geopos_private']
                     else:
                         obj['geopos_private'] = False
+
+                    if imgset['notes']:
+                        obj['notes'] = imgset['notes']
+                    else:
+                        obj['notes'] = ''
 
                     can_show = (True if (is_admin or current_organization['iid'] == obj['organization_id']) else False) if obj['geopos_private'] else True
                     if can_show:
