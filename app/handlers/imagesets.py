@@ -414,11 +414,14 @@ class ImageSetsHandler(BaseHandler):
     def put(self, imageset_id=None):
         # update an imageset
         if imageset_id:
+            # Clear cache for the imageset_id
+            rem = yield Task(self.cache_remove, str(imageset_id), 'imgset')
+            info(rem)
             # getting the object
             query = self.query_id(imageset_id)
             objimgset = yield self.ImageSets.find_one(query)
             if objimgset:
-                objiid = objimgset['iid']
+                # objiid = objimgset['iid']
                 dt = datetime.now()
                 objimgset['updated_at'] = dt
                 # validate the input
@@ -614,8 +617,6 @@ class ImageSetsHandler(BaseHandler):
                     del output['main_image_iid']
                     output[self.animal + '_id'] = output['animal_iid']
                     del output['animal_iid']
-                    rem = yield Task(self.cache_remove, str(objiid), 'imgset')
-                    info(rem)
                     self.set_status(200)
                     self.finish(self.json_encode(
                         {'status': 'success', 'message': 'image set updated', 'data': output}))
@@ -704,7 +705,7 @@ class ImageSetsHandler(BaseHandler):
                 # prepare data
                 if not support_data:
                     support_data = yield Task(self.get_support_data)
-                    animals = support_data['animals']
+                    # animals = support_data['animals']
                     primary_imgsets_list = support_data['primary_imgsets_list'].copy()
                     animals_names = support_data['animals_names']
                     dead_dict = support_data['dead_dict']
@@ -839,3 +840,33 @@ class ImageSetsHandler(BaseHandler):
             'dead_dict': dead_dict
         }
         callback(output)
+
+
+class ImageSetsCheckRequirementsHandler(BaseHandler):
+    SUPPORTED_METHODS = ('GET')
+
+    @asynchronous
+    @coroutine
+    @api_authenticated
+    def get(self, imageset_id=None, cvrequirements=None):
+        info(cvrequirements)
+        try:
+            imageset_id = int(imageset_id)
+        except Exception as e:
+            imageset_id = None
+        if not imageset_id:
+            self.response(400, 'Invalid request')
+        else:
+            resp_cv = 0
+            resp_wh = 0
+            try:
+                resp_cv = yield self.Images.find({'image_tags': ['cv'], 'image_set_iid': imageset_id}).count()
+                resp_wh = yield self.Images.find(
+                    {'$or': [
+                        {'image_tags': ['whisker']},
+                        {'image_tags': ['whisker-left']},
+                        {'image_tags': ['whisker-right']}], 'image_set_iid': imageset_id}).count()
+            except Exception as e:
+                info(e)
+            output = {'cv': bool(resp_cv), 'whisker': bool(resp_wh)}
+            self.response(200, 'Requirements checked for image set = {}.'.format(imageset_id), output)
