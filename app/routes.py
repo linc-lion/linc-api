@@ -28,7 +28,7 @@ from handlers.animals import AnimalsHandler
 from handlers.animals_relatives import AnimalsRelativesHandler
 from handlers.organizations import OrganizationsHandler
 from handlers.users import UsersHandler
-from handlers.imagesets import ImageSetsHandler, ImageSetsCheckRequirementsHandler
+from handlers.imagesets import ImageSetsHandler, ImageSetsCheckReqHandler
 from handlers.images import ImagesHandler
 from handlers.cvrequests import CVRequestsHandler
 from handlers.cvresults import CVResultsHandler
@@ -40,10 +40,10 @@ def url_patterns(animals='lions'):
         (r"/version/?", VersionHandler),
         (r"/auth/login/?", LoginHandler),
         (r"/auth/logout/?", LogoutHandler),
-        (r"/auth/check", CheckAuthHandler),
-        (r"/auth/recover", RestorePassword),
-        (r"/auth/requestaccess", RequestAccessHandler),
-        (r"/auth/changepassword", ChangePasswordHandler),
+        (r"/auth/check/?", CheckAuthHandler),
+        (r"/auth/recover/?", RestorePassword),
+        (r"/auth/requestaccess/?", RequestAccessHandler),
+        (r"/auth/changepassword/?", ChangePasswordHandler),
         (r"/data/export/?$", DataExportHandler),
         (r"/documentation.html", DocHandler),
 
@@ -55,26 +55,26 @@ def url_patterns(animals='lions'):
         (r"/" + animals + "/(\w+)/(relatives)/(\w+)/?$", AnimalsRelativesHandler),
 
         (r"/organizations/?$", OrganizationsHandler),
-        (r"/organizations/(.*)$", OrganizationsHandler),
+        (r"/organizations/(.*)/?$", OrganizationsHandler),
 
         (r"/users/?$", UsersHandler),
-        (r"/users/(.*)$", UsersHandler),
+        (r"/users/(.*)/?$", UsersHandler),
 
         (r"/images/?$", ImagesHandler),
-        (r"/images/(\w+$)", ImagesHandler),
+        (r"/images/(\w+$)/?", ImagesHandler),
 
         (r"/imagesets/?$", ImageSetsHandler),
         (r"/imagesets/(\w+)/?$", ImageSetsHandler),
-        (r"/imagesets/(\w+)/(cvrequest)$", ImageSetsHandler),
-        (r"/imagesets/(\w+)/(profile)$", ImageSetsHandler),
-        (r"/imagesets/(\w+)/(gallery)$", ImageSetsHandler),
-        (r"/imagesets/(\w+)/(cvrequirements)$", ImageSetsCheckRequirementsHandler),
+        (r"/imagesets/(\w+)/(cvrequest)/?$", ImageSetsHandler),
+        (r"/imagesets/(\w+)/(profile)/?$", ImageSetsHandler),
+        (r"/imagesets/(\w+)/(gallery)/?$", ImageSetsHandler),
+        (r"/imagesets/(\w+)/(cvrequirements)/?$", ImageSetsCheckReqHandler),
 
         (r"/cvrequests/?$", CVRequestsHandler),
-        (r"/cvrequests/(\w+$)", CVRequestsHandler),
+        (r"/cvrequests/(\w+$)/?", CVRequestsHandler),
 
         (r"/cvresults/?$", CVResultsHandler),
-        (r"/cvresults/(\w+$)", CVResultsHandler),
-        (r"/cvresults/(\w+)/(list)$", CVResultsHandler)
+        (r"/cvresults/(\w+$)/?", CVResultsHandler),
+        (r"/cvresults/(\w+)/(list)/?$", CVResultsHandler)
     ]
     return routes

@@ -842,7 +842,7 @@ class ImageSetsHandler(BaseHandler):
         callback(output)
 
 
-class ImageSetsCheckRequirementsHandler(BaseHandler):
+class ImageSetsCheckReqHandler(BaseHandler):
     SUPPORTED_METHODS = ('GET')
 
     @asynchronous
