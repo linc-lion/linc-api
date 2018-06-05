@@ -218,6 +218,7 @@ class BaseHandler(RequestHandler, DBMethods, HTTPMethods):
             info(kwargs)
             self.response(status_code, 'Error: ' + str(kwargs))
 
+
 class VersionHandler(BaseHandler):
     SUPPORTED_METHODS = ('GET')
 
