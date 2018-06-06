@@ -55,6 +55,9 @@ class ImageSetsHandler(BaseHandler):
     @api_authenticated
     def get(self, imageset_id=None, param=None):
         current_user = yield self.Users.find_one({'email': self.current_user['username']})
+        if not current_user:
+            self.response(401, 'Authentication required.')
+            return
         is_admin = current_user['admin']
         current_organization = yield self.db.organizations.find_one({'iid': current_user['organization_iid']})
         if param == 'cvrequest':
@@ -109,9 +112,6 @@ class ImageSetsHandler(BaseHandler):
                     output['age'] = str(self.age(output['date_of_birth']))
                 else:
                     output['age'] = '-'
-
-                # output['organization_id'] = output['organization_iid']
-                # del output['organization_iid']
                 output['uploading_organization_id'] = output['uploading_user_iid']
                 del output['uploading_user_iid']
                 output['uploading_organization_id'] = output['uploading_organization_iid']
@@ -135,20 +135,6 @@ class ImageSetsHandler(BaseHandler):
                     else:
                         output['image'] = ''
                         output['thumbnail'] = ''
-
-                # obji = yield self.Images.find_one({'iid':obj['main_image_iid']})
-                # if obji:
-                #     imgset_obj['thumbnail'] = self.settings['S3_URL']+obji['url']+'_icon.jpg'
-                #     imgset_obj['image'] = self.settings['S3_URL']+obji['url']+'_medium.jpg'
-                # else:
-                #     obji = yield self.Images.find({'image_set_iid':obj['iid']}).to_list(None)
-                #     if len(obji) > 0:
-                #         imgset_obj['thumbnail'] = self.settings['S3_URL']+obji[0]['url']+'_icon.jpg'
-                #         imgset_obj['image'] = self.settings['S3_URL']+obji[0]['url']+'_medium.jpg'
-                #     else:
-                #         imgset_obj['thumbnail'] = ''
-                #         imgset_obj['image'] = ''
-
                 can_show = (True if (is_admin or current_organization['iid'] == org['iid']) else False) if output['geopos_private'] else True
                 if can_show:
                     if output['location']:
