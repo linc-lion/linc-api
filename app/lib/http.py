@@ -63,8 +63,7 @@ class HTTPMethods:
             response = yield http_client.fetch(request)
         except HTTPError as e:
             info('HTTTP error returned... ')
-            info("Code: " + str(e.code))
-            info("Message: " + str(e.log_message))
+            info(str(e))
             if e.response:
                 info('URL: ' + str(e.response.effective_url))
                 info('Reason: ' + str(e.response.reason))

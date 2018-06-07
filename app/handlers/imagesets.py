@@ -55,6 +55,9 @@ class ImageSetsHandler(BaseHandler):
     @api_authenticated
     def get(self, imageset_id=None, param=None):
         current_user = yield self.Users.find_one({'email': self.current_user['username']})
+        if not current_user:
+            self.response(401, 'Authentication required.')
+            return
         is_admin = current_user['admin']
         current_organization = yield self.db.organizations.find_one({'iid': current_user['organization_iid']})
         if param == 'cvrequest':
@@ -109,9 +112,6 @@ class ImageSetsHandler(BaseHandler):
                     output['age'] = str(self.age(output['date_of_birth']))
                 else:
                     output['age'] = '-'
-
-                # output['organization_id'] = output['organization_iid']
-                # del output['organization_iid']
                 output['uploading_organization_id'] = output['uploading_user_iid']
                 del output['uploading_user_iid']
                 output['uploading_organization_id'] = output['uploading_organization_iid']
@@ -135,20 +135,6 @@ class ImageSetsHandler(BaseHandler):
                     else:
                         output['image'] = ''
                         output['thumbnail'] = ''
-
-                # obji = yield self.Images.find_one({'iid':obj['main_image_iid']})
-                # if obji:
-                #     imgset_obj['thumbnail'] = self.settings['S3_URL']+obji['url']+'_icon.jpg'
-                #     imgset_obj['image'] = self.settings['S3_URL']+obji['url']+'_medium.jpg'
-                # else:
-                #     obji = yield self.Images.find({'image_set_iid':obj['iid']}).to_list(None)
-                #     if len(obji) > 0:
-                #         imgset_obj['thumbnail'] = self.settings['S3_URL']+obji[0]['url']+'_icon.jpg'
-                #         imgset_obj['image'] = self.settings['S3_URL']+obji[0]['url']+'_medium.jpg'
-                #     else:
-                #         imgset_obj['thumbnail'] = ''
-                #         imgset_obj['image'] = ''
-
                 can_show = (True if (is_admin or current_organization['iid'] == org['iid']) else False) if output['geopos_private'] else True
                 if can_show:
                     if output['location']:
@@ -335,18 +321,18 @@ class ImageSetsHandler(BaseHandler):
                         age = self.age(imgchk['date_of_birth'])
                     else:
                         age = None
-                    body = {"identification":
-                            {"images": list(),
-                             "gender": imgchk['gender'],
-                             "age": age,
-                             self.animals: list()
-                             }
-                            }
+                    body = {
+                        "identification": {
+                            "images": list(),
+                            "gender": imgchk['gender'],
+                            "age": age,
+                            self.animals: list()
+                        }}
                     query_images = {'image_set_iid': imgchk['iid']}
                     imgs = yield self.Images.find(query_images).to_list(None)
                     limgs = list()
                     for img in imgs:
-                        limgs.append({'id': img['iid'], 'tags': img['image_tags'], 'url': self.settings[
+                        limgs.append({'id': img['iid'], 'type': img['image_type'], 'tags': img['image_tags'], 'url': self.settings[
                                      'S3_URL'] + img['url'] + '_full.jpg'})
                     animals = self.input_data[self.animals]
                     animalscheck = yield self.Animals.find({'iid': {'$in': animals}}).to_list(None)
@@ -369,34 +355,40 @@ class ImageSetsHandler(BaseHandler):
                                               body=sbody,
                                               auth_username=self.settings['CV_USERNAME'],
                                               auth_password=self.settings['CV_PASSWORD'])
-                        rbody = json_decode(response.body)
-                        # Create a cvrequest mongodb object for this ImageSet
-                        newobj = dict()
-                        newobj['iid'] = yield Task(self.new_iid, CVRequest.collection())
-                        # This will be get from the user that do the request
-                        newobj['requesting_organization_iid'] = self.current_user['org_id']
-                        newobj['image_set_iid'] = imageset_id
-                        newobj['status'] = rbody['status']
-                        newobj['server_uuid'] = rbody['id']
-                        newobj['request_body'] = sbody
-                        newsaved = CVRequest(newobj)
-                        newsaved.validate()
-                        newreqadd = yield self.CVRequests.insert(newsaved.to_native())
-                        output = newsaved.to_native()
-                        output['obj_id'] = str(newreqadd)
-                        self.switch_iid(output)
-                        del output['request_body']
-                        output['requesting_organization_id'] = output['requesting_organization_iid']
-                        del output['requesting_organization_iid']
-                        output['image_set_id'] = output['image_set_iid']
-                        del output['image_set_iid']
-                        self.set_status(response.code)
-                        self.finish(self.json_encode(
-                            {'status': 'success', 'message': response.reason, 'data': output}))
+                        if response and hasattr(response, 'code') and response.code == 200:
+                            rbody = json_decode(response.body)
+                            info(rbody)
+                            info(response)
+                            # Create a cvrequest mongodb object for this ImageSet
+                            newobj = dict()
+                            newobj['iid'] = yield Task(self.new_iid, CVRequest.collection())
+                            # This will be get from the user that do the request
+                            newobj['requesting_organization_iid'] = self.current_user['org_id']
+                            newobj['image_set_iid'] = imageset_id
+                            newobj['status'] = rbody['status']
+                            newobj['server_uuid'] = rbody['id']
+                            newobj['request_body'] = sbody
+                            newsaved = CVRequest(newobj)
+                            newsaved.validate()
+                            newreqadd = yield self.CVRequests.insert(newsaved.to_native())
+                            # Remove cache from this imageset
+                            rem = yield Task(self.cache_remove, str(imageset_id), 'imgset')
+                            info(rem)
+                            output = newsaved.to_native()
+                            output['obj_id'] = str(newreqadd)
+                            self.switch_iid(output)
+                            del output['request_body']
+                            output['requesting_organization_id'] = output['requesting_organization_iid']
+                            del output['requesting_organization_iid']
+                            output['image_set_id'] = output['image_set_iid']
+                            del output['image_set_iid']
+                            self.response(response.code, response.reason, output)
+                        else:
+                            self.response(500, 'Request failed.')
                     except ValidationError as e:
-                        self.set_status(500)
-                        self.finish(
-                            {'status': 'error', 'message': 'Fail to execute the request for identification. Errors: ' + str(e)})
+                        self.response(
+                            500,
+                            'Fail to execute the request for identification.')
                 else:
                     self.response(400, 'Bad request.')
             else:
@@ -408,11 +400,14 @@ class ImageSetsHandler(BaseHandler):
     def put(self, imageset_id=None):
         # update an imageset
         if imageset_id:
+            # Clear cache for the imageset_id
+            rem = yield Task(self.cache_remove, str(imageset_id), 'imgset')
+            info(rem)
             # getting the object
             query = self.query_id(imageset_id)
             objimgset = yield self.ImageSets.find_one(query)
             if objimgset:
-                objiid = objimgset['iid']
+                # objiid = objimgset['iid']
                 dt = datetime.now()
                 objimgset['updated_at'] = dt
                 # validate the input
@@ -608,8 +603,6 @@ class ImageSetsHandler(BaseHandler):
                     del output['main_image_iid']
                     output[self.animal + '_id'] = output['animal_iid']
                     del output['animal_iid']
-                    rem = yield Task(self.cache_remove, str(objiid), 'imgset')
-                    info(rem)
                     self.set_status(200)
                     self.finish(self.json_encode(
                         {'status': 'success', 'message': 'image set updated', 'data': output}))
@@ -698,7 +691,7 @@ class ImageSetsHandler(BaseHandler):
                 # prepare data
                 if not support_data:
                     support_data = yield Task(self.get_support_data)
-                    animals = support_data['animals']
+                    # animals = support_data['animals']
                     primary_imgsets_list = support_data['primary_imgsets_list'].copy()
                     animals_names = support_data['animals_names']
                     dead_dict = support_data['dead_dict']
@@ -713,8 +706,7 @@ class ImageSetsHandler(BaseHandler):
                     imgset_obj[self.animal + '_id'] = obj['animal_iid']
                     animal_org_iid = yield self.Animals.find_one({'iid': obj['animal_iid']})
                     if animal_org_iid:
-                        imgset_obj[self.animals +
-                                '_org_id'] = animal_org_iid['organization_iid']
+                        imgset_obj[self.animals + '_org_id'] = animal_org_iid['organization_iid']
                 else:
                     imgset_obj['name'] = '-'
                     imgset_obj['dead'] = None
@@ -834,3 +826,33 @@ class ImageSetsHandler(BaseHandler):
             'dead_dict': dead_dict
         }
         callback(output)
+
+
+class ImageSetsCheckReqHandler(BaseHandler):
+    SUPPORTED_METHODS = ('GET')
+
+    @asynchronous
+    @coroutine
+    @api_authenticated
+    def get(self, imageset_id=None, cvrequirements=None):
+        info(cvrequirements)
+        try:
+            imageset_id = int(imageset_id)
+        except Exception as e:
+            imageset_id = None
+        if not imageset_id:
+            self.response(400, 'Invalid request')
+        else:
+            resp_cv = 0
+            resp_wh = 0
+            try:
+                resp_cv = yield self.Images.find({'image_tags': ['cv'], 'image_set_iid': imageset_id}).count()
+                resp_wh = yield self.Images.find(
+                    {'$or': [
+                        {'image_tags': ['whisker']},
+                        {'image_tags': ['whisker-left']},
+                        {'image_tags': ['whisker-right']}], 'image_set_iid': imageset_id}).count()
+            except Exception as e:
+                info(e)
+            output = {'cv': bool(resp_cv), 'whisker': bool(resp_wh)}
+            self.response(200, 'Requirements checked for image set = {}.'.format(imageset_id), output)
