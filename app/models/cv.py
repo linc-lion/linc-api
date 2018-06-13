@@ -30,7 +30,6 @@ class CVRequest(Model):
     iid = IntType(required=True)
     image_set_iid = IntType(required=True)
     status = StringType(required=True,default='registered')
-    server_uuid = StringType(required=True)
     request_body = StringType(required=True,default='')
     created_at = DateTimeType(required=True,default=datetime.now())
     updated_at = DateTimeType(required=True,default=datetime.now())
