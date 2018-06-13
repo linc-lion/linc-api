@@ -108,6 +108,8 @@ api['CVSERVER_URL_IDENTIFICATION'] = os.environ.get('CVSERVER_URL_IDENTIFICATION
 api['CVSERVER_URL_RESULTS'] = os.environ.get('CVSERVER_URL_RESULTS', '')
 api['CV_USERNAME'] = os.environ.get('CV_USERNAME', '')
 api['CV_PASSWORD'] = os.environ.get('CV_PASSWORD', '')
+api['CVSERVER_URL'] = os.environ.get('CVSERVER_URL', 'http://52.207.96.155:5000')
+api['CV_APIKEY'] = os.environ.get('CV_APIKEY', '')
 
 api['S3_BUCKET'] = os.environ.get('S3_BUCKET', '')
 api['S3_FOLDER'] = 'linc-api-' + api['animals']
@@ -128,7 +130,7 @@ api['url'] = os.environ.get('API_URL', 'http://localhost:5050/')
 api['scheduler'] = TornadoScheduler()
 api['scheduler'].start()
 # Check CV Server results - every 30 seconds
-api['scheduler'].add_job(checkresults, 'interval', seconds=30, args=[sdb, api])
+api['scheduler'].add_job(checkresults, 'interval', seconds=50, args=[sdb, api])
 # Delete files in S3
 api['scheduler'].add_job(checkS3, 'interval', seconds=50, args=[sdb, api])
 
