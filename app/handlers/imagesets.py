@@ -873,12 +873,10 @@ class ImageSetsCheckReqHandler(BaseHandler):
                         url=self.settings['CVSERVER_URL'] + '/linc/v1/capabilities',
                         method='GET',
                         headers={'ApiKey': self.settings['CV_APIKEY']})
-                    info(resp)
-                    info(dir(resp))
                     if resp.code == 200 and output['cv']:
                         output['cv_lion_list'] = [int(x) for x in loads(resp.body.decode('utf-8'))['valid_cv_lion_ids']]
                     if resp.code == 200 and output['whisker']:
-                        output['whisker_lion_list'] = [int(x) for x in loads(resp.body.decode('utf-8'))['valid_cv_whisker_labels']]
+                        output['whisker_lion_ids'] = [int(x) for x in loads(resp.body.decode('utf-8'))['valid_whisker_lion_ids']]
                 except Exception as e:
                     info(e)
                     info('Fail to retrieve classifier capabilities.')

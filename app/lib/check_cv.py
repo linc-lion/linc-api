@@ -24,10 +24,12 @@ from tornado.escape import json_decode
 from logging import info
 from datetime import datetime
 from json import dumps, loads
+from time import time
 
 
 @gen.coroutine
 def checkresults(db, api):
+    ini = time()
     info('=========================================================================')
     info(' Starting CV Request processing - {}'.format(datetime.now().isoformat()))
     info('=========================================================================')
@@ -66,6 +68,8 @@ def checkresults(db, api):
         info(req_body)
         resp_cv = loads(cvres['match_probability'])
         # Check for cv results
+        # cv_topk_classifier_accuracy
+        # whisker_topk_classifier_accuracy
         if req_body.get('classifiers', False):
             info(' >>> CV Request invalid - id: {}'.format(cvreq['iid']))
             info(' >>> No classifiers found.')
@@ -133,5 +137,5 @@ def checkresults(db, api):
                 # Other errors are possible, such as IOError.
                 info("Other Errors: " + str(e))
     info('=========================================================================')
-    info(' CV Request processing finished - {}'.format(datetime.now().isoformat()))
+    info(' CV Request processing finished - Execution time: {} s'.format(time()-ini))
     info('=========================================================================')
