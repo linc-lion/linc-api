@@ -108,6 +108,8 @@ api['CVSERVER_URL_IDENTIFICATION'] = os.environ.get('CVSERVER_URL_IDENTIFICATION
 api['CVSERVER_URL_RESULTS'] = os.environ.get('CVSERVER_URL_RESULTS', '')
 api['CV_USERNAME'] = os.environ.get('CV_USERNAME', '')
 api['CV_PASSWORD'] = os.environ.get('CV_PASSWORD', '')
+api['CVSERVER_URL'] = os.environ.get('CVSERVER_URL', 'http://52.207.96.155:5000')
+api['CV_APIKEY'] = os.environ.get('CV_APIKEY', '')
 
 api['S3_BUCKET'] = os.environ.get('S3_BUCKET', '')
 api['S3_FOLDER'] = 'linc-api-' + api['animals']
