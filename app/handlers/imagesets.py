@@ -318,8 +318,9 @@ class ImageSetsHandler(BaseHandler):
                     return
                 if cvrequest:
                     check_algo = {'cv': False, 'whisker': False}
-                    for v in self.input_data.get('classifier', []):
-                        check_algo[v] = True
+                    classl = self.input_data.get('classifier', [])
+                    for v in ['cv', 'whisker']:
+                        check_algo[v] = v in classl
                     if not any(check_algo.values()):
                         self.response(400, 'Request invalid, please select at least one algorithm.')
                         return
@@ -337,7 +338,7 @@ class ImageSetsHandler(BaseHandler):
                     lanimals = [x['iid'] for x in animalscheck]
                     info('List passed: {}'.format(self.input_data[self.animals]))
                     info('List found : {}'.format(lanimals))
-                    request_base_body[self.animals] = lanimals
+                    request_base_body[self.animals + '_found'] = lanimals
                     request_base_body[self.animals + '_submitted'] = self.input_data[self.animals]
                     cv_imgs = yield self.Images.find(
                         {'image_tags': ['cv'],
