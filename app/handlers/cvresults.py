@@ -58,26 +58,40 @@ class CVResultsHandler(BaseHandler):
                 self.finish(self.json_encode({'status': 'success', 'data': self.list(objs)}))
             else:
                 query = self.query_id(res_id)
-                objs = yield self.CVResults.find_one(query)
-                if objs:
+                obj_cvr = yield self.CVResults.find_one(query)
+                if obj_cvr:
                     if not xlist:
-                        objres = dict(objs)
+                        objres = dict(obj_cvr)
                         self.switch_iid(objres)
-                        objres['obj_id'] = str(objs['_id'])
+                        objres['obj_id'] = str(obj_cvr['_id'])
                         del objres['_id']
                         output = objres
                     else:
                         # List data following the website form
-                        animl = yield self.Animals.find().to_list(None)
-                        animl = [x['iid'] for x in animl]
-                        output = list()
-                        mp = loads(objs['match_probability'])
-                        for i in mp:
-                            # Prevent search a deleted lion
-                            if int(i['id']) not in animl:
-                                continue
+                        obj_cvq = yield self.CVRequests.find_one({'iid': obj_cvr['cvrequest_iid']})
+
+                        req_body = loads(obj_cvq['request_body'])
+                        for k, v in req_body.items():
+                            info('{} = {}'.format(k, v))
+                        obj_cvr['results'] = loads(obj_cvr['match_probability'])
+                        del obj_cvr['match_probability']
+                        info(obj_cvr)
+
+                        # output = {'cvq': obj_cvq, 'cvr': obj_cvr}
+
+                        output = {'results': list()}
+                        output['lions_found'] = req_body['lions_found']
+                        output['lions_submitted'] = req_body['lions_submitted']
+                        output['classifiers'] = req_body['classifiers']
+
+                        output['results']
+
+                        # mp = loads(objs['match_probability'])
+
+                        for i in obj_cvr['results']:
                             objres = dict()
-                            objres['id'] = int(i['id'])
+                            # objres['id'] = int(i['id'])
+                            objres['id'] = 9
                             objres['primary_image_set_id'] = ''
                             objres['name'] = '-'
                             objres['thumbnail'] = ''
@@ -120,19 +134,18 @@ class CVResultsHandler(BaseHandler):
                                     if org:
                                         objres['organization'] = org['name']
 
-                            objres['cv'] = i['confidence']
-                            if 'classifier' not in i.keys():
-                                objres['cn'] = None
-                            else:
-                                objres['cn'] = i['classifier']
-                            output.append(objres)
-                        cvreq = yield self.CVRequests.find_one({'iid': objs['cvrequest_iid']})
+                            # objres['cv'] = i['confidence']
+                            objres['cv'] = 7.827403010196576e-07
+                            objres['whisker'] = 1.1841663763334509e-05
+                            objres['prediction'] = 0.75
+                            output['results'].append(objres)
+                            break
                         assoc = {'id': None, 'name': None}
                         reqstatus = '-'
-                        if cvreq:
-                            reqid = cvreq['iid']
-                            reqstatus = cvreq['status']
-                            imgset = yield self.ImageSets.find_one({'iid': cvreq['image_set_iid']})
+                        if obj_cvq:
+                            reqid = obj_cvq['iid']
+                            reqstatus = obj_cvq['status']
+                            imgset = yield self.ImageSets.find_one({'iid': obj_cvq['image_set_iid']})
                             if imgset:
                                 assoc['id'] = imgset['animal_iid']
                                 if imgset['animal_iid']:
@@ -140,11 +153,14 @@ class CVResultsHandler(BaseHandler):
                                     if lname:
                                         assoc['name'] = lname['name']
                         output = {'table': output, 'associated': assoc, 'status': reqstatus, 'req_id': reqid}
-                    self.set_status(200)
-                    self.finish(self.json_encode({'status': 'success', 'data': output}))
+                    #
+                    self.response(200, 'CV results data.', output)
+                    # self.set_status(200)
+                    # self.finish(self.json_encode({'status': 'success', 'data': output}))
                 else:
-                    self.set_status(404)
-                    self.finish(self.json_encode({'status': 'error', 'message': 'not found'}))
+                    # self.set_status(404)
+                    # self.finish(self.json_encode({'status': 'error', 'message': 'not found'}))
+                    self.response(404, 'CV results not found.')
         else:
             objs = yield self.CVResults.find().to_list(None)
             output = list()
