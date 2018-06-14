@@ -75,16 +75,11 @@ class CVResultsHandler(BaseHandler):
                             info('{} = {}'.format(k, v))
                         obj_cvr['results'] = loads(obj_cvr['match_probability'])
                         del obj_cvr['match_probability']
-                        info(obj_cvr)
+                        # info(obj_cvr)
 
                         # output = {'cvq': obj_cvq, 'cvr': obj_cvr}
 
                         output = {'results': list()}
-                        output['lions_found'] = req_body['lions_found']
-                        output['lions_submitted'] = req_body['lions_submitted']
-                        output['classifiers'] = req_body['classifiers']
-
-                        output['results']
 
                         # mp = loads(objs['match_probability'])
 
@@ -135,9 +130,10 @@ class CVResultsHandler(BaseHandler):
                                         objres['organization'] = org['name']
 
                             # objres['cv'] = i['confidence']
-                            objres['cv'] = 7.827403010196576e-07
-                            objres['whisker'] = 1.1841663763334509e-05
-                            objres['prediction'] = 0.75
+                            objres['cv_confidence'] = 7.827403010196576e-07
+                            objres['cv_prediction'] = 0.65
+                            objres['whisker_confidence'] = 1.1841663763334509e-05
+                            objres['whisker_prediction'] = 0.75
                             output['results'].append(objres)
                             break
                         assoc = {'id': None, 'name': None}
@@ -152,8 +148,14 @@ class CVResultsHandler(BaseHandler):
                                     lname = yield self.Animals.find_one({'iid': imgset['animal_iid']})
                                     if lname:
                                         assoc['name'] = lname['name']
-                        output = {'table': output, 'associated': assoc, 'status': reqstatus, 'req_id': reqid}
-                    #
+                        output = {
+                            'table': output['results'],
+                            'associated': assoc,
+                            'status': reqstatus,
+                            'req_id': reqid,
+                            'lions_found': req_body['lions_found'],
+                            'lions_submitted': req_body['lions_submitted'],
+                            'classifiers': req_body['classifiers']}
                     self.response(200, 'CV results data.', output)
                     # self.set_status(200)
                     # self.finish(self.json_encode({'status': 'success', 'data': output}))
