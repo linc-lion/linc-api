@@ -343,7 +343,7 @@ class ImageSetsHandler(BaseHandler):
                         {'image_tags': ['cv'],
                          'image_set_iid': imgchk['iid']}).to_list(None)
                     wh_imgs = yield self.Images.find(
-                        {'$or': [{'image_tags': ['whisker']},
+                        {'$or': [# {'image_tags': ['whisker']},
                                  {'image_tags': ['whisker-left']},
                                  {'image_tags': ['whisker-right']}],
                          'image_set_iid': imgchk['iid']}).to_list(None)
@@ -853,7 +853,7 @@ class ImageSetsCheckReqHandler(BaseHandler):
                 resp_cv = yield self.Images.find({'image_tags': ['cv'], 'image_set_iid': imageset_id}).count()
                 resp_wh = yield self.Images.find(
                     {'$or': [
-                        {'image_tags': ['whisker']},
+                        # {'image_tags': ['whisker']},
                         {'image_tags': ['whisker-left']},
                         {'image_tags': ['whisker-right']}], 'image_set_iid': imageset_id}).count()
             except Exception as e:
