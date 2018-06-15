@@ -363,7 +363,7 @@ class ImageSetsHandler(BaseHandler):
                                 'url': self.settings['S3_URL'] + x['url'] + '_full.jpg'})
                     if cv_calls or wh_calls:
                         request_base_body['cv_calls'] = cv_calls if cv_calls else []
-                        request_base_body['wh_calls'] = wh_calls if wh_calls else []
+                        request_base_body['whisker_calls'] = wh_calls if wh_calls else []
                         # Create a cvrequest mongodb object for this ImageSet
                         newobj = dict()
                         newobj['iid'] = yield Task(self.new_iid, CVRequest.collection())

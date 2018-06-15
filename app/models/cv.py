@@ -23,16 +23,16 @@
 import sys; sys.path.append('../')
 from datetime import datetime
 from schematics.models import Model
-from schematics.types import StringType,IntType,DateTimeType
+from schematics.types import StringType, IntType, DateTimeType
 
 class CVRequest(Model):
     requesting_organization_iid = IntType(required=True)
     iid = IntType(required=True)
     image_set_iid = IntType(required=True)
-    status = StringType(required=True,default='registered')
-    request_body = StringType(required=True,default='')
-    created_at = DateTimeType(required=True,default=datetime.now())
-    updated_at = DateTimeType(required=True,default=datetime.now())
+    status = StringType(required=True, default='registered')
+    request_body = StringType(required=True, default='')
+    created_at = DateTimeType(required=True, default=datetime.now())
+    updated_at = DateTimeType(required=True, default=datetime.now())
 
     @classmethod
     def collection(self,name=None):
@@ -55,9 +55,9 @@ class CVRequest(Model):
 class CVResult(Model):
     cvrequest_iid = IntType(required=True)
     iid = IntType(required=True)
-    match_probability = StringType(required=True,default='[]')
-    created_at = DateTimeType(required=True,default=datetime.now())
-    updated_at = DateTimeType(required=True,default=datetime.now())
+    match_probability = StringType(required=True, default='{}')
+    created_at = DateTimeType(required=True, default=datetime.now())
+    updated_at = DateTimeType(required=True, default=datetime.now())
 
     @classmethod
     def collection(self,name=None):

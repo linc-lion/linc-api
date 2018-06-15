@@ -36,14 +36,15 @@ from json import loads, dumps
 
 class AnimalsHandler(BaseHandler):
     """A class that handles requests about animals informartion."""
-
     SUPPORTED_METHODS = ('GET', 'POST', 'PUT', 'DELETE')
 
     @asynchronous
     @coroutine
+    @api_authenticated
     def get(self, animal_id=None, xurl=None):
 
-        current_user = yield self.Users.find_one({'email': self.current_user['username']})
+        current_user = yield self.Users.find_one(
+            {'email': self.current_user['username'] if self.current_user and 'username' in self.current_user else None})
         is_admin = current_user['admin']
         current_organization = yield self.db.organizations.find_one({'iid': current_user['organization_iid']})
 
@@ -713,7 +714,7 @@ class AnimalsHandler(BaseHandler):
                 for image in images:
                     obji = dict()
                     obji['id'] = image['iid']
-                    obji['image_tags'] = image['image_tags']
+                    obji['image_tags'] = image['image_tags'] if 'image_tags' in image else []
                     obji['is_public'] = image['is_public']
                     # This will be recoded
                     obji['thumbnail_url'] = ''
