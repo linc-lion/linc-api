@@ -75,18 +75,34 @@ class CVResultsHandler(BaseHandler):
                             info('{} = {}'.format(k, v))
                         obj_cvr['results'] = loads(obj_cvr['match_probability'])
                         del obj_cvr['match_probability']
-                        # info(obj_cvr)
-
-                        # output = {'cvq': obj_cvq, 'cvr': obj_cvr}
-
                         output = {'results': list()}
+                        # Prepare output
+                        capabilities = obj_cvr['results']['capabilities'].copy()
+                        exec_time = obj_cvr['results']['execution']
+                        del obj_cvr['results']['execution']
+                        del obj_cvr['results']['capabilities']
+                        calc = dict()
+                        mcalc = dict()
+                        lion_keys = list()
+                        for clf in ['cv', 'whisker']:
+                            calc[clf] = dict()
+                            mcalc[clf] = dict()
+                            # info(obj_cvr['results'][clf])
+                            for x in obj_cvr['results'][clf]:
+                                for v in x['predictions']['predictions']:
+                                    if v['lion_id'] not in calc[clf]:
+                                        calc[clf][v['lion_id']] = list()
+                                    calc[clf][v['lion_id']].append(v['probability'])
+                            for l, v  in calc[clf].items():
+                                mcalc[clf][l] = sum(v) / len(obj_cvr['results'][clf])
+                            lion_keys += calc[clf].keys()
+                        lion_keys = list(set(lion_keys + [str(i) for i in req_body['lions_submitted']]))
 
-                        # mp = loads(objs['match_probability'])
-
-                        for i in obj_cvr['results']:
+                        cv_pred_accu = capabilities['cv_topk_classifier_accuracy'][len(obj_cvr['results']['cv']) - 1]
+                        whisker_pred_accu = capabilities['whisker_topk_classifier_accuracy'][len(obj_cvr['results']['whisker']) - 1]
+                        for k in lion_keys:
                             objres = dict()
-                            # objres['id'] = int(i['id'])
-                            objres['id'] = 9
+                            objres['id'] = int(k)
                             objres['primary_image_set_id'] = ''
                             objres['name'] = '-'
                             objres['thumbnail'] = ''
@@ -128,14 +144,19 @@ class CVResultsHandler(BaseHandler):
                                     org = yield self.db.organizations.find_one({'iid': aobj['organization_iid']})
                                     if org:
                                         objres['organization'] = org['name']
-
-                            # objres['cv'] = i['confidence']
-                            objres['cv_confidence'] = 7.827403010196576e-07
-                            objres['cv_prediction'] = 0.65
-                            objres['whisker_confidence'] = 1.1841663763334509e-05
-                            objres['whisker_prediction'] = 0.75
+                            objres['cv_confidence'] = None
+                            objres['cv_prediction'] = None
+                            objres['whisker_confidence'] = None
+                            objres['whisker_prediction'] = None
+                            if k in capabilities['valid_cv_lion_ids'] and k in mcalc['cv']:
+                                objres['cv_confidence'] = mcalc['cv'][k]
+                                objres['cv_prediction'] = cv_pred_accu
+                            if k in capabilities['valid_whisker_lion_ids'] and k in mcalc['whisker']:
+                                objres['whisker_confidence'] = mcalc['whisker'][k]
+                                objres['whisker_prediction'] = whisker_pred_accu
+                            if k in ['245', '79']:
+                                info(objres)
                             output['results'].append(objres)
-                            break
                         assoc = {'id': None, 'name': None}
                         reqstatus = '-'
                         if obj_cvq:
@@ -155,7 +176,8 @@ class CVResultsHandler(BaseHandler):
                             'req_id': reqid,
                             'lions_found': req_body['lions_found'],
                             'lions_submitted': req_body['lions_submitted'],
-                            'classifiers': req_body['classifiers']}
+                            'classifiers': req_body['classifiers'],
+                            'execution': exec_time}
                     self.response(200, 'CV results data.', output)
                     # self.set_status(200)
                     # self.finish(self.json_encode({'status': 'success', 'data': output}))
