@@ -149,11 +149,15 @@ class CVResultsHandler(BaseHandler):
                             objres['whisker_confidence'] = None
                             objres['whisker_prediction'] = None
                             if k in capabilities['valid_cv_lion_ids'] and k in mcalc['cv']:
-                                objres['cv_confidence'] = mcalc['cv'][k]
-                                objres['cv_prediction'] = cv_pred_accu
+                                # objres['cv_confidence'] = mcalc['cv'][k]
+                                # objres['cv_prediction'] = cv_pred_accu
+                                objres['cv_confidence'] = cv_pred_accu
+                                objres['cv_prediction'] = mcalc['cv'][k]
                             if k in capabilities['valid_whisker_lion_ids'] and k in mcalc['whisker']:
-                                objres['whisker_confidence'] = mcalc['whisker'][k]
-                                objres['whisker_prediction'] = whisker_pred_accu
+                                # objres['whisker_confidence'] = mcalc['whisker'][k]
+                                # objres['whisker_prediction'] = whisker_pred_accu
+                                objres['whisker_confidence'] = whisker_pred_accu
+                                objres['whisker_prediction'] = mcalc['whisker'][k]
                             if k in ['245', '79']:
                                 info(objres)
                             output['results'].append(objres)
