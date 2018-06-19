@@ -69,7 +69,6 @@ class CVResultsHandler(BaseHandler):
                     else:
                         # List data following the website form
                         obj_cvq = yield self.CVRequests.find_one({'iid': obj_cvr['cvrequest_iid']})
-
                         req_body = loads(obj_cvq['request_body'])
                         for k, v in req_body.items():
                             info('{} = {}'.format(k, v))
@@ -96,11 +95,12 @@ class CVResultsHandler(BaseHandler):
                             for l, v  in calc[clf].items():
                                 mcalc[clf][l] = sum(v) / len(obj_cvr['results'][clf])
                             lion_keys += calc[clf].keys()
-                        lion_keys = list(set(lion_keys + [str(i) for i in req_body['lions_submitted']]))
+                        # lion_keys = list(set(lion_keys + [str(i) for i in req_body['lions_submitted']]))
 
                         cv_pred_accu = capabilities['cv_topk_classifier_accuracy'][len(obj_cvr['results']['cv']) - 1]
                         whisker_pred_accu = capabilities['whisker_topk_classifier_accuracy'][len(obj_cvr['results']['whisker']) - 1]
-                        for k in lion_keys:
+                        # for k in lion_keys:
+                        for k in [str(i) for i in req_body['lions_submitted']]:
                             objres = dict()
                             objres['id'] = int(k)
                             objres['primary_image_set_id'] = ''
@@ -159,6 +159,12 @@ class CVResultsHandler(BaseHandler):
                                 objres['whisker_confidence'] = whisker_pred_accu
                                 objres['whisker_prediction'] = mcalc['whisker'][k]
                             output['results'].append(objres)
+                        # Order the results taking the top values for both
+                        output['results'] = sorted(
+                            output['results'],
+                            key=lambda k: (-(k['cv_prediction'] if k['cv_prediction'] else 0.0), -(k['whisker_prediction'] if k['whisker_prediction'] else 0.0)))
+                        # Limit list to 20 lions
+                        output['results'] = output['results'][:20]
                         assoc = {'id': None, 'name': None}
                         reqstatus = '-'
                         if obj_cvq:
@@ -181,11 +187,7 @@ class CVResultsHandler(BaseHandler):
                             'classifiers': req_body['classifiers'],
                             'execution': exec_time}
                     self.response(200, 'CV results data.', output)
-                    # self.set_status(200)
-                    # self.finish(self.json_encode({'status': 'success', 'data': output}))
                 else:
-                    # self.set_status(404)
-                    # self.finish(self.json_encode({'status': 'error', 'message': 'not found'}))
                     self.response(404, 'CV results not found.')
         else:
             objs = yield self.CVResults.find().to_list(None)
