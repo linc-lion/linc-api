@@ -807,7 +807,7 @@ class ImageSetsHandler(BaseHandler):
                         imgset_obj['cvresults'] = str(objcvres['_id'])
                 output.append(imgset_obj)
                 addcache = yield Task(self.cache_set, obj['iid'], 'imgset', imgset_obj, None)
-                info(addcache)
+                # info(addcache)
         callback(output)
 
     @engine
