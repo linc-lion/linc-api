@@ -89,7 +89,7 @@ class CVResultsHandler(BaseHandler):
                             mcalc[clf] = dict()
                             # info(obj_cvr['results'][clf])
                             for x in obj_cvr['results'][clf]:
-                                for v in x['predictions']['predictions']:
+                                for v in x['predictions']:
                                     if v['lion_id'] not in calc[clf]:
                                         calc[clf][v['lion_id']] = list()
                                     calc[clf][v['lion_id']].append(v['probability'])
