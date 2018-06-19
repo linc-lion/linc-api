@@ -77,7 +77,6 @@ class CVResultsHandler(BaseHandler):
                         del obj_cvr['match_probability']
                         output = {'results': list()}
                         # Prepare output
-                        info(obj_cvr['results'].keys())
                         capabilities = obj_cvr['results']['capabilities'].copy()
                         exec_time = obj_cvr['results']['execution']
                         del obj_cvr['results']['execution']
@@ -159,8 +158,6 @@ class CVResultsHandler(BaseHandler):
                                 # objres['whisker_prediction'] = whisker_pred_accu
                                 objres['whisker_confidence'] = whisker_pred_accu
                                 objres['whisker_prediction'] = mcalc['whisker'][k]
-                            if k in ['245', '79']:
-                                info(objres)
                             output['results'].append(objres)
                         assoc = {'id': None, 'name': None}
                         reqstatus = '-'
