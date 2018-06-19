@@ -77,6 +77,7 @@ class CVResultsHandler(BaseHandler):
                         del obj_cvr['match_probability']
                         output = {'results': list()}
                         # Prepare output
+                        info(obj_cvr['results'].keys())
                         capabilities = obj_cvr['results']['capabilities'].copy()
                         exec_time = obj_cvr['results']['execution']
                         del obj_cvr['results']['execution']
