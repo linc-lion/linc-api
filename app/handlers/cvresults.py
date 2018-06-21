@@ -69,6 +69,9 @@ class CVResultsHandler(BaseHandler):
                     else:
                         # List data following the website form
                         obj_cvq = yield self.CVRequests.find_one({'iid': obj_cvr['cvrequest_iid']})
+                        if obj_cvq['status'] not in ['finished', 'error']:
+                            self.response(400, 'CV Request still processing...')
+                            return
                         req_body = loads(obj_cvq['request_body'])
                         for k, v in req_body.items():
                             info('{} = {}'.format(k, v))
