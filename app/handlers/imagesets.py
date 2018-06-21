@@ -803,7 +803,7 @@ class ImageSetsHandler(BaseHandler):
                 imgset_obj['cvresults'] = None
                 if objcvreq:
                     objcvres = yield self.CVResults.find_one({'cvrequest_iid': objcvreq['iid']})
-                    if objcvres:
+                    if objcvres and objcvreq['status'] in ['finished', 'error']:
                         imgset_obj['cvresults'] = str(objcvres['_id'])
                 output.append(imgset_obj)
                 addcache = yield Task(self.cache_set, obj['iid'], 'imgset', imgset_obj, None)
