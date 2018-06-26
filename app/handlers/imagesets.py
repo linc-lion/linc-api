@@ -307,16 +307,16 @@ class ImageSetsHandler(BaseHandler):
             query = self.query_id(imageset_id)
             imgchk = yield self.ImageSets.find_one(query)
             if imgchk:
-                cvreqchk = yield self.CVRequests.find_one({'image_set_iid': imgchk['iid']})
-                if cvreqchk:
-                    self.response(
-                        400, 'A request for indentification of this imageset already exists in the database.')
-                    return
                 if self.animals not in self.input_data.keys():
                     self.response(400, 'The cvrequest needs a list of ' + self.settings[
                                   'animals'] + ' id like: { "' + self.animals + '": [<id>,...] }.')
                     return
                 if cvrequest:
+                    cvreqchk = yield self.CVRequests.find_one({'image_set_iid': int(imageset_id)})
+                    if cvreqchk:
+                        self.response(
+                            409, 'A request for indentification of this imageset already exists in the database.')
+                        return
                     check_algo = {'cv': False, 'whisker': False}
                     classl = self.input_data.get('classifier', [])
                     for v in ['cv', 'whisker']:
@@ -848,6 +848,11 @@ class ImageSetsCheckReqHandler(BaseHandler):
         if not imageset_id:
             self.response(400, 'Invalid request')
         else:
+            cvreqchk = yield self.CVRequests.find_one({'image_set_iid': imageset_id})
+            if cvreqchk:
+                self.response(
+                    409, 'A previous request for indentification of this image set already exists in the database.')
+                return
             resp_cv = 0
             resp_wh = 0
             try:
