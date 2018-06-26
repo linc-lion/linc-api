@@ -634,6 +634,23 @@ class AnimalsHandler(BaseHandler):
                     if img:
                         obj['thumbnail'] = self.settings['S3_URL'] + img['url'] + '_icon.jpg'
                         obj['image'] = self.settings['S3_URL'] + img['url'] + '_medium.jpg'
+                    # Check algorithms
+                    resp_cv = None
+                    resp_wh = None
+                    try:
+                        resp_cv = yield self.Images.find(
+                            {'image_tags': ['cv'],
+                             'image_set_iid': imgset['iid']}).count()
+                        resp_wh = yield self.Images.find(
+                            {'$or': [
+                                # {'image_tags': ['whisker']},
+                                {'image_tags': ['whisker-left']},
+                                {'image_tags': ['whisker-right']}],
+                            'image_set_iid': imgset['iid']}).count()
+                    except Exception as e:
+                        info(e)
+                    obj['cv'] = bool(resp_cv)
+                    obj['whisker'] = bool(resp_wh)
             output.append(obj)
         callback(output)
 
