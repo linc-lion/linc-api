@@ -851,7 +851,9 @@ class ImageSetsCheckReqHandler(BaseHandler):
             cvreqchk = yield self.CVRequests.find_one({'image_set_iid': imageset_id})
             if cvreqchk:
                 self.response(
-                    409, 'A previous request for indentification of this image set already exists in the database.')
+                    409,
+                    'A previous request for indentification of this image set already exists in the database.',
+                    {'cv_request_id': cvreqchk['iid'], 'status': cvreqchk['status']})
                 return
             resp_cv = 0
             resp_wh = 0
