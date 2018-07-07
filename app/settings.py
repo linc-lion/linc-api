@@ -38,7 +38,6 @@ from redis import Redis, ConnectionPool
 
 
 # Adjusting path for the app
-
 appdir = os.path.dirname(os.path.realpath(__file__))
 info('Work directory: %s' % str(appdir))
 
@@ -100,6 +99,7 @@ else:
 
 info('MongoDB Database set to: %s' % (URI))
 api['db'] = db
+api['sdb'] = sdb
 
 api['cookie_secret'] = os.environ.get('COOKIE_SECRET', gen_token(50))
 api['token_secret'] = os.environ.get('TOKEN_SECRET', mksecret(50))
@@ -113,7 +113,7 @@ api['CV_APIKEY'] = os.environ.get('CV_APIKEY', '')
 
 api['S3_BUCKET'] = os.environ.get('S3_BUCKET', '')
 api['S3_FOLDER'] = 'linc-api-' + api['animals']
-api['S3_URL'] = os.environ.get('S3_URL', '') + api['S3_FOLDER'] + '/'
+api['S3_URL'] = os.environ.get('S3_URL', 'https://linc-api.herokuapp.com/') + api['S3_FOLDER'] + '/'
 
 api['S3_ACCESS_KEY'] = os.environ.get('S3_ACCESS_KEY', '')
 api['S3_SECRET_KEY'] = os.environ.get('S3_SECRET_KEY', '')
@@ -125,6 +125,8 @@ api['SMTP_SERVER'] = os.environ.get('SMTP_SERVER', 'email-smtp.us-east-1.amazona
 api['SMTP_USERNAME'] = os.environ.get('SMTP_USERNAME', '')
 api['SMTP_PASSWORD'] = os.environ.get('SMTP_PASSWORD')
 api['SMPT_PORT'] = os.environ.get('SMTP_PORT', '587')
+
+api['allowed_emails'] = os.environ.get('ALLOWED_EMAILS', 'suporte@venidera.com justin@lg.org linclionproject@gmail.com contact@adamgradzki.com')
 
 api['url'] = os.environ.get('API_URL', 'http://localhost:5050/')
 api['scheduler'] = TornadoScheduler()

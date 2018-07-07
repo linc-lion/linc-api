@@ -25,13 +25,15 @@ from tornado.gen import coroutine, engine, Task
 from handlers.base import BaseHandler
 from models.animal import Animal
 from models.imageset import ImageSet
-from datetime import datetime, time
+from datetime import datetime, time, timedelta
 from bson import ObjectId as ObjId
 from pymongo import DESCENDING
 from lib.rolecheck import api_authenticated
 from schematics.exceptions import ValidationError
 from logging import info
 from json import loads, dumps
+from lib.dbdump import dbdump
+from os import listdir, remove
 
 
 class AnimalsHandler(BaseHandler):
@@ -42,12 +44,10 @@ class AnimalsHandler(BaseHandler):
     @coroutine
     @api_authenticated
     def get(self, animal_id=None, xurl=None):
-
         current_user = yield self.Users.find_one(
             {'email': self.current_user['username'] if self.current_user and 'username' in self.current_user else None})
         is_admin = current_user['admin']
         current_organization = yield self.db.organizations.find_one({'iid': current_user['organization_iid']})
-
         apiout = self.get_argument('api', None)
         noimages = self.get_argument('no_images', '')
         if noimages.lower() == 'true':
@@ -96,7 +96,6 @@ class AnimalsHandler(BaseHandler):
                         output['organization'] = org['name']
                     else:
                         output['organization'] = '-'
-
                     # get data from the primary image set
                     objimgset = yield self.ImageSets.find_one(
                         {'iid': objanimal['primary_image_set_id']})
@@ -264,32 +263,78 @@ class AnimalsHandler(BaseHandler):
                 self.response(400, 'Invalid value for dob_start/dob_end. Error: ' + str(e) + '.')
                 return
             info(queryfilter)
-            objs = yield self.ImageSets.find(queryfilter).to_list(None)
-            iids = [x['animal_iid'] for x in objs]
-            iids = list(set(iids))
-            objs = yield self.Animals.find({'iid': {'$in': iids}}).to_list(None)
-            output = list()
-            for x in objs:
-                if 'dead' not in x.keys():
-                    x['dead'] = False
-                if apiout:
-                    obj = dict(x)
-                    obj['obj_id'] = str(x['_id'])
-                    del obj['_id']
-                    obj['organization_id'] = obj['organization_iid']
-                    del obj['organization_iid']
-                    obj['primary_image_set_id'] = obj['primary_image_set_iid']
-                    del obj['primary_image_set_iid']
-                    self.switch_iid(obj)
-                else:
-                    obj = yield Task(self.prepare_output, x, noimages)
-                output.append(obj)
-            self.set_status(200)
-            if apiout:
-                outshow = {'status': 'success', 'data': output}
+            if queryfilter:
+                objs = yield self.ImageSets.find(queryfilter).to_list(None)
+                iids = [x['animal_iid'] for x in objs]
+                iids = list(set(iids))
+                objs = yield self.Animals.find({'iid': {'$in': iids}}).to_list(None)
+                output = list()
+                for x in objs:
+                    if 'dead' not in x.keys():
+                        x['dead'] = False
+                    if apiout:
+                        obj = dict(x)
+                        obj['obj_id'] = str(x['_id'])
+                        del obj['_id']
+                        obj['organization_id'] = obj['organization_iid']
+                        del obj['organization_iid']
+                        obj['primary_image_set_id'] = obj['primary_image_set_iid']
+                        del obj['primary_image_set_iid']
+                        self.switch_iid(obj)
+                    else:
+                        obj = yield Task(self.prepare_output, x, noimages)
+                    output.append(obj)
+                self.response(200, 'List of animals for the query: {}'.format(queryfilter), output)
             else:
-                outshow = output
-            self.finish(self.json_encode(outshow))
+                if self.current_user['username'] not in self.settings['allowed_emails']:
+                    self.response(403, 'Resource access forbidden.')
+                    return
+                info('>>> DUMP REQUEST >>>')
+                filename = 'lion-db-dump-' + datetime.utcnow().isoformat()
+                filename = filename.replace(':','-').split('.')[0]
+                file_path = self.settings['app_path'] + '/static/export/'
+                file_url = self.settings['url'] + 'static/export/'
+                # Avoid duplicating requests
+                for filen in listdir(file_path):
+                    if filen.endswith('.lock'):
+                        fdownload = filen.split('/')[-1].split('.')[0]
+                        self.response(
+                            200,
+                            'A previous dump process was started. Wait and try to download the dump file.',
+                            {'url': file_url + fdownload + '.zip'})
+                        return
+                # Create lock
+                with open(file_path + filename + '.lock', 'w+') as f:
+                    f.write('lock')
+                    f.close()
+                self.dump_filename = file_path + filename
+                self.response(
+                    201,
+                    'Request successfull. The dump file will be available at the url indicated in the output data.',
+                    {'url': file_url + filename + '.zip'})
+                return
+
+    @engine
+    def on_finish(self):
+        if hasattr(self, 'dump_filename'):
+            resp = yield Task(self.add_dump, self.dump_filename)
+            resp = yield Task(self.add_remove, self.dump_filename)
+
+    @engine
+    def add_dump(self, filename, callback=None):
+        self.settings['scheduler'].add_job(
+                    func=dbdump,
+                    args=[self.settings['sdb'], filename, self.settings['S3_URL'], self.current_user])
+        callback(True)
+
+    @engine
+    def add_remove(self, filename, callback=None):
+        self.settings['scheduler'].add_job(
+                    func=remove,
+                    trigger='date',
+                    run_date=datetime.now() + timedelta(minutes=1),
+                    args=[filename + '.zip'])
+        callback(True)
 
     @asynchronous
     @engine

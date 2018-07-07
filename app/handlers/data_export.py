@@ -54,6 +54,13 @@ class DataExportHandler(BaseHandler):
         keys = self.standard_keys(animals)
         info(keys)
         # current_user['organization_iid']
+        # Collect data
+        orgdata = yield self.Orgs.find({}, {'iid': 1, 'name': 1}).to_list(None)
+        orgs = dict()
+        for org in orgdata:
+            orgs[org['iid']] = org['name']
+
+        info(self.current_user)
         resp = True
         try:
             fieldnames = list(keys.values())
