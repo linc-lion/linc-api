@@ -126,7 +126,7 @@ api['SMTP_USERNAME'] = os.environ.get('SMTP_USERNAME', '')
 api['SMTP_PASSWORD'] = os.environ.get('SMTP_PASSWORD')
 api['SMPT_PORT'] = os.environ.get('SMTP_PORT', '587')
 
-api['allowed_emails'] = os.environ.get('ALLOWED_EMAILS', 'suporte@venidera.com justin@lg.org linclionproject@gmail.com contact@adamgradzki.com')
+api['allowed_emails'] = os.environ.get('ALLOWED_EMAILS', '')
 
 api['url'] = os.environ.get('API_URL', 'http://localhost:5050/')
 api['scheduler'] = TornadoScheduler()
