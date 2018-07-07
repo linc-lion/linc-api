@@ -191,7 +191,7 @@ class CVResultsHandler(BaseHandler):
                             'execution': exec_time}
                     self.response(200, 'CV results data.', output)
                 else:
-                    self.response(404, 'CV results not found.')
+                    self.response(404, 'CV results not found. Another user may have deleted the CV results.')
         else:
             objs = yield self.CVResults.find().to_list(None)
             output = list()

@@ -145,66 +145,7 @@ def checkresults(db, api):
                                         resp_cvr[clf][n] = resp_data.copy()
                                 else:
                                     info('          Call #{} - fail'.format(n))
-
-            # if req_body['classifiers'].get('whisker', False):
-            #     info('    Processing calls for the classifier Whisker')
-            #     add = len(resp_cv[1]['results']) == 0
-            #     if add:
-            #         for n, wh_call in enumerate(req_body['wh_calls']):
-            #             dparams = params.copy()
-            #             dparams['body'] = dumps(wh_call)
-            #             request = HTTPRequest(**dparams)
-            #             try:
-            #                 response = yield http_client.fetch(request)
-            #             except HTTPError as e:
-            #                 info(e)
-            #                 response = e.response
-            #             except Exception as e:
-            #                 info(e)
-            #                 response = None
-            #             if response.code in [200, 201]:
-            #                 info('          Call #{} - success'.format(n))
-            #                 resp_cv[1]['results'].append(loads(response.body.decode('utf-8')))
-            #             else:
-            #                 info('          Call #{} - fail'.format(n))
-            #                 resp_cv[1]['results'].append('FAILURE')
-            #     else:
-            #         # Check results
-            #         for n, wh_call in enumerate(req_body['wh_calls']):
-            #             if resp_cv[1]['results'][n].get('status', None) == 'finished':
-            #                 info('          Request Whisker #{} finished'.format(n))
-            #                 wh_finished += 1
-            #             else:
-            #                 info('     Check results for Whisker #{}'.format(n))
-            #                 dparams = params.copy()
-            #                 del dparams['body']
-            #                 dparams['method'] = 'GET'
-            #                 url = api['CVSERVER_URL'] + '/linc/v1/results/' + resp_cv[1]['results'][n]['id']
-            #                 info(url)
-            #                 dparams['url'] = url
-            #                 request = HTTPRequest(**dparams)
-            #                 try:
-            #                     response = yield http_client.fetch(request)
-            #                 except HTTPError as e:
-            #                     info(e)
-            #                     response = e.response
-            #                 except Exception as e:
-            #                     info(e)
-            #                     response = None
-            #                 if response.code in [200, 201]:
-            #                     info('          Call #{} - success'.format(n))
-            #                     resp_data = loads(response.body.decode('utf-8'))
-            #                     if resp_data['status'] == 'finished':
-            #                         resp_cv[1]['results'][n] = resp_data.copy()
-            #                 else:
-            #                     info('          Call #{} - fail'.format(n))
             dt = datetime.now()
-            # info(cvres['created_at'])
-            # info(type(cvres['created_at']))
-            # info(finished['cv'])
-            # info(len(req_body['cv_calls']))
-            # info(finished['whisker'])
-            # info(len(req_body['whisker_calls']))
             if finished['cv'] == len(req_body['cv_calls']) and finished['whisker'] == len(req_body['whisker_calls']):
                 info(' Loading capabilities...')
                 dparams = params.copy()
