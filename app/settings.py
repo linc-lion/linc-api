@@ -113,7 +113,7 @@ api['CV_APIKEY'] = os.environ.get('CV_APIKEY', '')
 
 api['S3_BUCKET'] = os.environ.get('S3_BUCKET', '')
 api['S3_FOLDER'] = 'linc-api-' + api['animals']
-api['S3_URL'] = os.environ.get('S3_URL', 'https://linc-api.herokuapp.com/') + api['S3_FOLDER'] + '/'
+api['S3_URL'] = os.environ.get('S3_URL', 'https://linc-media.linclion.org/') + api['S3_FOLDER'] + '/'
 
 api['S3_ACCESS_KEY'] = os.environ.get('S3_ACCESS_KEY', '')
 api['S3_SECRET_KEY'] = os.environ.get('S3_SECRET_KEY', '')

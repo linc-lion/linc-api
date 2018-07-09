@@ -52,17 +52,26 @@ class DataExportHandler(BaseHandler):
     @engine
     def get_data(self, idslist=None, animals=False, callback=None):
         keys = self.standard_keys(animals)
-        info(keys)
-        # current_user['organization_iid']
+        if self.current_user['role'] == 'admin':
+            admin = True
+        else:
+            admin = False
         # Collect data
-        orgdata = yield self.Orgs.find({}, {'iid': 1, 'name': 1}).to_list(None)
+        gdata = yield self.Orgs.find({}, {'iid': 1, 'name': 1}).to_list(None)
         orgs = dict()
-        for org in orgdata:
+        for org in gdata:
             orgs[org['iid']] = org['name']
-
-        info(self.current_user)
+        gdata = yield self.Users.find({}, {'iid': 1, 'email': 1, 'admin': 1}).to_list(None)
+        users = dict()
+        for user in gdata:
+            users[user['iid']] = {'email': user['email'], 'admin': user['admin']}
+        gdata = yield self.Animals.find({}, {'iid': 1, 'name': 1}).to_list(None)
+        animl = dict()
+        for ani in gdata:
+            animl[ani['iid']] = str(ani['iid']) + ' - ' + ani['name']
         resp = True
-        try:
+        # try:
+        if True:
             fieldnames = list(keys.values())
             lines = list()
             query = {'iid': {'$in': idslist}}
@@ -71,16 +80,57 @@ class DataExportHandler(BaseHandler):
             else:
                 cursor = self.ImageSets.find(query)
             cursor.sort([('iid', ASCENDING)])
+            imgsetids = list()
             while (yield cursor.fetch_next):
                 obj = cursor.next_object()
-                rowdata = odict()
+                rowdata = list()
+                # odict()
                 for k, v in keys.items():
                     if k in obj:
-                        rowdata[v] = obj[k]
+                        # rowdata[v] =
+                        # info(k)
+                        if k in ['owner_organization_iid', 'uploading_organization_iid', 'organization_iid']:
+                            value = orgs[obj[k]]
+                        elif k == 'uploading_user_iid':
+                            value = users[obj[k]]['email']
+                        elif k == 'animal_iid':
+                            value = animl[obj[k]]
+                        else:
+                            value = obj[k]
+                        rowdata.append(value)
                 lines.append(rowdata.copy())
-            info(lines)
+                imgsetids.append(obj['iid'])
+            lines.append([''])
+            lines.append([''])
+            for vid in imgsetids:
+                if animals:
+                    query_imgset = {'animal_iid': vid}
+                else:
+                    query_imgset = {'iid': vid}
+                imgsetspl = yield self.ImageSets.find(query_imgset).to_list(None)
+                # Check if the user's organization has the imageset or if the user is an admin
+                for imset in imgsetspl:
+                    if admin or int(imset['owner_organization_iid']) == int(self.current_user['org_id']):
+                        lines.append(['Image Set: {} {}'.format(imset['iid'], ' - Lion: ' + animl[imset['animal_iid']] if imset['animal_iid'] else '')])
+                        imgs = yield self.Images.find({'image_set_iid': imset['iid']}).to_list(None)
+                        # ['_id', 'url', 'hashcheck', 'image_set_iid', 'created_at', 'image_type', 'is_public', 'updated_at', 'iid', 'image_tags'])
+                        lines.append(['HashId', 'Id', 'Image Set Id', 'Image Tags', 'Access', 'Created', 'Updated', 'Url'])
+                        for objimg in imgs:
+                            lines.append([
+                                str(objimg['_id']),
+                                objimg['iid'],
+                                objimg['image_set_iid'],
+                                objimg['image_tags'],
+                                'PUBLIC' if objimg['is_public'] else 'PRIVATE',
+                                objimg['created_at'],
+                                objimg['updated_at'],
+                                self.settings['S3_URL'] + objimg['url'] + '_full.jpg'
+                            ])
+                        lines.append([''])
+                        lines.append([''])
             resp = {'fnames': fieldnames.copy(), 'lines': lines.copy()}
-        except Exception as e:
+        # except Exception as e:
+        else:
             info(e)
             resp = False
         callback(resp)

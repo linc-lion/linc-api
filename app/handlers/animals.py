@@ -291,7 +291,7 @@ class AnimalsHandler(BaseHandler):
                     return
                 info('>>> DUMP REQUEST >>>')
                 filename = 'lion-db-dump-' + datetime.utcnow().isoformat()
-                filename = filename.replace(':','-').split('.')[0]
+                filename = filename.replace(':', '-').split('.')[0]
                 file_path = self.settings['app_path'] + '/static/export/'
                 file_url = self.settings['url'] + 'static/export/'
                 # Avoid duplicating requests
@@ -318,22 +318,24 @@ class AnimalsHandler(BaseHandler):
     def on_finish(self):
         if hasattr(self, 'dump_filename'):
             resp = yield Task(self.add_dump, self.dump_filename)
+            info(resp)
             resp = yield Task(self.add_remove, self.dump_filename)
+            info(resp)
 
     @engine
     def add_dump(self, filename, callback=None):
         self.settings['scheduler'].add_job(
-                    func=dbdump,
-                    args=[self.settings['sdb'], filename, self.settings['S3_URL'], self.current_user])
+            func=dbdump,
+            args=[self.settings['sdb'], filename, self.settings['S3_URL'], self.current_user])
         callback(True)
 
     @engine
     def add_remove(self, filename, callback=None):
         self.settings['scheduler'].add_job(
-                    func=remove,
-                    trigger='date',
-                    run_date=datetime.now() + timedelta(minutes=1),
-                    args=[filename + '.zip'])
+            func=remove,
+            trigger='date',
+            run_date=datetime.now() + timedelta(minutes=10),
+            args=[filename + '.zip'])
         callback(True)
 
     @asynchronous
