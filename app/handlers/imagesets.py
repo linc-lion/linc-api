@@ -430,17 +430,15 @@ class ImageSetsHandler(BaseHandler):
                         primimgsetid = yield self.Animals.find_one({'iid': assocanimalid})
                         if primimgsetid:
                             primimgsetid = primimgsetid['primary_image_set_iid']
-                            resp = yield self.Images.update(
+                            resp = yield self.Images.update_many(
                                 {'$and': [{'image_set_iid': objimgset['iid']},
                                           {'joined': {'$ne': None}}]},
-                                {'$set': {'joined': None}},
-                                multi=True)
+                                {'$set': {'joined': None}})
                             info(resp)
                             imgslist = yield self.Images.find({'image_set_iid': objimgset['iid']}).to_list(None)
                             imgslist = [int(x['iid']) for x in imgslist]
-                            resp = self.ImageSets.update(
-                                {'main_image_iid': {'$in': imgslist}}, {'$set': {'main_image_iid': None}},
-                                multi=True)
+                            resp = self.ImageSets.update_many(
+                                {'main_image_iid': {'$in': imgslist}}, {'$set': {'main_image_iid': None}})
                             info(resp)
                 for k, v in self.input_data.items():
                     if k in fields_allowed:
@@ -593,7 +591,7 @@ class ImageSetsHandler(BaseHandler):
                     objimgset = objimgset.to_native()
                     # objimgset['_id'] = imgid
                     updnobj = yield \
-                        self.ImageSets.update(
+                        self.ImageSets.find_one_and_update(
                             {'_id': imgid}, {'$set': objimgset}, upsert=True)
                     info(updnobj)
                     output = objimgset
@@ -647,7 +645,7 @@ class ImageSetsHandler(BaseHandler):
                 rmlist = list()
                 for img in imgl:
                     # Remove joined referenced
-                    resp = yield self.ImageSets.update({'main_image_iid': img['iid']}, {'$set': {'main_image_iid': None}})
+                    resp = yield self.ImageSets.find_one_and_update({'main_image_iid': img['iid']}, {'$set': {'main_image_iid': None}})
                     info(resp)
                     # Delete the source file
                     srcurl = self.settings['S3_FOLDER'] + '/imageset_' + \

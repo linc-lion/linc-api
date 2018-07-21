@@ -24,15 +24,25 @@ from tornado.gen import coroutine
 from json import dumps
 from time import time
 import zipfile
-from os import remove
-import zlib
+from os import listdir, remove
+# import zlib
 
 
 @coroutine
-def dbdump(db, filename, url_preffix, current_user):
+def dbdump(db, url_preffix, file_path):
     ini = time()
+    info('================================')
+    info('== Starting DB Dump ==')
+    info('================================')
+    for filen in listdir(file_path):
+        if filen.startswith('lion-db-dump-'):
+            info('Removing file: {}'.format(file_path + filen))
+            remove(file_path + filen)
+    filename = 'lion-db-dump-' + datetime.utcnow().isoformat()
+    filename = filename.replace(':', '-').split('.')[0]
+    info('Creating file: {}'.format(file_path + filename + '.zip'))
     # Get all Imagesets associated with a lion
-    imgsets = list(db.imagesets.find({},{'animal_iid': 1}))
+    imgsets = list(db.imagesets.find({}, {'animal_iid': 1}))
     iids = [x['animal_iid'] for x in imgsets if x['animal_iid']]
     # Get the unique ids of the imagesets associated
     iids = list(set(iids))
@@ -113,12 +123,15 @@ def dbdump(db, filename, url_preffix, current_user):
         objanimal['_embedded'] = {'image_sets': imgsets_output}
         output.append(objanimal)
     exec_time = time() - ini
-    data = {'data': output, 'dump_execution_time_in_seconds': exec_time, 'dump_requested_by': current_user['username']}
-    with open(filename + '.json', 'w+') as f:
+    data = {'data': output, 'dump_execution_time_in_seconds': exec_time}
+    with open(file_path + filename + '.json', 'w+') as f:
         f.write(dumps(data))
         f.close()
-    with zipfile.ZipFile(filename + '.zip', 'w', zipfile.ZIP_DEFLATED) as zipf:
-        zipf.write(filename + '.json', filename.split('/')[-1] + '.json')
+    with zipfile.ZipFile(file_path + filename + '.zip', 'w', zipfile.ZIP_DEFLATED) as zipf:
+        zipf.write(file_path + filename + '.json',
+                   filename.split('/')[-1] + '.json')
         zipf.close()
-        remove(filename + '.json')
-    remove(filename + '.lock')
+        remove(file_path + filename + '.json')
+    info('================================')
+    info('== DB Dump finished ==')
+    info('================================')

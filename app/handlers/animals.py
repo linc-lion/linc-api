@@ -25,15 +25,14 @@ from tornado.gen import coroutine, engine, Task
 from handlers.base import BaseHandler
 from models.animal import Animal
 from models.imageset import ImageSet
-from datetime import datetime, time, timedelta
+from datetime import datetime, time
 from bson import ObjectId as ObjId
 from pymongo import DESCENDING
 from lib.rolecheck import api_authenticated
 from schematics.exceptions import ValidationError
 from logging import info
 from json import loads, dumps
-from lib.dbdump import dbdump
-from os import listdir, remove
+from os import listdir
 
 
 class AnimalsHandler(BaseHandler):
@@ -289,54 +288,16 @@ class AnimalsHandler(BaseHandler):
                 if self.current_user['username'] not in self.settings['allowed_emails']:
                     self.response(403, 'Resource access forbidden.')
                     return
-                info('>>> DUMP REQUEST >>>')
-                filename = 'lion-db-dump-' + datetime.utcnow().isoformat()
-                filename = filename.replace(':', '-').split('.')[0]
                 file_path = self.settings['app_path'] + '/static/export/'
-                file_url = self.settings['url'] + 'static/export/'
-                # Avoid duplicating requests
                 for filen in listdir(file_path):
-                    if filen.endswith('.lock'):
-                        fdownload = filen.split('/')[-1].split('.')[0]
+                    if filen.startswith('lion-db-dump-'):
+                        fdownload = filen.split('/')[-1]
                         self.response(
                             200,
-                            'A previous dump process was started. Wait and try to download the dump file.',
-                            {'url': file_url + fdownload + '.zip'})
+                            'The database dump file is available for download.',
+                            {'url': self.settings['url'] + 'static/export/' + fdownload})
                         return
-                # Create lock
-                with open(file_path + filename + '.lock', 'w+') as f:
-                    f.write('lock')
-                    f.close()
-                self.dump_filename = file_path + filename
-                self.response(
-                    201,
-                    'Request successfull. The dump file will be available at the url indicated in the output data.',
-                    {'url': file_url + filename + '.zip'})
-                return
-
-    @engine
-    def on_finish(self):
-        if hasattr(self, 'dump_filename'):
-            resp = yield Task(self.add_dump, self.dump_filename)
-            info(resp)
-            resp = yield Task(self.add_remove, self.dump_filename)
-            info(resp)
-
-    @engine
-    def add_dump(self, filename, callback=None):
-        self.settings['scheduler'].add_job(
-            func=dbdump,
-            args=[self.settings['sdb'], filename, self.settings['S3_URL'], self.current_user])
-        callback(True)
-
-    @engine
-    def add_remove(self, filename, callback=None):
-        self.settings['scheduler'].add_job(
-            func=remove,
-            trigger='date',
-            run_date=datetime.now() + timedelta(minutes=10),
-            args=[filename + '.zip'])
-        callback(True)
+                self.response(404, 'Database dump file not available. Try again soon.')
 
     @asynchronous
     @engine
@@ -407,7 +368,7 @@ class AnimalsHandler(BaseHandler):
 
                 # Set Lion Id to Imageset
                 try:
-                    updnobj = yield self.ImageSets.update({'iid': imageset['id']}, {'$set': {'animal_iid': output['id']}})
+                    updnobj = yield self.ImageSets.find_one_and_update({'iid': imageset['id']}, {'$set': {'animal_iid': output['id']}})
                     info(updnobj)
                     # Remove the imageset from the cache to be updated
                     rem = yield Task(self.cache_remove, imageset['iid'], 'imgset')
@@ -475,21 +436,21 @@ class AnimalsHandler(BaseHandler):
                 if 'primary_image_set_iid' in update_data.keys():
                     newimgsetid = int(update_data['primary_image_set_iid'])
                     # Change joined images to the new primary image set
-                    resp = yield self.Images.update(
+                    resp = yield self.Images.update_many(
                         {'$and': [{'joined': primimgsetid}, {'image_set_iid': {'$ne': newimgsetid}}]},
-                        {'$set': {'joined': newimgsetid}}, multi=True)
+                        {'$set': {'joined': newimgsetid}})
                     # Removed joined if it is an image from the new primary image set
-                    resp = yield self.Images.update(
+                    resp = yield self.Images.update_many(
                         {'$and': [{'joined': primimgsetid},
                                   {'image_set_iid': newimgsetid}]},
-                        {'$set': {'joined': None}}, multi=True)
+                        {'$set': {'joined': None}})
                     oldimgset = yield self.ImageSets.find_one({'iid': primimgsetid})
                     if oldimgset:
                         coverid = yield self.Images.find_one(
                             {'iid': oldimgset['main_image_iid']})
                         if coverid:
                             if int(coverid['image_set_iid']) != int(oldimgset['iid']):
-                                resp = yield self.ImageSets.update(
+                                resp = yield self.ImageSets.find_one_and_update(
                                     {'iid': oldimgset['iid']}, {'$set': {'main_image_iid': None}})
                                 info(resp)
                 try:
@@ -500,7 +461,7 @@ class AnimalsHandler(BaseHandler):
                     animals.validate()
                     # the object is valid, so try to save
                     try:
-                        updated = yield self.Animals.update(
+                        updated = yield self.Animals.find_one_and_update(
                             {'_id': updid}, animals.to_native())
                         info(updated)
                         output = updobj
@@ -568,9 +529,9 @@ class AnimalsHandler(BaseHandler):
                 rmved = yield self.Images.remove({'image_set_iid': rem_pis}, multi=True)
                 info(str(rmved))
                 # 4 - Removing association
-                rmved = yield self.ImageSets.update(
+                rmved = yield self.ImageSets.update_many(
                     {'animal_iid': rem_iid},
-                    {'$set': {'animal_iid': None, 'updated_at': datetime.now()}}, multi=True)
+                    {'$set': {'animal_iid': None, 'updated_at': datetime.now()}})
                 info(str(rmved))
                 # 5 - Adjusting cvresults
                 cursor = self.CVResults.find()
@@ -585,7 +546,7 @@ class AnimalsHandler(BaseHandler):
                         else:
                             rmupl.append(ma)
                     if rmup:
-                        updcvr = yield self.CVResults.update(
+                        updcvr = yield self.CVResults.find_one_and_update(
                             {'_id': doc['_id']}, {'$set': {'match_probability': dumps(rmupl)}})
                         info(updcvr)
             else:
