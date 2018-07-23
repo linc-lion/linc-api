@@ -43,6 +43,7 @@ class UsersHandler(BaseHandler):
             try:
                 query = {'_id': ObjId(user_id)}
             except Exception as e:
+                info(e)
                 query = {'email': user_id}
         return query
 
@@ -198,7 +199,7 @@ class UsersHandler(BaseHandler):
                     try:
                         updobj = updobj.to_native()
                         updobj['_id'] = updid
-                        saved = yield self.Users.update({'_id': updid}, updobj)
+                        saved = yield self.Users.find_one_and_update({'_id': updid}, updobj)
                         info(saved)
                         output = updobj
                         output['obj_id'] = str(updid)
@@ -233,17 +234,17 @@ class UsersHandler(BaseHandler):
                 iid = updobj['iid']
                 # imageset - uploading_user_iid
                 # Imagesets now will be uploaded by the admin iid
-                imgsetrc = yield self.ImageSets.update(
+                imgsetrc = yield self.ImageSets.update_many(
                     {'uploading_user_iid': iid},
                     {'$set':
                         {'uploading_user_iid': self.current_user['id'],
-                         'updated_at': datetime.now()}},
-                    multi=True)
+                         'updated_at': datetime.now()}})
                 info(imgsetrc)
                 try:
                     updobj = yield self.Users.remove(query)
                     self.response(200, 'User successfully deleted.')
                 except Exception as e:
+                    info(e)
                     self.response(500, 'Fail to delete user.')
             else:
                 self.response(404, 'User not found.')

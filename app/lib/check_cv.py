@@ -37,12 +37,12 @@ def checkresults(db, api):
     AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient")
     http_client = AsyncHTTPClient()
     cvreqs = db.cvrequests.find()
-    lcvreqids = [x['iid'] for x in cvreqs]
+    lcvreqids = [x['iid'] for x in cvreqs] # retrieve data from the cursor
     rmcv = db.cvresults.remove({'cvrequest_iid': {'$nin': lcvreqids}}, multi=True)
     info('    Clear cvresults without cvrequests: {}'.format(rmcv))
     # Get ids with status != finished or error
     cvreqs = db.cvrequests.find({'status': {'$nin': ['finished', 'error']}})
-    cvreqs = [x for x in cvreqs]
+    cvreqs = [x for x in cvreqs] # retrieve data from the cursor
     info('    CV Request not finished of error - count: ' + str(len(cvreqs)))
     # Connection preset
     params = {
@@ -67,7 +67,7 @@ def checkresults(db, api):
             newcvres = dict()
             newcvres['cvrequest_iid'] = cvreq['iid']
             newcvres['iid'] = iid['next']
-            newcvres['match_probability'] = '[]'
+            newcvres['match_probability'] = '{}'
             dt = datetime.now()
             newcvres['created_at'] = dt
             newcvres['updated_at'] = dt
@@ -75,11 +75,12 @@ def checkresults(db, api):
             info('CV results created id: ' + str(ncvresobjid))
             cvres = db.cvresults.find_one({'cvrequest_iid': cvreq['iid']})
         # Cvres exists, so try to get data
+        info('  ## CV Results id.....: {}  ## '.format(cvres['iid']))
         req_body = loads(cvreq['request_body'])
-        resp_cv = loads(cvres['match_probability'])
-        if len(resp_cv) == 0:
-            resp_cv.append({'type': 'cv', 'results': list()})
-            resp_cv.append({'type': 'whisker', 'results': list()})
+        resp_cvr = loads(cvres['match_probability'])
+        if len(resp_cvr) == 0:
+            resp_cvr['cv'] = list()
+            resp_cvr['whisker'] = list()
         # Check for cv results
         # cv_topk_classifier_accuracy
         # whisker_topk_classifier_accuracy
@@ -88,44 +89,16 @@ def checkresults(db, api):
             info(' >>> No classifiers found.')
         else:
             # Check CV
-            cv_finished = 0
-            wh_finished = 0
-            if req_body['classifiers'].get('cv', False):
-                info('    Processing calls for the classifier CV')
-                add = len(resp_cv[0]['results']) == 0
-                if add:
-                    for n, cv_call in enumerate(req_body['cv_calls']):
-                        dparams = params.copy()
-                        dparams['body'] = dumps(cv_call)
-                        request = HTTPRequest(**dparams)
-                        try:
-                            response = yield http_client.fetch(request)
-                        except HTTPError as e:
-                            info(e)
-                            response = e.response
-                        except Exception as e:
-                            info(e)
-                            response = None
-                        if response and response.code in [200, 201]:
-                            info('          Call #{} - success'.format(n))
-                            resp_cv[0]['results'].append(loads(response.body.decode('utf-8')))
-                        else:
-                            info('          Call #{} - fail'.format(n))
-                            resp_cv[0]['results'].append('FAILURE')
-                else:
-                    # Check results
-                    for n, cv_call in enumerate(req_body['cv_calls']):
-                        if resp_cv[0]['results'][n].get('status', None) == 'finished':
-                            info('          Request CV #{} finished'.format(n))
-                            cv_finished += 1
-                        else:
-                            info('       Check results for CV #{}'.format(n))
+            finished = {'cv': 0, 'whisker': 0}
+            for clf in ['cv', 'whisker']:
+                if req_body['classifiers'].get(clf, False):
+                    info('    Processing calls for the classifier {}'.format(clf.upper()))
+                    add = len(resp_cvr[clf]) == 0
+                    if add:
+                        # Submit requests
+                        for n, clf_call in enumerate(req_body[clf + '_calls']):
                             dparams = params.copy()
-                            del dparams['body']
-                            dparams['method'] = 'GET'
-                            url = api['CVSERVER_URL'] + '/linc/v1/results/' + resp_cv[0]['results'][n]['id']
-                            info(url)
-                            dparams['url'] = url
+                            dparams['body'] = dumps(clf_call)
                             request = HTTPRequest(**dparams)
                             try:
                                 response = yield http_client.fetch(request)
@@ -135,68 +108,45 @@ def checkresults(db, api):
                             except Exception as e:
                                 info(e)
                                 response = None
-                            if response.code in [200, 201]:
-                                info('          Call #{} - success'.format(n))
-                                resp_data = loads(response.body.decode('utf-8'))
-                                if resp_data['status'] == 'finished':
-                                    resp_cv[0]['results'][n] = resp_data.copy()
+                            if response and response.code in [200, 201]:
+                                info('          Call {} #{} - success'.format(clf.upper(), n))
+                                resp_cvr[clf].append(loads(response.body.decode('utf-8')))
                             else:
-                                info('          Call #{} - fail'.format(n))
-
-            if req_body['classifiers'].get('whisker', False):
-                info('    Processing calls for the classifier Whisker')
-                add = len(resp_cv[1]['results']) == 0
-                if add:
-                    for n, wh_call in enumerate(req_body['wh_calls']):
-                        dparams = params.copy()
-                        dparams['body'] = dumps(wh_call)
-                        request = HTTPRequest(**dparams)
-                        try:
-                            response = yield http_client.fetch(request)
-                        except HTTPError as e:
-                            info(e)
-                            response = e.response
-                        except Exception as e:
-                            info(e)
-                            response = None
-                        if response.code in [200, 201]:
-                            info('          Call #{} - success'.format(n))
-                            resp_cv[1]['results'].append(loads(response.body.decode('utf-8')))
-                        else:
-                            info('          Call #{} - fail'.format(n))
-                            resp_cv[1]['results'].append('FAILURE')
-                else:
-                    # Check results
-                    for n, wh_call in enumerate(req_body['wh_calls']):
-                        if resp_cv[1]['results'][n].get('status', None) == 'finished':
-                            info('          Request Whisker #{} finished'.format(n))
-                            wh_finished += 1
-                        else:
-                            info('     Check results for Whisker #{}'.format(n))
-                            dparams = params.copy()
-                            del dparams['body']
-                            dparams['method'] = 'GET'
-                            url = api['CVSERVER_URL'] + '/linc/v1/results/' + resp_cv[1]['results'][n]['id']
-                            info(url)
-                            dparams['url'] = url
-                            request = HTTPRequest(**dparams)
-                            try:
-                                response = yield http_client.fetch(request)
-                            except HTTPError as e:
-                                info(e)
-                                response = e.response
-                            except Exception as e:
-                                info(e)
-                                response = None
-                            if response.code in [200, 201]:
-                                info('          Call #{} - success'.format(n))
-                                resp_data = loads(response.body.decode('utf-8'))
-                                if resp_data['status'] == 'finished':
-                                    resp_cv[1]['results'][n] = resp_data.copy()
+                                info('          Call {} #{} - fail'.format(clf.upper(), n))
+                                resp_cvr[clf].append('FAILURE')
+                    else:
+                        # Check results
+                        for n, clf_call in enumerate(req_body[clf + '_calls']):
+                            if resp_cvr[clf][n].get('status', None) == 'finished':
+                                info('          Request CV #{} finished'.format(n))
+                                finished[clf] += 1
                             else:
-                                info('          Call #{} - fail'.format(n))
+                                info('       Check results for CV #{}'.format(n))
+                                dparams = params.copy()
+                                del dparams['body']
+                                dparams['method'] = 'GET'
+                                url = api['CVSERVER_URL'] + '/linc/v1/results/' + resp_cvr[clf][n]['id']
+                                info('       {}'.format(url))
+                                dparams['url'] = url
+                                request = HTTPRequest(**dparams)
+                                try:
+                                    response = yield http_client.fetch(request)
+                                except HTTPError as e:
+                                    info(e)
+                                    response = e.response
+                                except Exception as e:
+                                    info(e)
+                                    response = None
+                                if response.code in [200, 201]:
+                                    info('          Call #{} - success'.format(n))
+                                    resp_data = loads(response.body.decode('utf-8'))
+                                    info('          Status: {}'.format(resp_data['status']))
+                                    if resp_data['status'] == 'finished':
+                                        resp_cvr[clf][n] = resp_data.copy()
+                                else:
+                                    info('          Call #{} - fail'.format(n))
             dt = datetime.now()
-            if cv_finished == len(req_body['cv_calls']) and wh_finished == len(req_body['wh_calls']):
+            if finished['cv'] == len(req_body['cv_calls']) and finished['whisker'] == len(req_body['whisker_calls']):
                 info(' Loading capabilities...')
                 dparams = params.copy()
                 del dparams['body']
@@ -214,10 +164,11 @@ def checkresults(db, api):
                 if response.code in [200, 201]:
                     info(' ### CV Request finished ###')
                     db.cvrequests.update({'iid': cvreq['iid']}, {'$set': {'status': 'finished', 'updated_at': dt}})
-                    resp_cv.append({'capabilities': loads(response.body.decode('utf-8'))})
+                    resp_cvr['capabilities'] = loads(response.body.decode('utf-8'))
+                    resp_cvr['execution'] = dt.timestamp() - cvres['created_at'].timestamp()
                 else:
                     info(' Fail to retrieve capabilities info...')
-            db.cvresults.update({'cvrequest_iid': cvreq['iid']}, {'$set': {'match_probability': dumps(resp_cv), 'updated_at': dt}})
+            db.cvresults.update({'cvrequest_iid': cvreq['iid']}, {'$set': {'match_probability': dumps(resp_cvr), 'updated_at': dt}})
             api['cache'].delete('imgset-' + str(cvreq['image_set_iid']))
             info('   Cache delete for image set id: {}'.format(cvreq['image_set_iid']))
     info('=========================================================================')

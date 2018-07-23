@@ -35,10 +35,10 @@ from apscheduler.schedulers.tornado import TornadoScheduler
 from pymongo import MongoClient
 from logging import info
 from redis import Redis, ConnectionPool
+from lib.dbdump import dbdump
 
 
 # Adjusting path for the app
-
 appdir = os.path.dirname(os.path.realpath(__file__))
 info('Work directory: %s' % str(appdir))
 
@@ -100,6 +100,7 @@ else:
 
 info('MongoDB Database set to: %s' % (URI))
 api['db'] = db
+api['sdb'] = sdb
 
 api['cookie_secret'] = os.environ.get('COOKIE_SECRET', gen_token(50))
 api['token_secret'] = os.environ.get('TOKEN_SECRET', mksecret(50))
@@ -113,7 +114,7 @@ api['CV_APIKEY'] = os.environ.get('CV_APIKEY', '')
 
 api['S3_BUCKET'] = os.environ.get('S3_BUCKET', '')
 api['S3_FOLDER'] = 'linc-api-' + api['animals']
-api['S3_URL'] = os.environ.get('S3_URL', '') + api['S3_FOLDER'] + '/'
+api['S3_URL'] = os.environ.get('S3_URL', 'https://linc-media.linclion.org/') + api['S3_FOLDER'] + '/'
 
 api['S3_ACCESS_KEY'] = os.environ.get('S3_ACCESS_KEY', '')
 api['S3_SECRET_KEY'] = os.environ.get('S3_SECRET_KEY', '')
@@ -126,13 +127,29 @@ api['SMTP_USERNAME'] = os.environ.get('SMTP_USERNAME', '')
 api['SMTP_PASSWORD'] = os.environ.get('SMTP_PASSWORD')
 api['SMPT_PORT'] = os.environ.get('SMTP_PORT', '587')
 
+api['allowed_emails'] = os.environ.get('ALLOWED_EMAILS', '')
+
 api['url'] = os.environ.get('API_URL', 'http://localhost:5050/')
+
+redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+api['cache'] = Redis(connection_pool=ConnectionPool.from_url(redis_url))
+
+
 api['scheduler'] = TornadoScheduler()
 api['scheduler'].start()
 # Check CV Server results - every 30 seconds
 api['scheduler'].add_job(checkresults, 'interval', seconds=30, args=[sdb, api])
 # Delete files in S3
 api['scheduler'].add_job(checkS3, 'interval', seconds=50, args=[sdb, api])
-
-redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
-api['cache'] = Redis(connection_pool=ConnectionPool.from_url(redis_url))
+# Dump the database hourly basis
+api['scheduler'].add_job(dbdump, 'interval',
+                         hours=1,
+                         args=[
+                             sdb,
+                             api['S3_URL'],
+                             appdir + '/static/export/'])
+api['scheduler'].add_job(dbdump,
+                         args=[
+                             sdb,
+                             api['S3_URL'],
+                             appdir + '/static/export/'])

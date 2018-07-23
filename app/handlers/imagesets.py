@@ -307,16 +307,16 @@ class ImageSetsHandler(BaseHandler):
             query = self.query_id(imageset_id)
             imgchk = yield self.ImageSets.find_one(query)
             if imgchk:
-                cvreqchk = yield self.CVRequests.find_one({'image_set_iid': imgchk['iid']})
-                if cvreqchk:
-                    self.response(
-                        400, 'A request for indentification of this imageset already exists in the database.')
-                    return
                 if self.animals not in self.input_data.keys():
                     self.response(400, 'The cvrequest needs a list of ' + self.settings[
                                   'animals'] + ' id like: { "' + self.animals + '": [<id>,...] }.')
                     return
                 if cvrequest:
+                    cvreqchk = yield self.CVRequests.find_one({'image_set_iid': int(imageset_id)})
+                    if cvreqchk:
+                        self.response(
+                            409, 'A request for indentification of this imageset already exists in the database.')
+                        return
                     check_algo = {'cv': False, 'whisker': False}
                     classl = self.input_data.get('classifier', [])
                     for v in ['cv', 'whisker']:
@@ -344,9 +344,10 @@ class ImageSetsHandler(BaseHandler):
                         {'image_tags': ['cv'],
                          'image_set_iid': imgchk['iid']}).to_list(None)
                     wh_imgs = yield self.Images.find(
-                        {'$or': [# {'image_tags': ['whisker']},
-                                 {'image_tags': ['whisker-left']},
-                                 {'image_tags': ['whisker-right']}],
+                        {'$or': [
+                            # {'image_tags': ['whisker']},
+                            {'image_tags': ['whisker-left']},
+                            {'image_tags': ['whisker-right']}],
                          'image_set_iid': imgchk['iid']}).to_list(None)
                     cv_calls = list()
                     info(check_algo)
@@ -363,7 +364,7 @@ class ImageSetsHandler(BaseHandler):
                                 'url': self.settings['S3_URL'] + x['url'] + '_full.jpg'})
                     if cv_calls or wh_calls:
                         request_base_body['cv_calls'] = cv_calls if cv_calls else []
-                        request_base_body['wh_calls'] = wh_calls if wh_calls else []
+                        request_base_body['whisker_calls'] = wh_calls if wh_calls else []
                         # Create a cvrequest mongodb object for this ImageSet
                         newobj = dict()
                         newobj['iid'] = yield Task(self.new_iid, CVRequest.collection())
@@ -429,17 +430,15 @@ class ImageSetsHandler(BaseHandler):
                         primimgsetid = yield self.Animals.find_one({'iid': assocanimalid})
                         if primimgsetid:
                             primimgsetid = primimgsetid['primary_image_set_iid']
-                            resp = yield self.Images.update(
+                            resp = yield self.Images.update_many(
                                 {'$and': [{'image_set_iid': objimgset['iid']},
                                           {'joined': {'$ne': None}}]},
-                                {'$set': {'joined': None}},
-                                multi=True)
+                                {'$set': {'joined': None}})
                             info(resp)
                             imgslist = yield self.Images.find({'image_set_iid': objimgset['iid']}).to_list(None)
                             imgslist = [int(x['iid']) for x in imgslist]
-                            resp = self.ImageSets.update(
-                                {'main_image_iid': {'$in': imgslist}}, {'$set': {'main_image_iid': None}},
-                                multi=True)
+                            resp = self.ImageSets.update_many(
+                                {'main_image_iid': {'$in': imgslist}}, {'$set': {'main_image_iid': None}})
                             info(resp)
                 for k, v in self.input_data.items():
                     if k in fields_allowed:
@@ -592,7 +591,7 @@ class ImageSetsHandler(BaseHandler):
                     objimgset = objimgset.to_native()
                     # objimgset['_id'] = imgid
                     updnobj = yield \
-                        self.ImageSets.update(
+                        self.ImageSets.find_one_and_update(
                             {'_id': imgid}, {'$set': objimgset}, upsert=True)
                     info(updnobj)
                     output = objimgset
@@ -646,7 +645,7 @@ class ImageSetsHandler(BaseHandler):
                 rmlist = list()
                 for img in imgl:
                     # Remove joined referenced
-                    resp = yield self.ImageSets.update({'main_image_iid': img['iid']}, {'$set': {'main_image_iid': None}})
+                    resp = yield self.ImageSets.find_one_and_update({'main_image_iid': img['iid']}, {'$set': {'main_image_iid': None}})
                     info(resp)
                     # Delete the source file
                     srcurl = self.settings['S3_FOLDER'] + '/imageset_' + \
@@ -803,7 +802,7 @@ class ImageSetsHandler(BaseHandler):
                 imgset_obj['cvresults'] = None
                 if objcvreq:
                     objcvres = yield self.CVResults.find_one({'cvrequest_iid': objcvreq['iid']})
-                    if objcvres:
+                    if objcvres and objcvreq['status'] in ['finished', 'error']:
                         imgset_obj['cvresults'] = str(objcvres['_id'])
                 output.append(imgset_obj)
                 addcache = yield Task(self.cache_set, obj['iid'], 'imgset', imgset_obj, None)
@@ -848,6 +847,13 @@ class ImageSetsCheckReqHandler(BaseHandler):
         if not imageset_id:
             self.response(400, 'Invalid request')
         else:
+            cvreqchk = yield self.CVRequests.find_one({'image_set_iid': imageset_id})
+            if cvreqchk:
+                self.response(
+                    409,
+                    'A previous request for indentification of this image set already exists in the database.',
+                    {'cv_request_id': cvreqchk['iid'], 'status': cvreqchk['status']})
+                return
             resp_cv = 0
             resp_wh = 0
             try:
