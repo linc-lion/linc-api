@@ -22,6 +22,15 @@ class DBMethods:
                 query = {'name': str(req_id)}
         return query
 
+    @asynchronous
+    @engine
+    def new_iid(self, collection, callback=None):
+        iid = yield self.db.counters.find_one_and_update(
+            filter={'_id': collection},
+            update={'$inc': {'next': 1}},
+            return_document=True, upsert=True)
+        callback(int(iid['next']))
+
     @engine
     def get_org_by_id(self, orgid=None, callback=None):
         try:
