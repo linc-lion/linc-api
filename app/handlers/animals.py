@@ -350,12 +350,14 @@ class AnimalsHandler(BaseHandler):
             if not check_org:
                 self.response(409, 'Invalid organization_id.')
                 return
-        try:
+        #try:
+        if True:
             newanimal = Animal(animal)
             newanimal.collection(self.animals)
             newanimal.validate()
             # the new object is valid, so try to save
-            try:
+            #try:
+            if True:
                 newsaved = yield self.Animals.insert(newanimal.to_primitive())
                 output = newanimal.to_primitive()
                 output['obj_id'] = str(newsaved)
@@ -367,7 +369,8 @@ class AnimalsHandler(BaseHandler):
                 del output['primary_image_set_iid']
 
                 # Set Lion Id to Imageset
-                try:
+                #try:
+                if True:
                     updnobj = yield self.ImageSets.find_one_and_update({'iid': imageset['id']}, {'$set': {'animal_iid': output['id']}})
                     info(updnobj)
                     # Remove the imageset from the cache to be updated
@@ -378,20 +381,20 @@ class AnimalsHandler(BaseHandler):
                         'message': 'new %s saved.' % (self.animal),
                         'data': output
                     }))
-                except ValidationError as e:
-                    self.response(400, "Invalid input data. Error: " + str(e) + '.')
-                    return
+#                except ValidationError as e:
+#                    self.response(400, "Invalid input data. Error: " + str(e) + '.')
+#                    return
 
-            except Exception as e:
-                # duplicated index error
-                self.response(
-                    409,
-                    'Key violation. Check if you are using a name from a lion that already exists in the database.')
-        except ValidationError as e:
-            # received data is invalid in some way
-            self.response(
-                400,
-                'Invalid input data. Errors: %s' % (str(e)))
+#            except Exception as e:
+#                # duplicated index error
+#                self.response(
+#                    409,
+#                    'Key violation. Check if you are using a name from a lion that already exists in the database.')
+#        except ValidationError as e:
+#            # received data is invalid in some way
+#            self.response(
+#                400,
+#                'Invalid input data. Errors: %s' % (str(e)))
 
     @asynchronous
     @coroutine
