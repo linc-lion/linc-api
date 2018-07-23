@@ -371,7 +371,7 @@ class AnimalsHandler(BaseHandler):
                     updnobj = yield self.ImageSets.find_one_and_update({'iid': imageset['id']}, {'$set': {'animal_iid': output['id']}})
                     info(updnobj)
                     # Remove the imageset from the cache to be updated
-                    rem = yield Task(self.cache_remove, imageset['iid'], 'imgset')
+                    rem = yield Task(self.cache_remove, imageset['id'], 'imgset')
                     info(rem)
                     self.finish(self.json_encode({
                         'status': 'success',
