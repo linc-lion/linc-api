@@ -142,7 +142,7 @@ class OrganizationsHandler(BaseHandler):
                         updid = updobj['_id']
                         # the object is valid, so try to save
                         try:
-                            saved = yield self.db.organizations.update(
+                            saved = yield self.db.organizations.find_one_and_update(
                                 {'_id': updid},
                                 {'$set': updict})
                             info(saved)
@@ -180,28 +180,26 @@ class OrganizationsHandler(BaseHandler):
                 # check for references
                 iid = updobj['iid']
                 # user - organization_iid
-                userrc = yield self.Users.update(
+                userrc = yield self.Users.update_many(
                     {'organization_iid': iid},
                     {'$set': {'organization_iid': self.current_user['org_id'],
-                              'updated_at': datetime.now()}},
-                    multi=True)
+                              'updated_at': datetime.now()}})
                 info(userrc)
                 # imageset - uploading_organization_iid
                 # imageset - owner_organization_iid
-                imgsetrc1 = yield self.ImageSets.update(
+                imgsetrc1 = yield self.ImageSets.update_many(
                     {'uploading_organization_iid': iid},
                     {'$set':
                         {'uploading_organization_iid': self.current_user['org_id'],
-                         'updated_at': datetime.now()}},
-                    multi=True)
+                         'updated_at': datetime.now()}})
                 info(imgsetrc1)
-                imgsetrc2 = yield self.ImageSets.update({'owner_organization_iid': iid}, {'$set': {'owner_organization_iid': self.current_user['org_id'], 'updated_at': datetime.now()}}, multi=True)
+                imgsetrc2 = yield self.ImageSets.update_many({'owner_organization_iid': iid}, {'$set': {'owner_organization_iid': self.current_user['org_id'], 'updated_at': datetime.now()}})
                 info(imgsetrc2)
                 # animal - organization_iid
-                animalsrc = yield self.Animals.update({'organization_iid': iid}, {'$set': {'organization_iid': self.current_user['org_id'], 'updated_at': datetime.now()}}, multi=True)
+                animalsrc = yield self.Animals.update_many({'organization_iid': iid}, {'$set': {'organization_iid': self.current_user['org_id'], 'updated_at': datetime.now()}})
                 info(animalsrc)
                 # cvrequest - uploading_organization_iid
-                cvreqrc = yield self.CVRequests.update({'requesting_organization_iid': iid}, {'$set': {'requesting_organization_iid': self.current_user['org_id'], 'updated_at': datetime.now()}}, multi=True)
+                cvreqrc = yield self.CVRequests.update_many({'requesting_organization_iid': iid}, {'$set': {'requesting_organization_iid': self.current_user['org_id'], 'updated_at': datetime.now()}})
                 info(cvreqrc)
                 try:
                     updobj = yield self.db.organizations.remove(query)

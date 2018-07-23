@@ -32,21 +32,21 @@ from lib.rolecheck import api_authenticated
 from schematics.exceptions import ValidationError
 from logging import info
 from json import loads, dumps
+from os import listdir
 
 
 class AnimalsHandler(BaseHandler):
     """A class that handles requests about animals informartion."""
-
     SUPPORTED_METHODS = ('GET', 'POST', 'PUT', 'DELETE')
 
     @asynchronous
     @coroutine
+    @api_authenticated
     def get(self, animal_id=None, xurl=None):
-
-        current_user = yield self.Users.find_one({'email': self.current_user['username']})
+        current_user = yield self.Users.find_one(
+            {'email': self.current_user['username'] if self.current_user and 'username' in self.current_user else None})
         is_admin = current_user['admin']
         current_organization = yield self.db.organizations.find_one({'iid': current_user['organization_iid']})
-
         apiout = self.get_argument('api', None)
         noimages = self.get_argument('no_images', '')
         if noimages.lower() == 'true':
@@ -95,7 +95,6 @@ class AnimalsHandler(BaseHandler):
                         output['organization'] = org['name']
                     else:
                         output['organization'] = '-'
-
                     # get data from the primary image set
                     objimgset = yield self.ImageSets.find_one(
                         {'iid': objanimal['primary_image_set_id']})
@@ -263,32 +262,42 @@ class AnimalsHandler(BaseHandler):
                 self.response(400, 'Invalid value for dob_start/dob_end. Error: ' + str(e) + '.')
                 return
             info(queryfilter)
-            objs = yield self.ImageSets.find(queryfilter).to_list(None)
-            iids = [x['animal_iid'] for x in objs]
-            iids = list(set(iids))
-            objs = yield self.Animals.find({'iid': {'$in': iids}}).to_list(None)
-            output = list()
-            for x in objs:
-                if 'dead' not in x.keys():
-                    x['dead'] = False
-                if apiout:
-                    obj = dict(x)
-                    obj['obj_id'] = str(x['_id'])
-                    del obj['_id']
-                    obj['organization_id'] = obj['organization_iid']
-                    del obj['organization_iid']
-                    obj['primary_image_set_id'] = obj['primary_image_set_iid']
-                    del obj['primary_image_set_iid']
-                    self.switch_iid(obj)
-                else:
-                    obj = yield Task(self.prepare_output, x, noimages)
-                output.append(obj)
-            self.set_status(200)
-            if apiout:
-                outshow = {'status': 'success', 'data': output}
+            if queryfilter:
+                objs = yield self.ImageSets.find(queryfilter).to_list(None)
+                iids = [x['animal_iid'] for x in objs]
+                iids = list(set(iids))
+                objs = yield self.Animals.find({'iid': {'$in': iids}}).to_list(None)
+                output = list()
+                for x in objs:
+                    if 'dead' not in x.keys():
+                        x['dead'] = False
+                    if apiout:
+                        obj = dict(x)
+                        obj['obj_id'] = str(x['_id'])
+                        del obj['_id']
+                        obj['organization_id'] = obj['organization_iid']
+                        del obj['organization_iid']
+                        obj['primary_image_set_id'] = obj['primary_image_set_iid']
+                        del obj['primary_image_set_iid']
+                        self.switch_iid(obj)
+                    else:
+                        obj = yield Task(self.prepare_output, x, noimages)
+                    output.append(obj)
+                self.response(200, 'List of animals for the query: {}'.format(queryfilter), output)
             else:
-                outshow = output
-            self.finish(self.json_encode(outshow))
+                if self.current_user['username'] not in self.settings['allowed_emails']:
+                    self.response(403, 'Resource access forbidden.')
+                    return
+                file_path = self.settings['app_path'] + '/static/export/'
+                for filen in listdir(file_path):
+                    if filen.startswith('lion-db-dump-'):
+                        fdownload = filen.split('/')[-1]
+                        self.response(
+                            200,
+                            'The database dump file is available for download.',
+                            {'url': self.settings['url'] + 'static/export/' + fdownload})
+                        return
+                self.response(404, 'Database dump file not available. Try again soon.')
 
     @asynchronous
     @engine
@@ -359,7 +368,8 @@ class AnimalsHandler(BaseHandler):
 
                 # Set Lion Id to Imageset
                 try:
-                    updnobj = yield self.ImageSets.update({'iid': imageset['id']}, {'$set': {'animal_iid': output['id']}})
+                    updnobj = yield self.ImageSets.find_one_and_update({'iid': imageset['id']}, {'$set': {'animal_iid': output['id']}})
+                    info(updnobj)
                     # Remove the imageset from the cache to be updated
                     rem = yield Task(self.cache_remove, imageset['iid'], 'imgset')
                     info(rem)
@@ -426,21 +436,21 @@ class AnimalsHandler(BaseHandler):
                 if 'primary_image_set_iid' in update_data.keys():
                     newimgsetid = int(update_data['primary_image_set_iid'])
                     # Change joined images to the new primary image set
-                    resp = yield self.Images.update(
+                    resp = yield self.Images.update_many(
                         {'$and': [{'joined': primimgsetid}, {'image_set_iid': {'$ne': newimgsetid}}]},
-                        {'$set': {'joined': newimgsetid}}, multi=True)
+                        {'$set': {'joined': newimgsetid}})
                     # Removed joined if it is an image from the new primary image set
-                    resp = yield self.Images.update(
+                    resp = yield self.Images.update_many(
                         {'$and': [{'joined': primimgsetid},
                                   {'image_set_iid': newimgsetid}]},
-                        {'$set': {'joined': None}}, multi=True)
+                        {'$set': {'joined': None}})
                     oldimgset = yield self.ImageSets.find_one({'iid': primimgsetid})
                     if oldimgset:
                         coverid = yield self.Images.find_one(
                             {'iid': oldimgset['main_image_iid']})
                         if coverid:
                             if int(coverid['image_set_iid']) != int(oldimgset['iid']):
-                                resp = yield self.ImageSets.update(
+                                resp = yield self.ImageSets.find_one_and_update(
                                     {'iid': oldimgset['iid']}, {'$set': {'main_image_iid': None}})
                                 info(resp)
                 try:
@@ -451,7 +461,7 @@ class AnimalsHandler(BaseHandler):
                     animals.validate()
                     # the object is valid, so try to save
                     try:
-                        updated = yield self.Animals.update(
+                        updated = yield self.Animals.find_one_and_update(
                             {'_id': updid}, animals.to_native())
                         info(updated)
                         output = updobj
@@ -519,9 +529,9 @@ class AnimalsHandler(BaseHandler):
                 rmved = yield self.Images.remove({'image_set_iid': rem_pis}, multi=True)
                 info(str(rmved))
                 # 4 - Removing association
-                rmved = yield self.ImageSets.update(
+                rmved = yield self.ImageSets.update_many(
                     {'animal_iid': rem_iid},
-                    {'$set': {'animal_iid': None, 'updated_at': datetime.now()}}, multi=True)
+                    {'$set': {'animal_iid': None, 'updated_at': datetime.now()}})
                 info(str(rmved))
                 # 5 - Adjusting cvresults
                 cursor = self.CVResults.find()
@@ -536,7 +546,7 @@ class AnimalsHandler(BaseHandler):
                         else:
                             rmupl.append(ma)
                     if rmup:
-                        updcvr = yield self.CVResults.update(
+                        updcvr = yield self.CVResults.find_one_and_update(
                             {'_id': doc['_id']}, {'$set': {'match_probability': dumps(rmupl)}})
                         info(updcvr)
             else:
@@ -633,6 +643,25 @@ class AnimalsHandler(BaseHandler):
                     if img:
                         obj['thumbnail'] = self.settings['S3_URL'] + img['url'] + '_icon.jpg'
                         obj['image'] = self.settings['S3_URL'] + img['url'] + '_medium.jpg'
+            # Check algorithms
+            limagesets = yield self.ImageSets.find({'animal_iid': x['iid']}, {'iid': 1}).to_list(None)
+            limagesets = [x['iid'] for x in limagesets]
+            resp_cv = None
+            resp_wh = None
+            try:
+                resp_cv = yield self.Images.find(
+                    {'image_tags': ['cv'],
+                        'image_set_iid': {'$in': limagesets}}).count()
+                resp_wh = yield self.Images.find(
+                    {'$or': [
+                        # {'image_tags': ['whisker']},
+                        {'image_tags': ['whisker-left']},
+                        {'image_tags': ['whisker-right']}],
+                     'image_set_iid': {'$in': limagesets}}).count()
+            except Exception as e:
+                info(e)
+            obj['cv'] = bool(resp_cv)
+            obj['whisker'] = bool(resp_wh)
             output.append(obj)
         callback(output)
 
@@ -713,7 +742,7 @@ class AnimalsHandler(BaseHandler):
                 for image in images:
                     obji = dict()
                     obji['id'] = image['iid']
-                    obji['image_tags'] = image['image_tags']
+                    obji['image_tags'] = image['image_tags'] if 'image_tags' in image else []
                     obji['is_public'] = image['is_public']
                     # This will be recoded
                     obji['thumbnail_url'] = ''

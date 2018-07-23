@@ -69,29 +69,43 @@ class CVResultsHandler(BaseHandler):
                     else:
                         # List data following the website form
                         obj_cvq = yield self.CVRequests.find_one({'iid': obj_cvr['cvrequest_iid']})
-
+                        if obj_cvq['status'] not in ['finished', 'error']:
+                            self.response(400, 'CV Request still processing...')
+                            return
                         req_body = loads(obj_cvq['request_body'])
                         for k, v in req_body.items():
                             info('{} = {}'.format(k, v))
                         obj_cvr['results'] = loads(obj_cvr['match_probability'])
                         del obj_cvr['match_probability']
-                        info(obj_cvr)
-
-                        # output = {'cvq': obj_cvq, 'cvr': obj_cvr}
-
                         output = {'results': list()}
-                        output['lions_found'] = req_body['lions_found']
-                        output['lions_submitted'] = req_body['lions_submitted']
-                        output['classifiers'] = req_body['classifiers']
+                        # Prepare output
+                        capabilities = obj_cvr['results']['capabilities'].copy()
+                        exec_time = obj_cvr['results']['execution']
+                        del obj_cvr['results']['execution']
+                        del obj_cvr['results']['capabilities']
+                        calc = dict()
+                        mcalc = dict()
+                        lion_keys = list()
+                        for clf in ['cv', 'whisker']:
+                            calc[clf] = dict()
+                            mcalc[clf] = dict()
+                            # info(obj_cvr['results'][clf])
+                            for x in obj_cvr['results'][clf]:
+                                for v in x['predictions']:
+                                    if v['lion_id'] not in calc[clf]:
+                                        calc[clf][v['lion_id']] = list()
+                                    calc[clf][v['lion_id']].append(v['probability'])
+                            for l, v  in calc[clf].items():
+                                mcalc[clf][l] = sum(v) / len(obj_cvr['results'][clf])
+                            lion_keys += calc[clf].keys()
+                        # lion_keys = list(set(lion_keys + [str(i) for i in req_body['lions_submitted']]))
 
-                        output['results']
-
-                        # mp = loads(objs['match_probability'])
-
-                        for i in obj_cvr['results']:
+                        cv_pred_accu = capabilities['cv_topk_classifier_accuracy'][len(obj_cvr['results']['cv']) - 1]
+                        whisker_pred_accu = capabilities['whisker_topk_classifier_accuracy'][len(obj_cvr['results']['whisker']) - 1]
+                        # for k in lion_keys:
+                        for k in [str(i) for i in req_body['lions_submitted']]:
                             objres = dict()
-                            # objres['id'] = int(i['id'])
-                            objres['id'] = 9
+                            objres['id'] = int(k)
                             objres['primary_image_set_id'] = ''
                             objres['name'] = '-'
                             objres['thumbnail'] = ''
@@ -133,13 +147,27 @@ class CVResultsHandler(BaseHandler):
                                     org = yield self.db.organizations.find_one({'iid': aobj['organization_iid']})
                                     if org:
                                         objres['organization'] = org['name']
-
-                            # objres['cv'] = i['confidence']
-                            objres['cv'] = 7.827403010196576e-07
-                            objres['whisker'] = 1.1841663763334509e-05
-                            objres['prediction'] = 0.75
+                            objres['cv_confidence'] = None
+                            objres['cv_prediction'] = None
+                            objres['whisker_confidence'] = None
+                            objres['whisker_prediction'] = None
+                            if k in capabilities['valid_cv_lion_ids'] and k in mcalc['cv']:
+                                # objres['cv_confidence'] = mcalc['cv'][k]
+                                # objres['cv_prediction'] = cv_pred_accu
+                                objres['cv_confidence'] = cv_pred_accu
+                                objres['cv_prediction'] = mcalc['cv'][k]
+                            if k in capabilities['valid_whisker_lion_ids'] and k in mcalc['whisker']:
+                                # objres['whisker_confidence'] = mcalc['whisker'][k]
+                                # objres['whisker_prediction'] = whisker_pred_accu
+                                objres['whisker_confidence'] = whisker_pred_accu
+                                objres['whisker_prediction'] = mcalc['whisker'][k]
                             output['results'].append(objres)
-                            break
+                        # Order the results taking the top values for both
+                        output['results'] = sorted(
+                            output['results'],
+                            key=lambda k: (-(k['cv_prediction'] if k['cv_prediction'] else 0.0), -(k['whisker_prediction'] if k['whisker_prediction'] else 0.0)))
+                        # Limit list to 20 lions
+                        output['results'] = output['results'][:20]
                         assoc = {'id': None, 'name': None}
                         reqstatus = '-'
                         if obj_cvq:
@@ -152,15 +180,18 @@ class CVResultsHandler(BaseHandler):
                                     lname = yield self.Animals.find_one({'iid': imgset['animal_iid']})
                                     if lname:
                                         assoc['name'] = lname['name']
-                        output = {'table': output, 'associated': assoc, 'status': reqstatus, 'req_id': reqid}
-                    #
+                        output = {
+                            'table': output['results'],
+                            'associated': assoc,
+                            'status': reqstatus,
+                            'req_id': reqid,
+                            'lions_found': req_body['lions_found'],
+                            'lions_submitted': req_body['lions_submitted'],
+                            'classifiers': req_body['classifiers'],
+                            'execution': exec_time}
                     self.response(200, 'CV results data.', output)
-                    # self.set_status(200)
-                    # self.finish(self.json_encode({'status': 'success', 'data': output}))
                 else:
-                    # self.set_status(404)
-                    # self.finish(self.json_encode({'status': 'error', 'message': 'not found'}))
-                    self.response(404, 'CV results not found.')
+                    self.response(404, 'CV results not found. Another user may have deleted the CV results.')
         else:
             objs = yield self.CVResults.find().to_list(None)
             output = list()
