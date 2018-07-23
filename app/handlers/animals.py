@@ -534,21 +534,22 @@ class AnimalsHandler(BaseHandler):
                     {'$set': {'animal_iid': None, 'updated_at': datetime.now()}})
                 info(str(rmved))
                 # 5 - Adjusting cvresults
-                cursor = self.CVResults.find()
-                while (yield cursor.fetch_next):
-                    doc = cursor.next_object()
-                    mp = loads(doc['match_probability'])
-                    rmup = False
-                    rmupl = list()
-                    for ma in mp:
-                        if int(ma['id']) == int(rem_iid):
-                            rmup = True
-                        else:
-                            rmupl.append(ma)
-                    if rmup:
-                        updcvr = yield self.CVResults.find_one_and_update(
-                            {'_id': doc['_id']}, {'$set': {'match_probability': dumps(rmupl)}})
-                        info(updcvr)
+                # cursor = self.CVResults.find()
+                # while (yield cursor.fetch_next):
+                #     doc = cursor.next_object()
+                #     mp = loads(doc['match_probability'])
+                #     rmup = False
+                #     rmupl = list()
+                #     for ma in mp:
+                #         if int(ma['id']) == int(rem_iid):
+                #             rmup = True
+                #         else:
+                #             rmupl.append(ma)
+                #     if rmup:
+                #         updcvr = yield self.CVResults.find_one_and_update(
+                #             {'_id': doc['_id']}, {'$set': {'match_probability': dumps(rmupl)}})
+                #         info(updcvr)
+                self.response(200, 'Lion deleted.')
             else:
                 self.response(404, self.animal + ' not found.')
         else:

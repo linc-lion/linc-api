@@ -25,10 +25,10 @@ class DBMethods:
     @asynchronous
     @engine
     def new_iid(self, collection, callback=None):
-        iid = yield self.db.counters.find_and_modify(
-            query={'_id': collection},
+        iid = yield self.db.counters.find_one_and_update(
+            filter={'_id': collection},
             update={'$inc': {'next': 1}},
-            new=True, upsert=True)
+            return_document=True, upsert=True)
         callback(int(iid['next']))
 
     @engine

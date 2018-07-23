@@ -214,6 +214,14 @@ class BaseHandler(RequestHandler, DBMethods, HTTPMethods):
             self.response(
                 status_code, 'Method not allowed in this resource. ' +
                 'Check your verb (GET, POST, PUT and DELETE).')
+        elif status_code == 403:
+            self.response(
+                status_code, 'Resource forbidden.'
+            )
+        elif status_code == 401:
+            self.response(
+                status_code, 'Authentication required'
+            )
         else:
             info(kwargs)
             self.response(status_code, 'Error: ' + str(kwargs))
