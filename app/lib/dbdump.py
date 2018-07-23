@@ -25,8 +25,7 @@ from json import dumps
 from time import time
 import zipfile
 from os import listdir, remove
-# import zlib
-
+from uuid import uuid4
 
 @coroutine
 def dbdump(db, url_preffix, file_path):
@@ -39,7 +38,7 @@ def dbdump(db, url_preffix, file_path):
             info('Removing file: {}'.format(file_path + filen))
             remove(file_path + filen)
     filename = 'lion-db-dump-' + datetime.utcnow().isoformat()
-    filename = filename.replace(':', '-').split('.')[0]
+    filename = filename.replace(':', '-').split('.')[0] + '-' + str(uuid4())
     info('Creating file: {}'.format(file_path + filename + '.zip'))
     # Get all Imagesets associated with a lion
     imgsets = list(db.imagesets.find({}, {'animal_iid': 1}))
