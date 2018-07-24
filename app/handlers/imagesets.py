@@ -591,7 +591,7 @@ class ImageSetsHandler(BaseHandler):
                     objimgset = objimgset.to_native()
                     # objimgset['_id'] = imgid
                     updnobj = yield \
-                        self.ImageSets.find_one_and_update(
+                        self.ImageSets.update(
                             {'_id': imgid}, {'$set': objimgset}, upsert=True)
                     info(updnobj)
                     output = objimgset
@@ -645,7 +645,7 @@ class ImageSetsHandler(BaseHandler):
                 rmlist = list()
                 for img in imgl:
                     # Remove joined referenced
-                    resp = yield self.ImageSets.find_one_and_update({'main_image_iid': img['iid']}, {'$set': {'main_image_iid': None}})
+                    resp = yield self.ImageSets.update({'main_image_iid': img['iid']}, {'$set': {'main_image_iid': None}})
                     info(resp)
                     # Delete the source file
                     srcurl = self.settings['S3_FOLDER'] + '/imageset_' + \
