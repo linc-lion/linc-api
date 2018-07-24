@@ -368,7 +368,7 @@ class AnimalsHandler(BaseHandler):
 
                 # Set Lion Id to Imageset
                 try:
-                    updnobj = yield self.ImageSets.find_one_and_update({'iid': imageset['id']}, {'$set': {'animal_iid': output['id']}})
+                    updnobj = yield self.ImageSets.update({'iid': imageset['id']}, {'$set': {'animal_iid': output['id']}})
                     info(updnobj)
                     # Remove the imageset from the cache to be updated
                     rem = yield Task(self.cache_remove, imageset['iid'], 'imgset')
@@ -450,7 +450,7 @@ class AnimalsHandler(BaseHandler):
                             {'iid': oldimgset['main_image_iid']})
                         if coverid:
                             if int(coverid['image_set_iid']) != int(oldimgset['iid']):
-                                resp = yield self.ImageSets.find_one_and_update(
+                                resp = yield self.ImageSets.update(
                                     {'iid': oldimgset['iid']}, {'$set': {'main_image_iid': None}})
                                 info(resp)
                 try:
@@ -461,7 +461,7 @@ class AnimalsHandler(BaseHandler):
                     animals.validate()
                     # the object is valid, so try to save
                     try:
-                        updated = yield self.Animals.find_one_and_update(
+                        updated = yield self.Animals.update(
                             {'_id': updid}, animals.to_native())
                         info(updated)
                         output = updobj
@@ -546,7 +546,7 @@ class AnimalsHandler(BaseHandler):
                 #         else:
                 #             rmupl.append(ma)
                 #     if rmup:
-                #         updcvr = yield self.CVResults.find_one_and_update(
+                #         updcvr = yield self.CVResults.update(
                 #             {'_id': doc['_id']}, {'$set': {'match_probability': dumps(rmupl)}})
                 #         info(updcvr)
                 self.response(200, 'Lion deleted.')

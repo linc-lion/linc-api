@@ -199,7 +199,7 @@ class UsersHandler(BaseHandler):
                     try:
                         updobj = updobj.to_native()
                         updobj['_id'] = updid
-                        saved = yield self.Users.find_one_and_update({'_id': updid}, updobj)
+                        saved = yield self.Users.update({'_id': updid}, updobj)
                         info(saved)
                         output = updobj
                         output['obj_id'] = str(updid)
