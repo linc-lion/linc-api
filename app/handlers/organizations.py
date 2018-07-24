@@ -142,7 +142,7 @@ class OrganizationsHandler(BaseHandler):
                         updid = updobj['_id']
                         # the object is valid, so try to save
                         try:
-                            saved = yield self.db.organizations.find_one_and_update(
+                            saved = yield self.db.organizations.update(
                                 {'_id': updid},
                                 {'$set': updict})
                             info(saved)

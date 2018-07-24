@@ -27,9 +27,9 @@ class DataExportHandler(BaseHandler):
             keys['gender'] = 'Gender'
             keys['main_image_iid'] = 'Cover image Id'
             keys['is_verified'] = 'Verified'
+            keys['animal_iid'] = self.animal.capitalize() + ' Id'
             keys['created_at'] = 'Created'
             keys['updated_at'] = 'Updated'
-            keys['animal_iid'] = self.animal.capitalize() + ' Id'
         else:
             keys['_id'] = 'HashId'
             keys['name'] = 'Lion Name'
@@ -37,9 +37,6 @@ class DataExportHandler(BaseHandler):
             keys['organization_iid'] = 'Org. Id'
             keys['primary_image_set_iid'] = 'Primary ImageSet Id'
             keys['dead'] = 'Is Dead'
-            keys['created_at'] = 'Created'
-            keys['updated_at'] = 'Updated'
-
         return keys
 
     def check_structure(self, key, data):
@@ -95,9 +92,30 @@ class DataExportHandler(BaseHandler):
                             value = users[obj[k]]['email']
                         elif k == 'animal_iid':
                             value = animl[obj[k]]
+                        elif k == 'dead' and obj['dead']:
+                            value = 'Yes'
+                        elif k == 'dead' and not obj['dead']:
+                            value = 'No'
                         else:
                             value = obj[k]
                         rowdata.append(value)
+                    elif k == 'dead':
+                        rowdata.append('No')
+                if animals:
+                    imgsetdata = yield self.ImageSets.find_one({'iid': obj['primary_image_set_iid']})
+                    if imgsetdata:
+                        for i in ['uploading_user_iid', 'notes', 'tags', 'owner_organization_iid', 'uploading_organization_iid', 'date_stamp', 'date_of_birth', 'location', 'gender', 'main_image_iid', 'is_verified']:
+                            if i in ['owner_organization_iid', 'uploading_organization_iid', 'organization_iid']:
+                                value = orgs[imgsetdata[i]]
+                            elif i == 'uploading_user_iid':
+                                value = users[imgsetdata[i]]['email']
+                            elif i == 'animal_iid':
+                                value = animl[imgsetdata[i]]
+                            else:
+                                value = imgsetdata[i]
+                            rowdata.append(value)
+                    for i in ['created_at', 'updated_at']:
+                        rowdata.append(obj[i])
                 lines.append(rowdata.copy())
                 imgsetids.append(obj['iid'])
             lines.append([''])
@@ -128,6 +146,10 @@ class DataExportHandler(BaseHandler):
                             ])
                         lines.append([''])
                         lines.append([''])
+            # Now the labels for lions
+            if animals:
+                for l in ['Uploaded by', 'Notes', 'Tags', 'Data Owner', 'Org. that Uploaded', 'Datestamp', 'Date of Birth', 'Location', 'Gender', 'Cover Image Id', 'Verified', 'Created', 'Updated']:
+                    fieldnames.append(l)
             resp = {'fnames': fieldnames.copy(), 'lines': lines.copy()}
         # except Exception as e:
         else:
