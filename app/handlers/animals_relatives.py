@@ -184,7 +184,7 @@ class AnimalsRelativesHandler(BaseHandler):
                 relation, int(relid), gender))
             return
         try:
-            radd = yield self.Relatives.find_one_and_update(
+            radd = yield self.Relatives.update(
                 {'_id': already_relative['_id']},
                 {'$set': {
                     'relation': relation.lower(),

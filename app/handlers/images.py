@@ -233,7 +233,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
             # the new object is valid, so try to save
             try:
                 newsaved = yield self.Images.insert(newimage.to_native())
-                updurl = yield self.Images.find_one_and_update({'_id': newsaved}, {'$set': {'url': url + str(newsaved)}})
+                updurl = yield self.Images.update({'_id': newsaved}, {'$set': {'url': url + str(newsaved)}})
                 info(updurl)
                 output = newimage.to_native()
                 # File data saved, now start to
@@ -244,7 +244,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                 self.switch_iid(output)
                 # if is Cover
                 if self.input_data['iscover']:
-                    updiscover = self.ImageSets.find_one_and_update(
+                    updiscover = self.ImageSets.update(
                         {'iid': output['image_set_id']},
                         {'$set': {'updated_at': datetime.now(), 'main_image_iid': output['id']}})
                     info(updiscover)
@@ -307,7 +307,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                             jimgset = yield self.ImageSets.find_one(
                                 {'iid': int(id_imgset)})
                             if jimgset:
-                                resp = yield self.Images.find_one_and_update(
+                                resp = yield self.Images.update(
                                     {'iid': int(imgobj['iid'])},
                                     {'$set': {'joined': vjoined}})
                                 info(resp)
@@ -370,7 +370,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                     # the object is valid, so try to save
                     try:
                         updobj['_id'] = objupdid
-                        saved = yield self.Images.find_one_and_update(query, updobj)
+                        saved = yield self.Images.update(query, updobj)
                         info(saved)
                         # Ok, data saved so operate s3
                         # Copy the image to the new imageset
@@ -440,7 +440,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                     # except Exception as e:
                     #    pass
                     # Remove joined info from imagesets
-                    resp = yield self.ImageSets.find_one_and_update({'main_image_iid': updobj['iid']}, {'$set': {'main_image_iid': None}})
+                    resp = yield self.ImageSets.update({'main_image_iid': updobj['iid']}, {'$set': {'main_image_iid': None}})
                     info(resp)
                     rmlist = list()
                     try:
