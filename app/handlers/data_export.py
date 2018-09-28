@@ -81,11 +81,8 @@ class DataExportHandler(BaseHandler):
             while (yield cursor.fetch_next):
                 obj = cursor.next_object()
                 rowdata = list()
-                # odict()
                 for k, v in keys.items():
                     if k in obj and obj[k]:
-                        # rowdata[v] =
-                        # info(k)
                         if k in ['owner_organization_iid', 'uploading_organization_iid', 'organization_iid']:
                             value = orgs[obj[k]]
                         elif k == 'uploading_user_iid':
