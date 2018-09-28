@@ -262,7 +262,7 @@ class AnimalsHandler(BaseHandler):
                 self.response(400, 'Invalid value for dob_start/dob_end. Error: ' + str(e) + '.')
                 return
             info(queryfilter)
-            if queryfilter:
+            if queryfilter or apiout:
                 objs = yield self.ImageSets.find(queryfilter).to_list(None)
                 iids = [x['animal_iid'] for x in objs]
                 iids = list(set(iids))
