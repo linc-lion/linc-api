@@ -857,12 +857,12 @@ class ImageSetsCheckReqHandler(BaseHandler):
             resp_cv = 0
             resp_wh = 0
             try:
-                resp_cv = yield self.Images.find({'image_tags': ['cv'], 'image_set_iid': imageset_id}).count()
+                resp_cv = yield self.Images.find({'image_tags': 'cv', 'image_set_iid': imageset_id}).count()
                 resp_wh = yield self.Images.find(
                     {'$or': [
                         # {'image_tags': ['whisker']},
-                        {'image_tags': ['whisker-left']},
-                        {'image_tags': ['whisker-right']}], 'image_set_iid': imageset_id}).count()
+                        {'image_tags': 'whisker-left'},
+                        {'image_tags': 'whisker-right'}], 'image_set_iid': imageset_id}).count()
             except Exception as e:
                 info(e)
             output = {
