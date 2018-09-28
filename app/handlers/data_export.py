@@ -83,7 +83,7 @@ class DataExportHandler(BaseHandler):
                 rowdata = list()
                 # odict()
                 for k, v in keys.items():
-                    if k in obj:
+                    if k in obj and obj[k]:
                         # rowdata[v] =
                         # info(k)
                         if k in ['owner_organization_iid', 'uploading_organization_iid', 'organization_iid']:
@@ -91,7 +91,7 @@ class DataExportHandler(BaseHandler):
                         elif k == 'uploading_user_iid':
                             value = users[obj[k]]['email']
                         elif k == 'animal_iid':
-                            value = animl[obj[k]]
+                            value = animl.get(obj[k], '-') 
                         elif k == 'dead' and obj['dead']:
                             value = 'Yes'
                         elif k == 'dead' and not obj['dead']:
