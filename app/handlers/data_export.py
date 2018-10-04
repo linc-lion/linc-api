@@ -98,6 +98,8 @@ class DataExportHandler(BaseHandler):
                         rowdata.append(value)
                     elif k == 'dead':
                         rowdata.append('No')
+                    else:
+                        rowdata.append(' ')
                 if animals:
                     imgsetdata = yield self.ImageSets.find_one({'iid': obj['primary_image_set_iid']})
                     if imgsetdata:
