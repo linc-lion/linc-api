@@ -94,7 +94,7 @@ class DataExportHandler(BaseHandler):
                         elif k == 'dead' and not obj['dead']:
                             value = 'No'
                         else:
-                            value = obj[k]
+                            value = obj[k] if obj[k] else ' '
                         rowdata.append(value)
                     elif k == 'dead':
                         rowdata.append('No')
@@ -109,7 +109,7 @@ class DataExportHandler(BaseHandler):
                             elif i == 'animal_iid':
                                 value = animl[imgsetdata[i]]
                             else:
-                                value = imgsetdata[i]
+                                value = imgsetdata[i] if imgsetdata[i] else ' '
                             rowdata.append(value)
                     for i in ['created_at', 'updated_at']:
                         rowdata.append(obj[i])
