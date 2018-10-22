@@ -137,11 +137,11 @@ api['cache'] = Redis(connection_pool=ConnectionPool.from_url(redis_url))
 
 api['scheduler'] = TornadoScheduler()
 api['scheduler'].start()
-Check CV Server results - every 30 seconds
+# Check CV Server results - every 30 seconds
 api['scheduler'].add_job(checkresults, 'interval', seconds=30, args=[sdb, api])
-Delete files in S3
+# Delete files in S3
 api['scheduler'].add_job(checkS3, 'interval', seconds=50, args=[sdb, api])
-Dump the database hourly basis
+# Dump the database hourly basis
 api['scheduler'].add_job(dbdump, 'interval',
                          hours=1,
                          args=[
