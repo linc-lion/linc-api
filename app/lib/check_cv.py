@@ -59,13 +59,14 @@ def checkresults(db, api):
         info("========================================================================")
         info(" ### Checking CV Request: " + str(cvreq['iid']) + " ###")
         info("  ## Image set submitted: " + str(cvreq['image_set_iid']) + " ##")
-        # Restart after 10 minutes
-        info('  >> Created at: {}'.format(cvreq['created_at']))
-        info('  >>        now: {}'.format(datetime.now()))
-        if (datetime.now() - cvreq['created_at']).seconds > 600:
-            info("  !!! The recognition process took more than 10 minutres... restarting")
-            cvrem_restart = db.cvresults.remove({'cvrequest_iid': cvreq['iid']})
         cvres = db.cvresults.find_one({'cvrequest_iid': cvreq['iid']})
+        # Restart after 10 minutes
+        info('  >> Created at: {}'.format(cvres['created_at']))
+        info('  >>        now: {}'.format(datetime.now()))
+        if (datetime.now() - cvres['created_at']).seconds > 600:
+            info("  !!! The recognition process took more than 10 minutes... restarting")
+            cvrem_restart = db.cvresults.remove({'cvrequest_iid': cvreq['iid']})
+            cvres = None
         if not cvres:
             # Create the CVResults
             iid = db.counters.find_and_modify(
