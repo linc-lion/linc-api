@@ -37,12 +37,14 @@ def checkresults(db, api):
     AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient")
     http_client = AsyncHTTPClient()
     cvreqs = db.cvrequests.find()
-    lcvreqids = [x['iid'] for x in cvreqs] # retrieve data from the cursor
+    # retrieve data from the cursor
+    lcvreqids = [x['iid'] for x in cvreqs]
     rmcv = db.cvresults.remove({'cvrequest_iid': {'$nin': lcvreqids}}, multi=True)
     info('    Clear cvresults without cvrequests: {}'.format(rmcv))
     # Get ids with status != finished or error
     cvreqs = db.cvrequests.find({'status': {'$nin': ['finished', 'error']}})
-    cvreqs = [x for x in cvreqs] # retrieve data from the cursor
+    # retrieve data from the cursor
+    cvreqs = [x for x in cvreqs]
     info('    CV Request not finished of error - count: ' + str(len(cvreqs)))
     # Connection preset
     params = {
@@ -54,6 +56,7 @@ def checkresults(db, api):
         'validate_cert': False}
     # Check if cvresults exists
     for cvreq in cvreqs:
+        info("========================================================================")
         info(" ### Checking CV Request: " + str(cvreq['iid']) + " ###")
         info("  ## Image set submitted: " + str(cvreq['image_set_iid']) + " ##")
         # Restart after 10 minutes
