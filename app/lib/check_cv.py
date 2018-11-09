@@ -128,6 +128,7 @@ def checkresults(db, api):
                     else:
                         # Check results
                         for n, clf_call in enumerate(req_body[clf + '_calls']):
+                            info(resp_cvr[clf][n])
                             if resp_cvr[clf][n].get('status', None) == 'finished':
                                 info('          Request CV #{} finished'.format(n))
                                 finished[clf] += 1
