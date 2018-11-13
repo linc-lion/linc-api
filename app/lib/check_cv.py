@@ -65,9 +65,14 @@ def checkresults(db, api):
             info('  >> Created at: {}'.format(cvres['created_at']))
             info('  >>        now: {}'.format(datetime.now()))
             if (datetime.now() - cvres['created_at']).seconds > 600:
-                info("  !!! The recognition process took more than 10 minutes... restarting")
+                #info("  !!! The recognition process took more than 10 minutes... restarting")
+                info("!!! The CV Request took more than 10 minutes to get a result")
+                info("!!! Marking it with error status")
+                db.cvrequests.update({'iid': cvreq['iid']}, {'$set': {'status': 'error', 'updated_at': datetime.now}})
                 cvrem_restart = db.cvresults.remove({'cvrequest_iid': cvreq['iid']})
                 cvres = None
+                info("========================================================================")
+                continue
         if not cvres:
             # Create the CVResults
             iid = db.counters.find_and_modify(
