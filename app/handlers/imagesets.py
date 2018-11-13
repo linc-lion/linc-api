@@ -314,9 +314,14 @@ class ImageSetsHandler(BaseHandler):
                 if cvrequest:
                     cvreqchk = yield self.CVRequests.find_one({'image_set_iid': int(imageset_id)})
                     if cvreqchk:
-                        self.response(
-                            409, 'A request for indentification of this imageset already exists in the database.')
-                        return
+                        if cvreqchk['status'] == 'error':
+                            info('Removing old CV Request of the image set {} that was marked with error.'.format(imageset_id))
+                            cvreqdel = yield self.CVRequests.remove({'iid': cvreqchk['iid']})
+                        else:
+                            self.response(
+                                409, 
+                                'A request for indentification of this imageset already exists in the database.')
+                            return
                     check_algo = {'cv': False, 'whisker': False}
                     classl = self.input_data.get('classifier', [])
                     for v in ['cv', 'whisker']:
