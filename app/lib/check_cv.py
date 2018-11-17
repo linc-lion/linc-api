@@ -25,6 +25,7 @@ from logging import info
 from datetime import datetime
 from json import dumps, loads
 from time import time
+from os import environ
 
 
 @gen.coroutine
@@ -33,6 +34,11 @@ def checkresults(db, api):
     info('=========================================================================')
     info(' Starting CV Request processing - {}'.format(datetime.now().isoformat()))
     info('=========================================================================')
+    try:
+        time_limit = int(environ.get('CVREQ_TIMELIMIT', 7200))
+    except Exception as e:
+        info(e)
+        time_limit = 7200
     # Check results execute GET in the CV Server URL to acquire results for cv requests
     AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient")
     http_client = AsyncHTTPClient()
@@ -64,7 +70,7 @@ def checkresults(db, api):
         if cvres:
             info('  >> Created at: {}'.format(cvres['created_at']))
             info('  >>        now: {}'.format(datetime.now()))
-            if (datetime.now() - cvres['created_at']).seconds > 7200:
+            if (datetime.now() - cvres['created_at']).seconds > time_limit:
                 #info("  !!! The recognition process took more than 10 minutes... restarting")
                 info("!!! The CV Request took more than 2 hours to finish")
                 info("!!! Marking it with error status")
