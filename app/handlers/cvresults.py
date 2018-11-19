@@ -101,7 +101,10 @@ class CVResultsHandler(BaseHandler):
                         # lion_keys = list(set(lion_keys + [str(i) for i in req_body['lions_submitted']]))
 
                         cv_pred_accu = capabilities['cv_topk_classifier_accuracy'][len(obj_cvr['results']['cv']) - 1]
-                        whisker_pred_accu = capabilities['whisker_topk_classifier_accuracy'][len(obj_cvr['results']['whisker']) - 1]
+                        if len(obj_cvr['results']['whisker']) > 0:
+                            whisker_pred_accu = capabilities['whisker_topk_classifier_accuracy'][len(obj_cvr['results']['whisker']) - 1]
+                        else:
+                            whisker_pred_accu = capabilities['whisker_topk_classifier_accuracy']
                         # for k in lion_keys:
                         for k in [str(i) for i in req_body['lions_submitted']]:
                             objres = dict()
