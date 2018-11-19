@@ -99,8 +99,10 @@ class CVResultsHandler(BaseHandler):
                                 mcalc[clf][l] = sum(v) / len(obj_cvr['results'][clf])
                             lion_keys += calc[clf].keys()
                         # lion_keys = list(set(lion_keys + [str(i) for i in req_body['lions_submitted']]))
-
-                        cv_pred_accu = capabilities['cv_topk_classifier_accuracy'][len(obj_cvr['results']['cv']) - 1]
+                        if len(obj_cvr['results']['cv']) > 0:
+                            cv_pred_accu = capabilities['cv_topk_classifier_accuracy'][len(obj_cvr['results']['cv']) - 1]
+                        else:
+                            cv_pred_accu = capabilities['cv_topk_classifier_accuracy']
                         if len(obj_cvr['results']['whisker']) > 0:
                             whisker_pred_accu = capabilities['whisker_topk_classifier_accuracy'][len(obj_cvr['results']['whisker']) - 1]
                         else:
