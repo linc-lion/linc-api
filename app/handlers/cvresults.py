@@ -73,8 +73,8 @@ class CVResultsHandler(BaseHandler):
                             self.response(400, 'CV Request still processing...')
                             return
                         req_body = loads(obj_cvq['request_body'])
-                        for k, v in req_body.items():
-                            info('{} = {}'.format(k, v))
+                        # for k, v in req_body.items():
+                        #     info('{} = {}'.format(k, v))
                         obj_cvr['results'] = loads(obj_cvr['match_probability'])
                         del obj_cvr['match_probability']
                         output = {'results': list()}
@@ -99,14 +99,17 @@ class CVResultsHandler(BaseHandler):
                                 mcalc[clf][l] = sum(v) / len(obj_cvr['results'][clf])
                             lion_keys += calc[clf].keys()
                         # lion_keys = list(set(lion_keys + [str(i) for i in req_body['lions_submitted']]))
-                        if len(obj_cvr['results']['cv']) > 0:
+                        # info(capabilities)
+                        try:
                             cv_pred_accu = capabilities['cv_topk_classifier_accuracy'][len(obj_cvr['results']['cv']) - 1]
-                        else:
-                            cv_pred_accu = capabilities['cv_topk_classifier_accuracy']
-                        if len(obj_cvr['results']['whisker']) > 0:
+                        except Exception as e:
+                            info(e)
+                            cv_pred_accu = capabilities['cv_topk_classifier_accuracy'][-1]
+                        try:
                             whisker_pred_accu = capabilities['whisker_topk_classifier_accuracy'][len(obj_cvr['results']['whisker']) - 1]
-                        else:
-                            whisker_pred_accu = capabilities['whisker_topk_classifier_accuracy']
+                        except Exception as e:
+                            info(e)
+                            whisker_pred_accu = capabilities['whisker_topk_classifier_accuracy'][-1]
                         # for k in lion_keys:
                         for k in [str(i) for i in req_body['lions_submitted']]:
                             objres = dict()
