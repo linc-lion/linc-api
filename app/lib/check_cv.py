@@ -166,7 +166,11 @@ def checkresults(db, api):
                                     resp_data = loads(response.body.decode('utf-8'))
                                     info('          Status: {}'.format(resp_data['status']))
                                     if resp_data['status'] == 'finished':
+                                        info('       Resp data: {}'.format(resp_data))
                                         resp_cvr[clf][n] = resp_data.copy()
+                                    elif resp_data['status'] == 'error':
+                                        info('      Forcing it to be FINISHED (Workaround)')
+                                        finished[clf] += 1
                                 else:
                                     info('          Call #{} - fail'.format(n))
             dt = datetime.now()
