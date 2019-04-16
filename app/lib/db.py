@@ -67,7 +67,6 @@ class DBMethods:
             lobj = None
         callback(lobj)
 
-    @asynchronous
     @engine
     def changePassword(self, ouser, newpass, callback=None):
         encpass = self.encryptPassword(newpass)
