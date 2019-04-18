@@ -17,7 +17,7 @@ class HTTPMethods:
             self.response(
                 status_code, 'Request results is an error with the code: %d' % (status_code))
 
-    def response(self, code, message="", data=None, headers=None):
+    def response(self, code, message="", data=None, headers=None, stats=None):
         output_response = {'status': None, 'message': message}
         if data:
             output_response['data'] = data
@@ -32,6 +32,8 @@ class HTTPMethods:
         if headers and isinstance(headers, dict):
             for k, v in headers.items():
                 self.add_header(k, v)
+        if stats:
+            output_response['stats'] = stats
         self.set_status(code)
         self.write(self.json_encode(output_response))
         self.finish()

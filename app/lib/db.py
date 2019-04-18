@@ -137,7 +137,7 @@ class DBMethods:
             newobj['uploading_user_iid'] = useriid
         else:
             callback(
-                {'code': 409, 'message': "Uploading user id referenced doesn't exist."})
+                {'code': 400, 'message': "Uploading user id referenced doesn't exist."})
 
         # check if organizations exists
         orgiid = input_data['uploading_organization_id']
@@ -146,7 +146,7 @@ class DBMethods:
             newobj['uploading_organization_iid'] = orgiid
         else:
             callback(
-                {'code': 409, 'message': "Uploading organization id referenced doesn't exist."})
+                {'code': 400, 'message': "Uploading organization id referenced doesn't exist."})
 
         oorgiid = input_data['owner_organization_id']
         oorgexists = yield self.db.organizations.find_one({'iid': oorgiid})
@@ -154,7 +154,7 @@ class DBMethods:
             newobj['owner_organization_iid'] = oorgiid
         else:
             callback(
-                {'code': 409, 'message': "Owner organization id referenced doesn't exist."})
+                {'code': 400, 'message': "Owner organization id referenced doesn't exist."})
 
         if 'latitude' in input_data.keys() and input_data['latitude'] and \
                 'longitude' in input_data.keys() and input_data['longitude']:
@@ -181,7 +181,7 @@ class DBMethods:
             output[self.animal + '_id'] = output['animal_iid']
             del output['animal_iid']
             callback(
-                {'code': 200, 'message': 'new image set added', 'data': output})
+                {'code': 201, 'message': 'New image set created.', 'data': output})
         except ValidationError as e:
             callback(
                 {'code': 400, 'message': "Invalid input data. Error: " + str(e) + "."})

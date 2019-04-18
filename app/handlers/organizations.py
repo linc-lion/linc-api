@@ -209,7 +209,7 @@ class OrganizationsHandler(BaseHandler):
             else:
                 self.response(404, 'Organization not found.')
         else:
-            self.response(400, 'Remove requests (DELETE) must have a resource ID.')
+            self.response(400, 'Remove requests (DELETE) must have an organization id.')
 
     def list(self, objs):
         """ Implements the list output used for UI in the website
