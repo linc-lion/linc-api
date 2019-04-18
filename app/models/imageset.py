@@ -75,9 +75,9 @@ class Image(Model):
     is_public = BooleanType(required=True, default=False)
     url = StringType(required=True)
     hashcheck = StringType(required=True, default='')
-    filename = StringType(required=False, default='')
-    exif_data = StringType(required=False, default='{}')
-    joined = IntType(required=False, default=None)
+    filename = StringType(required=True, default='')
+    exif_data = StringType(required=True, default='{}')
+    joined = IntType(required=True, default=None)
     created_at = DateTimeType(required=True, default=datetime.now())
     updated_at = DateTimeType(required=True, default=datetime.now())
 

@@ -146,7 +146,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                 # Pagination stats
                 n_images = yield self.Images.count()
                 stats = {'number_of_images': n_images, 'skip': self.skip, 'limit': self.limit}
-                self.response(200, 'Images list', output, stats=stats)
+                self.response(200, 'Images list.', output, stats=stats)
 
     @asynchronous
     @engine
