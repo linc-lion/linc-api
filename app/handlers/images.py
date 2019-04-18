@@ -144,7 +144,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                 self.set_status(200)
                 # self.finish(self.json_encode({'status': 'success', 'message': 'Images list.', 'data': output}))
                 # Pagination stats
-                n_images = yield self.Images.count_documents()
+                n_images = yield self.Images.count()
                 stats = {'number_of_images': n_images, 'skip': self.skip, 'limit': self.limit}
                 self.response(200, 'Images list', output, stats=stats)
 
