@@ -332,7 +332,7 @@ class AnimalsHandler(BaseHandler):
 
         if not imageset:
             response = yield Task(self.create_imageset, self.input_data['imageset'])
-            if response and response['code'] != 200:
+            if response and response['code'] != 201:
                 self.response(response['code'], response['message'])
                 return
             imageset = response['data']
@@ -348,7 +348,7 @@ class AnimalsHandler(BaseHandler):
             animal['organization_iid'] = self.input_data['lion']['organization_id']
             check_org = yield self.db.organizations.find_one({'iid': animal['organization_iid']})
             if not check_org:
-                self.response(409, 'Invalid organization_id.')
+                self.response(400, 'Invalid organization_id.')
                 return
         try:
             newanimal = Animal(animal)
@@ -373,9 +373,10 @@ class AnimalsHandler(BaseHandler):
                     # Remove the imageset from the cache to be updated
                     rem = yield Task(self.cache_remove, imageset['id'], 'imgset')
                     info(rem)
+                    self.set_status(201)
                     self.finish(self.json_encode({
                         'status': 'success',
-                        'message': 'new %s saved.' % (self.animal),
+                        'message': 'New %s saved.' % (self.animal),
                         'data': output
                     }))
                 except ValidationError as e:
@@ -407,7 +408,7 @@ class AnimalsHandler(BaseHandler):
             check_org = yield self.db.organizations.find_one(
                 {'iid': update_data['organization_iid']})
             if not check_org:
-                self.response(409, 'Invalid organization_id.')
+                self.response(400, 'Invalid organization_id.')
                 return
         if 'primary_image_set_id' in self.input_data.keys():
             update_data['primary_image_set_iid'] = self.input_data['primary_image_set_id']
@@ -415,7 +416,7 @@ class AnimalsHandler(BaseHandler):
             check_imageset = yield self.ImageSets.find_one(
                 {'iid': update_data['primary_image_set_iid']})
             if not check_imageset:
-                self.response(409, 'Invalid primary_image_set_id.')
+                self.response(400, 'Invalid primary_image_set_id.')
                 return
         # validate the input for update
         update_ok = False
@@ -474,7 +475,7 @@ class AnimalsHandler(BaseHandler):
                         del output['primary_image_set_iid']
                         self.finish(self.json_encode(
                             {'status': 'success',
-                             'message': self.animal + ' updated', 'data': output}))
+                             'message': self.animal.capitalize() + ' updated.', 'data': output}))
                     except Exception as e:
                         # duplicated index error
                         self.response(409, 'Duplicated name for %s.' % (self.animal))
@@ -482,11 +483,11 @@ class AnimalsHandler(BaseHandler):
                     # received data is invalid in some way
                     self.response(400, 'Invalid input data. Errors: %s.' % (str(e)))
             else:
-                self.response(404, self.animal + ' not found.')
+                self.response(404, self.animal.capitalize() + ' not found.')
         else:
             self.response(
                 400,
-                'Update requests (PUT) must have a resource ID and update pairs for key and value.')
+                'Update requests (PUT) must have a Lion Id and update pairs for key and value.')
 
     @asynchronous
     @coroutine
@@ -551,7 +552,7 @@ class AnimalsHandler(BaseHandler):
                 #         info(updcvr)
                 self.response(200, 'Lion deleted.')
             else:
-                self.response(404, self.animal + ' not found.')
+                self.response(404, self.animal.capitalize() + ' not found.')
         else:
             self.response(400, 'Remove requests (DELETE) must have a resource ID.')
 

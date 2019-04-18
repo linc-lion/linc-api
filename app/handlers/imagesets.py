@@ -68,7 +68,7 @@ class ImageSetsHandler(BaseHandler):
             # Show a list for the website
             # Get imagesets from the DB
             output = yield Task(self.list)
-            self.response(200, 'Imagesets list.', output)
+            self.response(200, 'Image sets list.', output)
         elif imageset_id and param == 'profile':
             query = self.query_id(imageset_id)
             imgset = yield self.ImageSets.find_one(query)
@@ -288,7 +288,7 @@ class ImageSetsHandler(BaseHandler):
                 self.set_status(200)
                 if imageset_id:
                     loutput = loutput[0]
-                self.response(200, 'Image set required.', loutput)
+                self.response(200, 'Image set found.', loutput)
             else:
                 self.response(404, 'Imageset id not found.')
 
@@ -298,10 +298,10 @@ class ImageSetsHandler(BaseHandler):
     def post(self, imageset_id=None, cvrequest=None):
         if not imageset_id:
             response = yield Task(self.create_imageset, self.input_data)
-            if response and response['code'] != 200:
+            if response and response['code'] != 201:
                 self.response(response['code'], response['message'])
                 return
-            self.set_status(200)
+            self.set_status(201)
             self.finish(self.json_encode({'status': 'success', 'message': response['message'], 'data': response['data']}))
         else:
             query = self.query_id(imageset_id)
@@ -397,13 +397,13 @@ class ImageSetsHandler(BaseHandler):
                         del output['requesting_organization_iid']
                         output['image_set_id'] = output['image_set_iid']
                         del output['image_set_iid']
-                        self.response(200, 'Image', output)
+                        self.response(201, 'CV request created.', output)
                     else:
                         self.response(400, 'The image set does not have images with the tags cv or whisker.')
                 else:
-                    self.response(400, 'Bad request.')
+                    self.response(400, 'Invalid request.')
             else:
-                self.response(404, 'Imageset id not found.')
+                self.response(404, 'Image set id not found.')
 
     @asynchronous
     @coroutine
@@ -614,7 +614,7 @@ class ImageSetsHandler(BaseHandler):
                     del output['animal_iid']
                     self.set_status(200)
                     self.finish(self.json_encode(
-                        {'status': 'success', 'message': 'image set updated', 'data': output}))
+                        {'status': 'success', 'message': 'Image set updated.', 'data': output}))
                 except ValidationError as e:
                     self.response(400, "Invalid input data. Error: " + str(e) + '.')
                     return
@@ -677,6 +677,7 @@ class ImageSetsHandler(BaseHandler):
                     # Removing cvrequest
                     rmved = yield self.CVRequests.remove({'_id': cvreq['_id']})
                     info(str(rmved))
+                self.response(200, 'Image set deleted.')
             else:
                 self.response(404, 'Image set not found.')
         else:

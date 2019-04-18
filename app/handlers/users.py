@@ -80,7 +80,7 @@ class UsersHandler(BaseHandler):
                         rm.append(k)
                 for k in rm:
                     del orglist[k]
-                self.response(200, 'Ok, it works.', orglist)
+                self.response(200, 'Conservationists list.', orglist)
                 return
             else:
                 # return a specific user accepting as id the integer id, hash and name
@@ -148,7 +148,7 @@ class UsersHandler(BaseHandler):
                 del output['encrypted_password']
                 self.finish(self.json_encode(
                     {'status': 'success',
-                     'message': 'new user saved',
+                     'message': 'New user added.',
                      'data': output}))
             except Exception as e:
                 # duplicated index error
@@ -209,7 +209,7 @@ class UsersHandler(BaseHandler):
                         del output['encrypted_password']
                         output['organization_id'] = output['organization_iid']
                         del output['organization_iid']
-                        self.finish(self.json_encode({'status': 'success', 'message': 'user updated', 'data': output}))
+                        self.finish(self.json_encode({'status': 'success', 'message': 'User updated.', 'data': output}))
                     except Exception as e:
                         # duplicated index error
                         self.response(409, 'Invalid data for update.')

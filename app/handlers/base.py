@@ -70,6 +70,17 @@ class BaseHandler(RequestHandler, DBMethods, HTTPMethods):
                         self.input_data[k] = v[0].decode("utf-8")
             except ValueError:
                 self.response(400, 'Fail to parse input data.')
+        # Pagination
+        try:
+            self.skip = int(self.get_argument('skip', 0))
+        except Exception as e:
+            info(e)
+            self.skip = 0
+        try:
+            self.limit = int(self.get_argument('limit', 100))
+        except Exception as e:
+            info(e)
+            self.limit = 100
 
     def get_current_user(self):
         max_days_valid = 365

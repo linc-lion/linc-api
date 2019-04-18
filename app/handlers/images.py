@@ -130,7 +130,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                         self.finish(self.json_encode({'status': 'error', 'message': 'not found'}))
             else:
                 # return a list of images
-                objs = yield self.Images.find().to_list(None)
+                objs = yield self.Images.find().skip(self.skip).limit(self.limit).to_list(None)
                 output = list()
                 for x in objs:
                     obj = dict(x)
@@ -142,7 +142,11 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                     obj['url'] = self.imgurl(obj['url'], 'medium')
                     output.append(obj)
                 self.set_status(200)
-                self.finish(self.json_encode({'status': 'success', 'data': output}))
+                # self.finish(self.json_encode({'status': 'success', 'message': 'Images list.', 'data': output}))
+                # Pagination stats
+                n_images = yield self.Images.count_documents()
+                stats = {'number_of_images': n_images, 'skip': self.skip, 'limit': self.limit}
+                self.response(200, 'Images list', output, stats=stats)
 
     @asynchronous
     @engine
