@@ -53,9 +53,8 @@ class CVResultsHandler(BaseHandler):
     def get(self, res_id=None, xlist=None):
         if res_id:
             if res_id == 'list':
-                objs = yield self.CVResults.find().to_list(None)
-                self.set_status(200)
-                self.finish(self.json_encode({'status': 'success', 'data': self.list(objs)}))
+                objs = yield self.CVResults.find().skip(self.skip).limit(self.limit).to_list(None)
+                self.response(200, 'CV Results list.', self.list(objs))
             else:
                 query = self.query_id(res_id)
                 obj_cvr = yield self.CVResults.find_one(query)
@@ -65,6 +64,8 @@ class CVResultsHandler(BaseHandler):
                         self.switch_iid(objres)
                         objres['obj_id'] = str(obj_cvr['_id'])
                         del objres['_id']
+                        objres['cvrequest_id'] = objres['cvrequest_iid']
+                        del objres['cvrequest_iid']
                         output = objres
                     else:
                         # List data following the website form
@@ -202,7 +203,7 @@ class CVResultsHandler(BaseHandler):
                 else:
                     self.response(404, 'CV results not found. Another user may have deleted the CV results.')
         else:
-            objs = yield self.CVResults.find().to_list(None)
+            objs = yield self.CVResults.find().skip(self.skip).limit(self.limit).to_list(None)
             output = list()
             for x in objs:
                 obj = dict(x)
@@ -212,8 +213,7 @@ class CVResultsHandler(BaseHandler):
                 del obj['cvrequest_iid']
                 self.switch_iid(obj)
                 output.append(obj)
-            self.set_status(200)
-            self.finish(self.json_encode({'status': 'success', 'data': output}))
+            self.response(200, 'CV Results found.', output)
 
     @api_authenticated
     def post(self):
@@ -258,6 +258,8 @@ class CVResultsHandler(BaseHandler):
             self.switch_iid(obj)
             obj['obj_id'] = str(obj['_id'])
             del obj['_id']
+            obj['cvrequest_id'] = obj['cvrequest_iid']
+            del obj['cvrequest_iid']
             output.append(obj)
         return output
 

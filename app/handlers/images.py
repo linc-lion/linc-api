@@ -100,15 +100,14 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                 self.response(200, 'Links for the requested images with id=' + download + '.', urls)
                 return
             else:
-                self.response(400, "you need to pass image's ids separated by commas")
+                self.response(404, "Image ids separated by commas are mandatory for this request.")
                 return
         else:
             info(image_id)
             if image_id:
                 if image_id == 'list':
-                    objs = yield self.Images.find().to_list(None)
-                    self.set_status(200)
-                    self.finish(self.json_encode({'status': 'success', 'data': self.list(objs)}))
+                    objs = yield self.Images.find().skip(self.skip).limit(self.limit).to_list(None)
+                    self.response(200, 'Images list.', self.list(objs))
                 else:
                     # return a specific image accepting as id the integer id, hash and name
                     query = self.query_id(image_id)
@@ -168,6 +167,9 @@ class ImagesHandler(BaseHandler, ProcessMixin):
             self.response(400, 'The request to add image require the key \
                 "image" with the file encoded with base64.')
             return
+        if 'joined' in self.input_data.keys():
+            self.response(400, 'The "joined" attribute can\'t be defined for a new image.')
+            return
         # Check if its a valid image
         dirfs = dirname(realpath(__file__))
         imgname = dirfs + '/' + str(uuid4()) + '.img'
@@ -206,7 +208,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
         for field in fields_needed:
             if field not in self.input_data.keys():
                 self.remove_file(imgname)
-                self.response(400, 'you need to provide the field ' + field)
+                self.response(400, 'You must submit the field {}.'.format(field))
                 return
             else:
                 newobj[field] = self.input_data[field]
@@ -217,7 +219,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
             del newobj['image_set_id']
         else:
             self.remove_file(imgname)
-            self.response(400, "image set id referenced doesn't exist")
+            self.response(400, "Image set id referenced doesn't exist.")
             return
         try:
             folder_name = 'imageset_' + str(isexists['iid']) + '_' + str(isexists['_id'])
@@ -322,7 +324,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                         self.response(200, 'Image joined with success.')
                         return
                     else:
-                        self.response(400, 'Image set of image ID submitted not found')
+                        self.response(400, 'Image set of image Id submitted not found.')
                         return
                 else:
                     self.response(404, 'Image ID not found.')
