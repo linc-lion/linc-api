@@ -37,10 +37,9 @@ class CVRequestsHandler(BaseHandler):
     def get(self, req_id=None):
         if req_id:
             if req_id == 'list':
-                objs = yield self.CVRequests.find().to_list(None)
-                self.set_status(200)
+                objs = yield self.CVRequests.find().skip(self.skip).limit(self.limit).to_list(None)
                 output = yield Task(self.list, objs)
-                self.finish(self.json_encode({'status': 'success', 'data': output}))
+                self.response(200, 'CV Requests list.', output)
             else:
                 query = self.query_id(req_id)
                 obj = yield self.CVRequests.find_one(query)
@@ -54,13 +53,11 @@ class CVRequestsHandler(BaseHandler):
                     del objreq['image_set_iid']
                     objreq['requesting_organization_id'] = objreq['requesting_organization_iid']
                     del objreq['requesting_organization_iid']
-                    self.set_status(200)
-                    self.finish(self.json_encode({'status': 'success', 'data': objreq}))
+                    self.response(200, 'CV Request found.',  objreq)
                 else:
-                    self.set_status(404)
-                    self.finish(self.json_encode({'status': 'error', 'message': 'not found'}))
+                    self.response(404, 'CV Request object not found.')
         else:
-            objs = yield self.CVRequests.find().to_list(None)
+            objs = yield self.CVRequests.find().skip(self.skip).limit(self.limit).to_list(None)
             output = list()
             for x in objs:
                 obj = dict(x)
@@ -72,8 +69,7 @@ class CVRequestsHandler(BaseHandler):
                 obj['requesting_organization_id'] = obj['requesting_organization_iid']
                 del obj['requesting_organization_iid']
                 output.append(obj)
-            self.set_status(200)
-            self.finish(self.json_encode({'status': 'success', 'data': output}))
+            self.response(200, 'CV Requests found.', output)
 
     @api_authenticated
     def post(self, *kwargs):
@@ -110,11 +106,11 @@ class CVRequestsHandler(BaseHandler):
                     info(newhreq)
                     cvreq = yield self.CVRequests.remove(query)
                     info(cvreq)
-                    self.response(200, 'CVrequest successfully deleted.')
+                    self.response(200, 'CV Request successfully deleted.')
                 except Exception as e:
                     self.response(500, 'Fail to delete cvrequest.')
             else:
-                self.response(404, 'CVrequest not found.')
+                self.response(404, 'CV Request not found.')
         else:
             self.response(400, 'Remove requests (DELETE) must have a resource ID.')
 

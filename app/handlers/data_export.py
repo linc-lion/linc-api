@@ -130,7 +130,7 @@ class DataExportHandler(BaseHandler):
                     if admin or int(imset['owner_organization_iid']) == int(self.current_user['org_id']):
                         lines.append(['Image Set: {} {}'.format(imset['iid'], ' - Lion: ' + animl[imset['animal_iid']] if imset['animal_iid'] else '')])
                         imgs = yield self.Images.find({'image_set_iid': imset['iid']}).to_list(None)
-                        # ['_id', 'url', 'hashcheck', 'image_set_iid', 'created_at', 'image_type', 'is_public', 'updated_at', 'iid', 'image_tags'])
+                        # ['_id', 'url', 'hashcheck', 'image_set_iid', 'created_at', 'image_tags', 'is_public', 'updated_at', 'iid', 'image_tags'])
                         lines.append(['HashId', 'Id', 'Image Set Id', 'Image Tags', 'Access', 'Created', 'Updated', 'Url'])
                         for objimg in imgs:
                             lines.append([

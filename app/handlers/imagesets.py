@@ -226,7 +226,7 @@ class ImageSetsHandler(BaseHandler):
                     imgout['date_stamp'] = None
                     if 'exif_data' in img.keys():
                         exifd = loads(img['exif_data'])
-                        info(exifd)
+                        # info(exifd)
                         if 'date_stamp' in exifd.keys() and exifd['date_stamp']:
                             imgout['date_stamp'] = datetime.strptime(
                                 exifd['date_stamp'], '%Y-%m-%dT%H:%M:%S').date().isoformat()
