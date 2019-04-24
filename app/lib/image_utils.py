@@ -27,6 +27,9 @@ def generate_images(fn):
         fn = fn[:-5] + '.jpg'
     # Saving the full image as JPEG
     im = Image.open(fn)
+    # Handling transparent PNGs error 
+    if 'RGBA' not in im.mode: 
+        im = im.convert('RGB')
     im.save(fn[:-4] + '_full.jpg', 'JPEG', quality=100)
     # Crop 1:1
     im = Image.open(fn)
