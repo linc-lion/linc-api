@@ -23,17 +23,19 @@ from logging import info
 
 
 def generate_images(fn):
-    if '.jpeg' in fn:
+    if '.jpeg' in fn.lower():
         fn = fn[:-5] + '.jpg'
+    if '.png' in fn.lower():
+        # Converting the PNG 
+        nfn = fn[:-4] + '.jpg'
+        im = Image.open(fn)
+        im = im.convert('RGB')
+        im.save(nfn, 'JPEG', quality=100)
+        fn = nfn
     # Saving the full image as JPEG
     im = Image.open(fn)
     # Handling transparent PNGs error 
-    try:
-        im.save(fn[:-4] + '_full.jpg', 'JPEG', quality=100)
-    except Exception as e:
-        info(e)
-        im = im.convert('RGB')
-        im.save(fn[:-4] + '_full.jpg', 'JPEG', quality=100)
+    im.save(fn[:-4] + '_full.jpg', 'JPEG', quality=100)
     # Crop 1:1
     im = Image.open(fn)
     width, height = im.size
