@@ -24,16 +24,16 @@ from logging import info
 
 def generate_images(fn):
     if '.jpeg' in fn.lower():
-        fn = fn[:-5] + '.jpg'
-    if '.png' in fn.lower():
-        # Converting the PNG 
-        nfn = fn[:-4] + '.jpg'
+        nfn = fn[:-5] + '.jpg'
         im = Image.open(fn)
-        im = im.convert('RGB')
         im.save(nfn, 'JPEG', quality=100)
         fn = nfn
     # Saving the full image as JPEG
     im = Image.open(fn)
+    # Converting the PNG
+    if im.format == 'PNG':
+        im = im.convert('RGB')
+        im.save(fn, 'JPEG', quality=100)
     # Handling transparent PNGs error 
     im.save(fn[:-4] + '_full.jpg', 'JPEG', quality=100)
     # Crop 1:1
