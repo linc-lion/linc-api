@@ -205,7 +205,7 @@ class ImageSetsHandler(BaseHandler):
                     if 'joined' not in img.keys():
                         vjoined = False
                     else:
-                        vjoined = (img['joined'] is not None)
+                        vjoined = (img['joined'] > 0)
                     imgout = {'id': img['iid'], 'tags': img['image_tags'],
                               'is_public': img['is_public'], 'joined': vjoined}
                     if vjoined:
@@ -437,8 +437,8 @@ class ImageSetsHandler(BaseHandler):
                             primimgsetid = primimgsetid['primary_image_set_iid']
                             resp = yield self.Images.update_many(
                                 {'$and': [{'image_set_iid': objimgset['iid']},
-                                          {'joined': {'$ne': None}}]},
-                                {'$set': {'joined': None}})
+                                          {'joined': {'$ne': 0}}]},
+                                {'$set': {'joined': 0}})
                             info(resp)
                             imgslist = yield self.Images.find({'image_set_iid': objimgset['iid']}).to_list(None)
                             imgslist = [int(x['iid']) for x in imgslist]
