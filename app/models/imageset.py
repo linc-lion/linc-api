@@ -76,7 +76,7 @@ class Image(Model):
     hashcheck = StringType(required=True, default='')
     filename = StringType(required=True, default='')
     exif_data = StringType(required=True, default='{}')
-    joined = IntType(required=True, default=None)
+    joined = IntType(required=True, default=0)
     created_at = DateTimeType(required=True, default=datetime.now())
     updated_at = DateTimeType(required=True, default=datetime.now())
 
