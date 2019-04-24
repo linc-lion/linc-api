@@ -232,7 +232,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                 newobj['exif_data'] = dumps(newobj['exif_data'])
             else:
                 info('No exif data found.')
-                newobj['exif_data'] = '{}'
+                newobj['exif_data'] = {}
             info(newobj)
             newimage = Image(newobj)
             newimage.validate()
