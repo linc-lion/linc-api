@@ -233,6 +233,8 @@ class ImagesHandler(BaseHandler, ProcessMixin):
             else:
                 info('No exif data found.')
                 newobj['exif_data'] = {}
+            # Force joined as None since only associated imagesets can have images joined to the primary imageset
+            newobj['joined'] = None
             info(newobj)
             newimage = Image(newobj)
             newimage.validate()
