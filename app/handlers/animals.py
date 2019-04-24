@@ -444,7 +444,7 @@ class AnimalsHandler(BaseHandler):
                     resp = yield self.Images.update_many(
                         {'$and': [{'joined': primimgsetid},
                                   {'image_set_iid': newimgsetid}]},
-                        {'$set': {'joined': None}})
+                        {'$set': {'joined': 0}})
                     oldimgset = yield self.ImageSets.find_one({'iid': primimgsetid})
                     if oldimgset:
                         coverid = yield self.Images.find_one(

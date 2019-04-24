@@ -234,7 +234,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                 info('No exif data found.')
                 newobj['exif_data'] = {}
             # Force joined as None since only associated imagesets can have images joined to the primary imageset
-            newobj['joined'] = None
+            newobj['joined'] = 0
             info(newobj)
             newimage = Image(newobj)
             newimage.validate()
@@ -305,12 +305,12 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                                 break
                         info('joined value = ' + str(self.input_data['joined']))
                         info('joined type = ' + str(type(self.input_data['joined'])))
-                        vjoined = None
+                        vjoined = 0
                         try:
                             if self.input_data['joined']:
                                 vjoined = int(id_imgset)
                         except Exception as e:
-                            vjoined = None
+                            vjoined = 0
                         try:
                             jimgset = yield self.ImageSets.find_one(
                                 {'iid': int(id_imgset)})
