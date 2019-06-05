@@ -22,7 +22,7 @@
 
 from handlers.base import VersionHandler, DocHandler
 from handlers.data_export import DataExportHandler
-from handlers.auth import LoginHandler, LogoutHandler, CheckAuthHandler
+from handlers.auth import LoginHandler, LogoutHandler, CheckAuthHandler, AgreementHandler
 from handlers.auth import RestorePassword, ChangePasswordHandler, RequestAccessHandler
 from handlers.animals import AnimalsHandler
 from handlers.animals_relatives import AnimalsRelativesHandler
@@ -44,6 +44,7 @@ def url_patterns(animals='lions'):
         (r"/auth/recover/?", RestorePassword),
         (r"/auth/requestaccess/?", RequestAccessHandler),
         (r"/auth/changepassword/?", ChangePasswordHandler),
+        (r"/auth/agree/?", AgreementHandler),
         (r"/data/export/?$", DataExportHandler),
         (r"/documentation.html", DocHandler),
 

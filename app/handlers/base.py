@@ -46,6 +46,7 @@ class BaseHandler(RequestHandler, DBMethods, HTTPMethods):
         # Database reference
         self.db = self.settings['db']
         # Collections references
+        self.Agreements = self.settings['db'].agreements
         self.Animals = self.settings['db'][self.settings['animals'].lower()]
         self.Users = self.settings['db'].users
         self.Orgs = self.settings['db'].organizations
