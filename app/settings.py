@@ -42,13 +42,6 @@ from lib.dbdump import dbdump
 appdir = os.path.dirname(os.path.realpath(__file__))
 info('Work directory: %s' % str(appdir))
 
-# Set False in Development
-IsDevelopment = eval(os.environ.get('IsDevelopment', 'False'))
-if IsDevelopment:
-    environ = 'lion-development'
-else:
-    environ = 'lion-production'
-
 # save original Python path
 old_sys_path = list(sys.path)
 
