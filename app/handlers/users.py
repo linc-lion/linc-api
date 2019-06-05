@@ -54,18 +54,24 @@ class UsersHandler(BaseHandler):
         if user_id:
             if user_id == 'list':
                 objs = yield self.Users.find().to_list(None)
-                orgs = yield self.db.organizations.find().to_list(None)
+                orgs = yield self.Orgs.find().to_list(None)
+                agrees = yield self.Agreements.find().to_list(None)
+                users_agree={agr['user_iid']:agr['agree_date'] for agr in agrees}
                 orgnames = dict()
                 for org in orgs:
                     orgnames[org['iid']] = org['name']
                 for obj in objs:
                     del obj['encrypted_password']
+                    if obj['iid'] in users_agree:
+                        obj['agree'] = users_agree[obj['iid']]
+                    else:
+                        obj['agree'] = None
                 self.set_status(200)
                 self.finish(self.json_encode(
                     {'status': 'success',
                      'data': self.list(objs, orgnames)}))
             elif user_id == 'conservationists':
-                orgs = yield self.db.organizations.find().to_list(None)
+                orgs = yield self.Orgs.find().to_list(None)
                 users = yield self.Users.find().to_list(None)
                 orglist = dict()
                 for org in orgs:
@@ -86,6 +92,7 @@ class UsersHandler(BaseHandler):
                 # return a specific user accepting as id the integer id, hash and name
                 query = self.query_id(user_id)
                 objs = yield self.Users.find_one(query)
+                agree = yield self.Agreements.find_one({'user_iid': int(user_id)})
                 if objs:
                     objuser = objs
                     objuser['obj_id'] = str(objs['_id'])
@@ -94,6 +101,10 @@ class UsersHandler(BaseHandler):
                     objuser['organization_id'] = objuser['organization_iid']
                     del objuser['organization_iid']
                     del objuser['encrypted_password']
+                    if agree:
+                        objuser['agree'] = agree['agree_date']
+                    else:
+                        objuser['agree'] = None
 
                     self.set_status(200)
                     self.finish(self.json_encode({'status': 'success', 'data': objuser}))
@@ -102,6 +113,8 @@ class UsersHandler(BaseHandler):
                     self.finish(self.json_encode({'status': 'error', 'message': 'not found'}))
         else:
             objs = yield self.Users.find().to_list(None)
+            agrees = yield self.Agreements.find().to_list(None)
+            users_agree={agr['user_iid']:agr['agree_date'] for agr in agrees}
             output = list()
             for x in objs:
                 obj = dict(x)
@@ -110,6 +123,10 @@ class UsersHandler(BaseHandler):
                 del obj['encrypted_password']
                 obj['organization_id'] = obj['organization_iid']
                 del obj['organization_iid']
+                if obj['iid'] in users_agree:
+                    obj['agree'] = users_agree[obj['iid']]
+                else:
+                    obj['agree'] = None
                 self.switch_iid(obj)
                 output.append(obj)
             self.set_status(200)
@@ -128,7 +145,7 @@ class UsersHandler(BaseHandler):
         # encrypt password
         newobj['encrypted_password'] = self.encryptPassword(self.input_data['password'])
         orgiid = self.input_data['organization_id']
-        orgexists = yield self.db.organizations.find_one({'iid': orgiid})
+        orgexists = yield self.Orgs.find_one({'iid': orgiid})
         if orgexists:
             newobj['organization_iid'] = orgiid
         else:
@@ -168,7 +185,7 @@ class UsersHandler(BaseHandler):
         fields_allowed_to_be_update = ['email', 'organization_iid', 'admin', 'password']
         if 'organization_id' in self.input_data.keys():
             orgiid = self.input_data['organization_id']
-            orgexists = yield self.db.organizations.find_one({'iid': orgiid})
+            orgexists = yield self.Orgs.find_one({'iid': orgiid})
             if orgexists:
                 update_data['organization_iid'] = orgiid
             else:

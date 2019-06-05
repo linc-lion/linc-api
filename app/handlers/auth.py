@@ -24,12 +24,16 @@ from tornado.web import asynchronous
 from tornado.gen import coroutine, Task
 from handlers.base import BaseHandler
 from datetime import datetime, timedelta
-from lib.tokens import gen_token, token_encode
+from dateutil.relativedelta import relativedelta
+from lib.tokens import gen_token, token_encode, token_decode
 from lib.rolecheck import api_authenticated
 from tornado.escape import utf8
 from tornado import web
-from json import dumps
+from json import loads, dumps
 from logging import info
+from uuid import uuid4
+from logging import info
+from models.agreement import Agreement
 
 
 class CheckAuthHandler(BaseHandler):
@@ -71,7 +75,26 @@ class LoginHandler(BaseHandler):
                     del wlist[username]
             if ouser:
                 if self.checkPassword(utf8(password), utf8(ouser['encrypted_password'])):
-                    # Ok: password matches
+
+                    agree = yield self.Agreements.find_one({'user_iid': ouser['iid']})
+                    dp = datetime.now() - relativedelta(months=6)
+                    # if agree:
+                    # info('agree date: %s = %s days ago', agree['agree_date'], (datetime.now() - agree['agree_date']).days)
+                    if not agree or (agree and agree['agree_date'] < dp):
+                        user_id = str(ouser['_id'])
+                        hashkey = str(uuid4())
+                        authtoken = dumps({
+                            'email': username,
+                            'token': gen_token(6),
+                            'key': hashkey
+                        })
+                        dtime = 300
+                        self.cache.set('agreement:' + user_id, authtoken, dtime)
+                        code = token_encode(authtoken, self.settings['token_secret'][:10])
+                        self.response(412, 'Usuário precisa aceitar as condições do EULA.', {'agree_code': code})
+                        return
+
+                    # Ok: password matches and user has agreement
                     x_real_ip = self.request.headers.get("X-Real-IP")
                     remote_ip = x_real_ip or self.request.remote_ip
                     if ouser['admin']:
@@ -102,8 +125,6 @@ class LoginHandler(BaseHandler):
                         'current_sign_in_ip': remote_ip
                     }}
                     upduser = yield self.Users.update({'iid': ouser['iid']}, datupd)
-                    # update({'iid': ouser['iid']}, datupd)
-                    info(upduser)
                     authtoken = web.create_signed_value(
                         self.settings['cookie_secret'], 'authtoken', dumps(objuser))
                     if username in wlist.keys():
@@ -140,6 +161,104 @@ class LoginHandler(BaseHandler):
                 self.response(401, 'Authentication failure. Username or password are incorrect or maybe the user are disabled.')
         else:
             self.response(400, 'Authentication requires username and password')
+
+
+class AgreementHandler(BaseHandler):
+    SUPPORTED_METHODS = ('POST')
+
+    @asynchronous
+    @coroutine
+    def post(self):
+        if 'agree_code' in self.input_data.keys():
+            agree_code = self.input_data['agree_code']
+            detoken = loads(token_decode(agree_code, self.settings['token_secret'][:10]))
+
+            ouser = yield Task(self.get_user_by_email, detoken['email'])
+            if ouser:
+                user_id = str(ouser['_id'])
+                obj = loads(self.cache.get('agreement:' + user_id))
+                if obj['email'] == detoken['email'] and obj['token'] == detoken['token'] and \
+                    obj['key'] == detoken['key']:
+                    dtnow = datetime.now()
+
+                    # Ok: token match
+                    agree = yield self.Agreements.find_one({'user_iid': ouser['iid']})
+                    if not agree:
+                        info('not agree')
+                        agree_data = {
+                            'user_iid': ouser['iid'],
+                            'organization_iid': ouser['organization_iid'],
+                            'agree_date': dtnow,
+                            'created_at': dtnow,
+                            'updated_at': dtnow
+                        }
+                        try:
+                            newagree = Agreement(agree_data)
+                            newagree.validate()
+                            yield self.Agreements.insert(newagree.to_native())
+                        except Exception as e:
+                            # agree register exist - continue
+                            info(e)
+                    else:
+                        info('agree : %s', agree)
+                        try:
+                            query = {'$set':{'agree_date': dtnow, 'updated_at': dtnow}}
+                            info(query)
+                            yield self.Agreements.update({'_id': agree['_id']}, query)
+                        except Exception as e:
+                            info(e)
+
+                    x_real_ip = self.request.headers.get("X-Real-IP")
+                    remote_ip = x_real_ip or self.request.remote_ip
+                    if ouser['admin']:
+                        role = 'admin'
+                    else:
+                        role = 'user'
+                    org = yield Task(self.get_org_by_id, ouser['organization_iid'])
+                    orgname = ''
+                    if org:
+                        orgname = org['name']
+                    token = gen_token(24)
+                    objuser = {
+                        'id': ouser['iid'],
+                        'username': ouser['email'],
+                        'orgname': orgname,
+                        'org_id': ouser['organization_iid'],
+                        'role': role,
+                        'token': token,
+                        'ip': remote_ip,
+                        'timestamp': datetime.now().isoformat()}
+                    # update user info about the login
+                    datupd = {'$set': {
+                        'updated_at': datetime.now(),
+                        'sign_in_count': int(ouser['sign_in_count']) + 1,
+                        'last_sign_in_ip': ouser['current_sign_in_ip'],
+                        'last_sign_in_at': ouser['current_sign_in_at'],
+                        'current_sign_in_at': datetime.now(),
+                        'current_sign_in_ip': remote_ip
+                    }}
+                    upduser = yield self.Users.update({'iid': ouser['iid']}, datupd)
+                    # update({'iid': ouser['iid']}, datupd)
+                    authtoken = web.create_signed_value(
+                        self.settings['cookie_secret'], 'authtoken', dumps(objuser))
+
+                    self.settings['tokens'][ouser['email']] = {'token': token, 'dt': datetime.now()}
+                    # Encode to output
+                    outputtoken = token_encode(authtoken, self.settings['token_secret'])
+                    # Output Response
+                    outputdata = {'token': outputtoken,
+                                'role': role, 'orgname': orgname,
+                                'id': ouser['iid'],
+                                'organization_id': ouser['organization_iid']}
+                    self.response(200, 'Authentication OK.', outputdata, {'Linc-Api-AuthToken': outputtoken})
+                    return
+                else:
+                    # wrong agreement token
+                    self.response( 401, 'Authentication failure, user did not accept the contract (EULA).')
+            else:
+                self.response(401, 'Authentication failure. Username or token are incorrect or maybe the user are disabled.')
+        else:
+            self.response(400, 'Authentication requires token')
 
 
 class LogoutHandler(BaseHandler):
