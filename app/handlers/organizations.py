@@ -32,6 +32,7 @@ from logging import info
 
 class OrganizationsHandler(BaseHandler):
     """A class that handles requests about organizations informartion"""
+    SUPPORTED_METHODS = ('GET', 'POST', 'PUT', 'DELETE')
 
     def query_id(self, org_id):
         """This method configures the query that will find an object"""

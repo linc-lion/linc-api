@@ -34,6 +34,7 @@ from logging import info
 class UsersHandler(BaseHandler):
     """A class that handles requests about users informartion
     """
+    SUPPORTED_METHODS = ('GET', 'POST', 'PUT', 'DELETE')
 
     def query_id(self, user_id):
         """This method configures the query that will find an object"""
@@ -55,7 +56,7 @@ class UsersHandler(BaseHandler):
             if user_id == 'list':
                 objs = yield self.Users.find().to_list(None)
                 orgs = yield self.Orgs.find().to_list(None)
-                agrees = yield self.Agreements.find().to_list(None)
+                agrees = yield self.Agreements.find({}).to_list(None)
                 users_agree={agr['user_iid']:agr['agree_date'] for agr in agrees}
                 orgnames = dict()
                 for org in orgs:
@@ -113,7 +114,7 @@ class UsersHandler(BaseHandler):
                     self.finish(self.json_encode({'status': 'error', 'message': 'not found'}))
         else:
             objs = yield self.Users.find().to_list(None)
-            agrees = yield self.Agreements.find().to_list(None)
+            agrees = yield self.Agreements.find({}).to_list(None)
             users_agree={agr['user_iid']:agr['agree_date'] for agr in agrees}
             output = list()
             for x in objs:
@@ -258,6 +259,8 @@ class UsersHandler(BaseHandler):
                          'updated_at': datetime.now()}})
                 info(imgsetrc)
                 try:
+                    rmagree = yield self.Agreements.remove({'user_iid': int(user_id)})
+                    info("user agree removed %s", rmagree)
                     updobj = yield self.Users.remove(query)
                     self.response(200, 'User successfully deleted.')
                 except Exception as e:
