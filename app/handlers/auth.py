@@ -164,7 +164,7 @@ class LoginHandler(BaseHandler):
 
 
 class AgreementHandler(BaseHandler):
-    SUPPORTED_METHODS = ('POST')
+    SUPPORTED_METHODS = ('POST', 'DELETE')
 
     @asynchronous
     @coroutine
@@ -259,6 +259,24 @@ class AgreementHandler(BaseHandler):
                 self.response(401, 'Authentication failure. Username or token are incorrect or maybe the user are disabled.')
         else:
             self.response(400, 'Authentication requires token')
+
+    @coroutine
+    @api_authenticated
+    def delete(self, user_id=None):
+        # delete a agree by id
+        if user_id:
+            updobj = yield self.Agreements.find_one({'user_iid': int(user_id)})
+            if updobj:
+                try:
+                    rmstatus = yield self.Agreements.remove({'_id': updobj['_id']})
+                    info('agree removed %s', rmstatus)
+                    self.response(200, 'Agreement successfully removed.')
+                except Exception as e:
+                    self.response(500, 'Fail to remove agreement.')
+            else:
+                self.response(404, 'Agreement not found.')
+        else:
+            self.response(400, 'Remove agreement (DELETE) must have a resource ID.')
 
 
 class LogoutHandler(BaseHandler):

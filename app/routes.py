@@ -45,6 +45,7 @@ def url_patterns(animals='lions'):
         (r"/auth/requestaccess/?", RequestAccessHandler),
         (r"/auth/changepassword/?", ChangePasswordHandler),
         (r"/auth/agree/?", AgreementHandler),
+        (r"/auth/agree/(\w+)/?$", AgreementHandler),
         (r"/data/export/?$", DataExportHandler),
         (r"/documentation.html", DocHandler),
 
