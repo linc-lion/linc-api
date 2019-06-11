@@ -111,6 +111,7 @@ api['S3_URL'] = os.environ.get('S3_URL', 'https://linc-media.linclion.org/') + a
 
 api['S3_ACCESS_KEY'] = os.environ.get('S3_ACCESS_KEY', '')
 api['S3_SECRET_KEY'] = os.environ.get('S3_SECRET_KEY', '')
+api['S3_URL_EXPIRE_SECONDS'] = int(os.environ.get('S3_URL_EXPIRE_SECONDS', '3600'))
 
 api['EMAIL_FROM'] = os.environ.get('EMAIL_FROM', 'linclionproject@gmail.com')
 # new request access email address
