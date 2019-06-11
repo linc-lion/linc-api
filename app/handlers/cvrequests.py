@@ -30,6 +30,7 @@ from logging import info
 
 class CVRequestsHandler(BaseHandler):
     """ A class that handles requests about CV indentification informartion """
+    SUPPORTED_METHODS = ('GET', 'POST', 'PUT', 'DELETE')
 
     @asynchronous
     @coroutine
