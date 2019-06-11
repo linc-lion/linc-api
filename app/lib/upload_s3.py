@@ -1,8 +1,29 @@
 import os
 import boto
+from logging import info
 from boto.s3.key import Key
 from boto.s3.connection import OrdinaryCallingFormat
-from logging import info
+
+
+class RemoteS3Files(object):
+
+    def __init__(self, remote=dict()):
+        # Establishing a new connection
+        conn = boto.connect_s3(
+            remote["access_key"], remote["secret_key"], 
+            is_secure=False, calling_format=OrdinaryCallingFormat()
+        )
+        # Connecting to the bucket
+        self.bucket = conn.get_bucket(remote['bucket'], validate=True)
+        # Setting remote configurations
+        self.folder = remote['folder']
+
+    def generate_presigned_url(self, key, expires_in=3600):
+        # Capturing the required key
+        key = self.bucket.new_key('%s/%s' % (self.folder, key))
+        # Returning the temporary url
+        return key.generate_url(
+            expires_in=expires_in, query_auth=True)
 
 
 def upload_to_s3(aws_access_key_id, aws_secret_access_key, file, bucket, key, callback=None, md5=None, reduced_redundancy=False, content_type=None):
