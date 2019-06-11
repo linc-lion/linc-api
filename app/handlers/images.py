@@ -42,6 +42,7 @@ from lib.upload_s3 import upload_to_s3, s3_copy, s3_delete
 
 class ImagesHandler(BaseHandler, ProcessMixin):
     """A class that handles requests about images informartion."""
+    SUPPORTED_METHODS = ('GET', 'POST', 'PUT', 'DELETE')
 
     def initialize(self):
         super().initialize()

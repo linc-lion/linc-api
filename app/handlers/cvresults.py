@@ -34,6 +34,7 @@ from logging import info
 class CVResultsHandler(BaseHandler):
     """A class that handles requests about CV identificaiton results informartion
     """
+    SUPPORTED_METHODS = ('GET', 'POST', 'PUT', 'DELETE')
 
     def query_id(self, res_id):
         """This method configures the query that will find an object"""
