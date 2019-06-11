@@ -24,6 +24,7 @@ from tornado.web import RequestHandler, asynchronous
 from tornado.gen import engine
 from tornado import web
 import string
+import time
 from datetime import date
 from logging import info
 import bcrypt
@@ -34,6 +35,7 @@ from lib.db import DBMethods
 from lib.http import HTTPMethods
 import smtplib
 from tornado.web import HTTPError
+from lib.upload_s3 import RemoteS3Files
 
 
 class BaseHandler(RequestHandler, DBMethods, HTTPMethods):
@@ -56,6 +58,13 @@ class BaseHandler(RequestHandler, DBMethods, HTTPMethods):
         self.CVRequests = self.settings['db'].cvrequests
         self.CVResults = self.settings['db'].cvresults
         self.cache = self.settings['cache']
+        # Creating remote s3 instance
+        self.remote = RemoteS3Files({
+            'access_key': self.settings['S3_ACCESS_KEY'],
+            'secret_key': self.settings['S3_SECRET_KEY'],
+            'bucket': self.settings['S3_BUCKET'],
+            'folder': self.settings['S3_FOLDER']
+        })
 
     def prepare(self):
         # self.auth_check()
@@ -145,17 +154,46 @@ class BaseHandler(RequestHandler, DBMethods, HTTPMethods):
 
     def imgurl(self, urlpath, imgtype='thumbnail'):
         # type can be: full,medium,thumbnail and icon
-        url = self.settings['S3_URL'] + urlpath
         if imgtype == 'thumbnail':
-            url = url + '_thumbnail.jpg'
+            urlpath = urlpath + '_thumbnail.jpg'
         elif imgtype == 'full':
-            url = url + '_full.jpg'
+            urlpath = urlpath + '_full.jpg'
         elif imgtype == 'icon':
-            url = url + '_icon.jpg'
+            urlpath = urlpath + '_icon.jpg'
         else:
-            # imgtype == 'medium':
-            url = url + '_medium.jpg'
-        return url
+            urlpath = urlpath + '_medium.jpg'
+        # Capturing object url from memory
+        url = self.get_url_token(urlpath) 
+        # Checking if the url is in memory
+        if not url:
+            # Generating a new url
+            url = self.remote.generate_presigned_url(
+                urlpath, expires_in=self.settings['S3_URL_EXPIRE_SECONDS'])
+            # Adding url to memory
+            self.set_url_token(urlpath, url)
+        # Decoding object url, if needed
+        return url.decode('utf-8') if isinstance(url, bytes) else url
+
+    def set_url_token(self, token, value):
+        # Attempting redis connection
+        for attempt in range(5):
+            try:
+                self.settings['cache'].set('urltoken-' + token, 
+                    value, ex=self.settings['S3_URL_EXPIRE_SECONDS'])
+                break
+            except:
+                # Sleeping
+                time.sleep(0.5)
+
+    def get_url_token(self, token):
+        # Attempting redis connection
+        for attempt in range(5):
+            try:
+                return self.settings['cache'].get('urltoken-' + token)
+            except:
+                # Sleeping
+                time.sleep(0.5)
+        return False
 
     def remove_file(self, fname):
         try:
