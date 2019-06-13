@@ -126,8 +126,8 @@ class AnimalsHandler(BaseHandler):
                     # Get image
                     img = yield self.Images.find_one({'iid': output['main_image_id']})
                     if img:
-                        output['image'] = self.settings['S3_URL'] + img['url'] + '_thumbnail.jpg'
-                        output['thumbnail'] = self.settings['S3_URL'] + img['url'] + '_icon.jpg'
+                        output['image'] = self.imgurl(img['url'], 'thumbnail') # self.settings['S3_URL'] + img['url'] + '_thumbnail.jpg'
+                        output['thumbnail'] = self.imgurl(img['url'], 'icon') # self.settings['S3_URL'] + img['url'] + '_icon.jpg'
                     else:
                         output['image'] = ''
                         output['thumbnail'] = ''
@@ -643,8 +643,8 @@ class AnimalsHandler(BaseHandler):
                     img = yield self.Images.find_one(
                         {'iid': imgset['main_image_iid']})
                     if img:
-                        obj['thumbnail'] = self.settings['S3_URL'] + img['url'] + '_icon.jpg'
-                        obj['image'] = self.settings['S3_URL'] + img['url'] + '_medium.jpg'
+                        obj['thumbnail'] = self.imgurl(img['url'], 'icon') # self.settings['S3_URL'] + img['url'] + '_icon.jpg'
+                        obj['image'] = self.imgurl(img['url'], 'medium') # self.settings['S3_URL'] + img['url'] + '_medium.jpg'
             # Check algorithms
             limagesets = yield self.ImageSets.find({'animal_iid': x['iid']}, {'iid': 1}).to_list(None)
             limagesets = [x['iid'] for x in limagesets]
@@ -752,9 +752,9 @@ class AnimalsHandler(BaseHandler):
                     obji['url'] = ''
                     img = yield self.Images.find_one({'iid': image['iid']})
                     if img:
-                        obji['thumbnail_url'] = self.settings['S3_URL'] + img['url'] + '_thumbnail.jpg'
-                        obji['main_url'] = self.settings['S3_URL'] + img['url'] + '_full.jpg'
-                        obji['url'] = self.settings['S3_URL'] + img['url'] + '_full.jpg'
+                        obji['thumbnail_url'] = self.imgurl(img['url'], 'thumbnail') # self.settings['S3_URL'] + img['url'] + '_thumbnail.jpg'
+                        obji['main_url'] = self.imgurl(img['url'], 'full') # self.settings['S3_URL'] + img['url'] + '_full.jpg'
+                        obji['url'] = self.imgurl(img['url'], 'full') # self.settings['S3_URL'] + img['url'] + '_full.jpg'
                     outimages.append(obji)
                 obj['_embedded'] = {'images': outimages}
             imgsets_output.append(obj)

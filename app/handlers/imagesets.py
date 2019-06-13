@@ -125,14 +125,14 @@ class ImageSetsHandler(BaseHandler):
                 # Get image
                 img = yield self.Images.find_one({'iid': output['main_image_id']})
                 if img:
-                    output['image'] = self.settings['S3_URL'] + img['url'] + '_thumbnail.jpg'
-                    output['thumbnail'] = self.settings['S3_URL'] + img['url'] + '_icon.jpg'
+                    output['image'] = self.imgurl(img['url'], 'thumbnail') # self.settings['S3_URL'] + img['url'] + '_thumbnail.jpg'
+                    output['thumbnail'] = self.imgurl(img['url'], 'icon') # self.settings['S3_URL'] + img['url'] + '_icon.jpg'
                 else:
                     img = yield self.Images.find(
                         {'image_set_iid': output['id']}).to_list(None)
                     if len(img) > 0:
-                        output['image'] = self.settings['S3_URL'] + img[0]['url'] + '_thumbnail.jpg'
-                        output['thumbnail'] = self.settings['S3_URL'] + img[0]['url'] + '_icon.jpg'
+                        output['image'] = self.imgurl(img[0]['url'], 'thumbnail') # self.settings['S3_URL'] + img[0]['url'] + '_thumbnail.jpg'
+                        output['thumbnail'] = self.imgurl(img[0]['url'], 'icon') # self.settings['S3_URL'] + img[0]['url'] + '_icon.jpg'
                     else:
                         output['image'] = ''
                         output['thumbnail'] = ''
@@ -230,8 +230,8 @@ class ImageSetsHandler(BaseHandler):
                         if 'date_stamp' in exifd.keys() and exifd['date_stamp']:
                             imgout['date_stamp'] = datetime.strptime(
                                 exifd['date_stamp'], '%Y-%m-%dT%H:%M:%S').date().isoformat()
-                    for suf in ['_icon.jpg', '_medium.jpg', '_thumbnail.jpg']:
-                        imgout[suf[1:-4]] = self.settings['S3_URL'] + img['url'] + suf
+                    for suf in ['icon', 'medium', 'thumbnail']:
+                        imgout[suf] = self.imgurl(img['url'], suf) # self.settings['S3_URL'] + img['url'] + suf
                     imgout['cover'] = (img['iid'] == cover)
                     output['images'].append(imgout)
                 self.response(200, 'Gallery images for the image set ' +
@@ -724,13 +724,13 @@ class ImageSetsHandler(BaseHandler):
 
                 obji = yield self.Images.find_one({'iid': obj['main_image_iid']})
                 if obji:
-                    imgset_obj['thumbnail'] = self.settings['S3_URL'] + obji['url'] + '_icon.jpg'
-                    imgset_obj['image'] = self.settings['S3_URL'] + obji['url'] + '_medium.jpg'
+                    imgset_obj['thumbnail'] = self.imgurl(obji['url'], 'icon') # self.settings['S3_URL'] + obji['url'] + '_icon.jpg'
+                    imgset_obj['image'] = self.imgurl(obji['url'], 'medium') # self.settings['S3_URL'] + obji['url'] + '_medium.jpg'
                 else:
                     obji = yield self.Images.find({'image_set_iid': obj['iid']}).to_list(None)
                     if len(obji) > 0:
-                        imgset_obj['thumbnail'] = self.settings['S3_URL'] + obji[0]['url'] + '_icon.jpg'
-                        imgset_obj['image'] = self.settings['S3_URL'] + obji[0]['url'] + '_medium.jpg'
+                        imgset_obj['thumbnail'] = self.imgurl(obji[0]['url'], 'icon') # self.settings['S3_URL'] + obji[0]['url'] + '_icon.jpg'
+                        imgset_obj['image'] = self.imgurl(obji[0]['url'], 'medium') # self.settings['S3_URL'] + obji[0]['url'] + '_medium.jpg'
                     else:
                         imgset_obj['thumbnail'] = ''
                         imgset_obj['image'] = ''
