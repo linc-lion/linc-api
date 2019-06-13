@@ -83,16 +83,12 @@ class ImagesHandler(BaseHandler, ProcessMixin):
     def get(self, image_id=None):
         download = self.get_argument('download', None)
         if download:
-            info(download)
             dimg = [int(x) for x in download.split(',')]
-            info(dimg)
             limgs = yield self.Images.find({'iid': {'$in': dimg}}).to_list(None)
             if len(limgs) > 0:
-                s3url = self.settings['S3_URL']
-                suf = '_full.jpg'
                 urls = list()
                 for x in limgs:
-                    iurl = s3url + x['url'] + suf
+                    iurl = self.imgurl(x['url'], 'full')
                     if 'filename' not in x.keys() or x['filename'] == '':
                         fname = 'imageset_' + str(x['image_set_iid']) + '_image_' + str(x['iid']) + '.jpg'
                     else:
