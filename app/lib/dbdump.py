@@ -115,7 +115,7 @@ def dbdump(db, url_preffix, file_path):
                 obji['id'] = image['iid']
                 obji['image_tags'] = image['image_tags'] if 'image_tags' in image else []
                 obji['is_public'] = image['is_public']
-                obji['url'] = url_preffix + image['url'] + '_full.jpg'
+                obji['url'] = self.imgurl(image['url'], 'full')
                 outimages.append(obji)
             obj['_embedded'] = {'images': outimages}
             imgsets_output.append(obj)
