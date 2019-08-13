@@ -26,13 +26,42 @@ from time import time
 import zipfile
 from os import listdir, remove
 from secrets import token_urlsafe
+from lib.upload_s3 import RemoteS3Files
+
+
+class BaseDump:
+
+    def __init__(self, settings):
+        # Letting settings global
+        self.settings = settings
+        # Creating remote s3 instance
+        self.remote = RemoteS3Files({
+            'access_key': self.settings['S3_ACCESS_KEY'],
+            'secret_key': self.settings['S3_SECRET_KEY'],
+            'bucket': self.settings['S3_BUCKET'],
+            'folder': self.settings['S3_FOLDER']
+        })
+
+    def imgurl(self, urlpath):
+        # Creating url path
+        urlpath = urlpath + '_full.jpg'
+        # Generating a new url
+        url = self.remote.generate_presigned_url(
+            urlpath, expires_in=self.settings['S3_URL_EXPIRE_SECONDS'])
+        # Decoding object url, if needed
+        return url.decode('utf-8') if isinstance(url, bytes) else url
+
 
 @coroutine
-def dbdump(db, url_preffix, file_path):
+def dbdump(db, settings, file_path):
     ini = time()
     info('================================')
     info('== Starting DB Dump ==')
     info('================================')
+    
+    # Creating remote instance
+    remote = BaseDump(settings)
+
     for filen in listdir(file_path):
         if filen.startswith('lion-db-dump-'):
             info('Removing file: {}'.format(file_path + filen))
@@ -115,7 +144,8 @@ def dbdump(db, url_preffix, file_path):
                 obji['id'] = image['iid']
                 obji['image_tags'] = image['image_tags'] if 'image_tags' in image else []
                 obji['is_public'] = image['is_public']
-                obji['url'] = self.imgurl(image['url'], 'full')
+                obji['url'] = remote.imgurl(image['url'])
+                print(obji)
                 outimages.append(obji)
             obj['_embedded'] = {'images': outimages}
             imgsets_output.append(obj)
