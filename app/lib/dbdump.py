@@ -145,7 +145,6 @@ def dbdump(db, settings, file_path):
                 obji['image_tags'] = image['image_tags'] if 'image_tags' in image else []
                 obji['is_public'] = image['is_public']
                 obji['url'] = remote.imgurl(image['url'])
-                print(obji)
                 outimages.append(obji)
             obj['_embedded'] = {'images': outimages}
             imgsets_output.append(obj)
