@@ -37,7 +37,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     override.vm.network :forwarded_port, guest: 8081, host: 8081 # MongoDB Adimin Dev Purposes
     override.vm.network :forwarded_port, guest: 7081, host: 7081 # MongoDB Adimin Dev Purposes
     override.vm.network :forwarded_port, guest: 5080, host: 5080 # MongoDB Adimin Dev Purposes
-    override.vm.network :private_network, ip: "192.168.100.10"
+    override.vm.network :private_network, ip: "192.168.101.10"
 
     provider.name = "linc-api-website"
 
@@ -51,11 +51,12 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
   end
 
   config.vm.provider "lxc" do |provider, override|
-    override.vm.box = "fgrehm/trusty64-lxc"
-    provider.container_name = 'linc-api-website'
+    override.vm.box = "emptybox/ubuntu-bionic-amd64-lxc"
+    override.vm.box_version = "0.1.1546433870"
+    provider.container_name = 'linc-lion'
     provider.customize 'cgroup.memory.limit_in_bytes', '1024M'
 
-    override.vm.network "private_network", ip: "192.168.100.10", lxc__bridge_name: 'sgabridge'
+    override.vm.network "private_network", ip: "192.168.101.10", lxc__bridge_name: 'linc_bridge'
 
     override.vm.provision :shell, path: "./provision/lxc-provision.sh"
 

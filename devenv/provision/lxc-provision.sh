@@ -27,15 +27,22 @@ msg () {
     return 0
 }
 
+HOME='/home/vagrant'
+USER='vagrant'
+GROUP='vagrant'
+
+cd ${HOME}
+
 msg "Starting provision..."
+export DEBIAN_FRONTEND=noninteractive
 
 msg "Configuring OS"
 
 msg "Updating System..."
-sudo apt-get update
+sudo apt-get update --fix-missing
+sudo apt-get -y dist-upgrade
   
 # Provision config section
-USER=vagrant
 
 msg "Disabling IPv6"
 sudo echo "net.ipv6.conf.all.disable_ipv6 = 1" >> /etc/sysctl.conf
@@ -60,14 +67,35 @@ msg "Setting locale"
 sudo locale-gen en_US.UTF-8
 sudo dpkg-reconfigure -f noninteractive locales tzdata
 
+# Adding Packages - common
+msg "Installing Common Packages"
+sudo apt-get -y install git unzip wget curl net-tools > /dev/null
+sudo apt-get -y install build-essential > /dev/null
+sudo apt-get -y install liblapack-dev libpq-dev pkg-config > /dev/null
+
+msg "Installing Python Packages and Dependencies"
+sudo apt-get -y install python3.6 python3.6-dev python3.6-venv python3-virtualenv python3-pip python3-setuptools > /dev/null
+sudo apt-get -y install python-dev python-virtualenv python-setuptools-git > /dev/null
+
+msg "Install Supervisor && GIT"
+sudo apt-get -y install supervisor git > /dev/null
+
+msg "Install Redis-Server"
+sudo apt-get -y install redis-server > /dev/null
+
+# Update Python libs
+msg "Updating Python Libs"
+sudo apt-get -y install libcurl4-openssl-dev libffi-dev libssl-dev > /dev/null
+sudo apt-get -y install libjpeg-dev libzip4 libzip-dev zlib1g zlib1g-dev
+
 # mongodb
 msg "Adding MongoDB package repository"
-sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 2930ADAE8CAF5059EE73BB4B58712A2291FA4AD5
-echo "deb [ arch=amd64 ] https://repo.mongodb.org/apt/ubuntu trusty/mongodb-org/3.6 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-3.6.list
-sudo apt-get update
+sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 9DA31620334BD75D9DCB49F368818C72E52529D4
+echo "deb [ arch=amd64 ] https://repo.mongodb.org/apt/ubuntu bionic/mongodb-org/4.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-4.0.list
+sudo apt-get update > /dev/null
 
 msg "Installing and configuring MongoDB"
-sudo apt-get install -y mongodb-org
+sudo apt-get install -y mongodb-org > /dev/null
 sudo service mongod restart
 
 msg "Loading MongoDB database"
@@ -78,31 +106,13 @@ if [ -d "$DUMPDIR" ]; then
 else
 msg "No dump found so no MongoDB restore"
 fi
-#mongodump -h ds115360.mlab.com:15360 -d heroku_jrlc1bt9 -u heroku_jrlc1bt9 -p 4ro8ll4mc61u34ti0hnrnqe0t6 --out ./dump/
-
-# Adding Packages - common
-msg "Adding repo for Python 3.6"
-sudo add-apt-repository -y ppa:fkrull/deadsnakes
-sudo apt-get update
-
-msg "Installing common packages and dependencies"
-sudo apt-get install -y python3.6 python3.6-dev python-dev python-virtualenv supervisor git python3.6-venv python3-setuptools redis-server redis-tools
 
 # Installing NodeJS
 msg "Installing NodeJS"
-curl -sL https://deb.nodesource.com/setup_6.x | sudo -E bash -
-sudo apt-get install nodejs
-sudo apt-get install build-essential
-sudo apt-get update
-
-# Update Python libs
-sudo apt-get -y install libcurl4-openssl-dev libffi-dev libssl-dev
 sudo apt-get -y nodejs npm
 
 # Python image tools Pillow dependencies
 msg "Installing Python Image Tools"
-sudo apt-get -y install libjpeg-dev libzip4 libzip-dev zlib1g zlib1g-dev
-sudo apt-get -y install libcurl4-openssl-dev libffi-dev
 
 # Adjusting for Pillow JPEG creation
 sudo ln -s /usr/lib/x86_64-linux-gnu/libjpeg.so /usr/lib
@@ -113,8 +123,12 @@ sudo ln -s /usr/lib/x86_64-linux-gnu/libz.so /usr/lib
 sudo rm -fr /home/vagrant/app/venv /home/vagrant/linc-api/venv /home/vagrant/linc-webapp/venv /home/vagrant/linc-webapp/venv
 
 msg "Starting provision for All Apps..."
-/usr/bin/python3.6 -m venv /home/vagrant/app/venv
-source /home/vagrant/app/venv/bin/activate
+cd ${HOME}
+/usr/bin/python3.6 -m venv ${HOME}/venv-3.6 --prompt=Linc
+source ${HOME}/venv-3.6/bin/activate
+
+msg "Change Directory Owner"
+sudo chown -hR ${USER} ${HOME}/venv-3.6
 
 msg "Install Python Dependencies"
 pip install pip --upgrade
@@ -122,38 +136,40 @@ pip install setuptools --upgrade
 pip install -r /home/vagrant/linc-api/requirements.txt --upgrade
 pip install -I Pillow
 
+PYTHON=${HOME}/venv-3.6/bin/python
+SUPERV=/etc/supervisor/conf.d
 msg "Configuring supervisord to run Linc Api"
 
 # msg "Configuring supervisord to run linc-api services"
 
-sudo echo '[program:linc-api]' > /etc/supervisor/conf.d/linc-api.conf
-sudo echo 'command=/home/vagrant/app/venv/bin/python  /home/vagrant/linc-api/app/linc-api.py --port=5050' >> /etc/supervisor/conf.d/linc-api.conf
-sudo echo 'environment=S3_URL=https://linc-media.linclion.org/,APPURL=http://localhost:5050,IsDevelopment=True' >> /etc/supervisor/conf.d/linc-api.conf
-sudo echo 'redirect_stderr=true' >> /etc/supervisor/conf.d/linc-api.conf
-sudo echo 'stdout_logfile=/tmp/linc-api.log' >> /etc/supervisor/conf.d/linc-api.conf
-sudo echo 'numprocs=1' >> /etc/supervisor/conf.d/linc-api.conf
-sudo echo 'user=vagrant' >> /etc/supervisor/conf.d/linc-api.conf
-sudo echo 'directory=/home/vagrant/linc-api/app' >> /etc/supervisor/conf.d/linc-api.conf
+sudo echo "[program:linc-api]" > $SUPERV/linc-api.conf
+sudo echo "command=$PYTHON $HOME/linc-api/app/linc-api.py --port=5050" >> $SUPER/linc-api.conf
+sudo echo "environment=S3_URL=https://linc-media.linclion.org/,APPURL=http://localhost:5050,IsDevelopment=True" >> $SUPER/linc-api.conf
+sudo echo "redirect_stderr=true" >> $SUPER/linc-api.conf
+sudo echo "stdout_logfile=/tmp/linc-api.log" >> $SUPER/linc-api.conf
+sudo echo "numprocs=1" >> $SUPER/linc-api.conf
+sudo echo "user=$USER" >> $SUPER/linc-api.conf
+sudo echo "directory=$HOME/linc-api/app" >> $SUPER/linc-api.conf
 
 msg "Configuring supervisord to run linc-web services"
 
-sudo echo '[program:linc-webapp]' > /etc/supervisor/conf.d/linc-webapp.conf
-sudo echo 'command=/home/vagrant/app/venv/bin/python  /home/vagrant/linc-webapp/app/linc-webapp.py --port=5080' >> /etc/supervisor/conf.d/linc-webapp.conf
-sudo echo 'environment=APPURL=http://linc-webapp.venidera.local,API_URL=http://localhost:5050,IsDevelopment=True' >> /etc/supervisor/conf.d/linc-webapp.conf
-sudo echo 'redirect_stderr=true' >> /etc/supervisor/conf.d/linc-webapp.conf
-sudo echo 'stdout_logfile=/tmp/linc-webapp.log' >> /etc/supervisor/conf.d/linc-webapp.conf
-sudo echo 'numprocs=1' >> /etc/supervisor/conf.d/linc-webapp.conf
-sudo echo 'user=vagrant' >> /etc/supervisor/conf.d/linc-webapp.conf
-sudo echo 'directory=/home/vagrant/linc-webapp/app' >> /etc/supervisor/conf.d/linc-webapp.conf
+sudo echo "[program:linc-webapp]" > $SUPERV/linc-webapp.conf
+sudo echo "command=$PYTHON  $HOME/linc-webapp/app/linc-webapp.py --port=5080" >> $SUPERV/linc-webapp.conf
+sudo echo "environment=APPURL=http://linc-webapp.venidera.local,API_URL=http://localhost:5050,IsDevelopment=True" >> $SUPERV/linc-webapp.conf
+sudo echo "redirect_stderr=true" >> $SUPERV/linc-webapp.conf
+sudo echo "stdout_logfile=/tmp/linc-webapp.log" >> $SUPERV/linc-webapp.conf
+sudo echo "numprocs=1" >> $SUPERV/linc-webapp.conf
+sudo echo "user=vagrant" >> $SUPERV/linc-webapp.conf
+sudo echo "directory=$HOME/linc-webapp/app" >> $SUPERV/linc-webapp.conf
 
 # Updating
 
 msg "Updating supervisord services"
-sudo supervisorctl update
+sudo supervisorctl update > /dev/null
 
 # Install nginx
 msg "Install the nginx service"
-sudo apt-get -y install nginx
+sudo apt-get -y install nginx ufw > /dev/null
 
 msg "Configuring the nginx services"
 sudo ufw allow 'Nginx Full'
@@ -163,11 +179,10 @@ sudo mv /etc/nginx/nginx.conf /etc/nginx/nginx.conf.original
 sudo cp /home/vagrant/linc-api/devenv/nginx/nginx.conf /etc/nginx/nginx.conf
 
 msg "Restarting the nginx service"
-sudo /etc/init.d/nginx restart
+sudo systemctl restart nginx
 
 msg "Nginx service status"
-/etc/init.d/nginx status
-sudo systemctl enable nginx.service
+sudo systemctl status nginx
 
 echo "source /home/vagrant/app/venv/bin/activate" >> "/home/vagrant/.bashrc"
 echo 'export LC_ALL=en_US.UTF-8' >> "/home/vagrant/.bashrc"
@@ -177,18 +192,5 @@ echo 'export LANG=en_US.UTF-8' >> "/home/vagrant/.bashrc"
 msg "Cleaning Everything"
 msg "   dist-upgrade"
 sudo apt-get -y dist-upgrade
-
-# msg "Setting timezone: EST"
-# sudo timedatectl set-timezone EST
-# sudo dpkg-reconfigure -f noninteractive tzdata
-
-# msg "   autoremove"
-# sudo apt-get -y autoremove
-# msg "   autoclean"
-# sudo apt-get -y autoclean
-
-# # Shrink image size
-# sudo dd if=/dev/zero of=/EMPTY bs=1M
-# sudo rm -f /EMPTY
 
 msg "Provision completed!"
