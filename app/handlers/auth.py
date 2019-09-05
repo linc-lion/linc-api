@@ -333,9 +333,9 @@ class RestorePassword(BaseHandler):
                         self.response(resp[0], resp[1])
                         return
                     emails = [email]
-                    admin_emails = yield self.Users.find({'admin': True}).to_list(None)
-                    for i in admin_emails:
-                        emails.append(i['email'])
+                    # admin_emails = yield self.Users.find({'admin': True}).to_list(None)
+                    # for i in admin_emails:
+                        # emails.append(i['email'])
                     emails = list(set(emails))
                     pemail = False
                     for emailaddress in emails:
