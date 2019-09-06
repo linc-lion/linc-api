@@ -41,7 +41,7 @@ msg "Configuring OS"
 msg "Updating System..."
 sudo apt-get update --fix-missing
 sudo apt-get -y dist-upgrade
-  
+
 # Provision config section
 
 msg "Disabling IPv6"
@@ -136,26 +136,26 @@ pip install setuptools --upgrade
 pip install -r /home/vagrant/linc-api/requirements.txt --upgrade
 pip install -I Pillow
 
-PYTHON=${HOME}/venv-3.6/bin/python
-SUPERV=/etc/supervisor/conf.d
+export PYTHON=${HOME}/venv-3.6/bin/python
+export SUPERV=/etc/supervisor/conf.d
 msg "Configuring supervisord to run Linc Api"
 
 # msg "Configuring supervisord to run linc-api services"
 
 sudo echo "[program:linc-api]" > $SUPERV/linc-api.conf
-sudo echo "command=$PYTHON $HOME/linc-api/app/linc-api.py --port=5050" >> $SUPER/linc-api.conf
-sudo echo "environment=S3_URL=https://linc-media.linclion.org/,APPURL=http://localhost:5050,IsDevelopment=True" >> $SUPER/linc-api.conf
-sudo echo "redirect_stderr=true" >> $SUPER/linc-api.conf
-sudo echo "stdout_logfile=/tmp/linc-api.log" >> $SUPER/linc-api.conf
-sudo echo "numprocs=1" >> $SUPER/linc-api.conf
-sudo echo "user=$USER" >> $SUPER/linc-api.conf
-sudo echo "directory=$HOME/linc-api/app" >> $SUPER/linc-api.conf
+sudo echo "command=$PYTHON $HOME/linc-api/app/linc-api.py --port=5050" >> $SUPERV/linc-api.conf
+sudo echo "environment=API_URL=http://localhost:5050,APP_URL=http://localhost:5080" >> $SUPERV/linc-api.conf
+sudo echo "redirect_stderr=true" >> $SUPERV/linc-api.conf
+sudo echo "stdout_logfile=/tmp/linc-api.log" >> $SUPERV/linc-api.conf
+sudo echo "numprocs=1" >> $SUPERV/linc-api.conf
+sudo echo "user=$USER" >> $SUPERV/linc-api.conf
+sudo echo "directory=$HOME/linc-api/app" >> $SUPERV/linc-api.conf
 
 msg "Configuring supervisord to run linc-web services"
 
 sudo echo "[program:linc-webapp]" > $SUPERV/linc-webapp.conf
 sudo echo "command=$PYTHON  $HOME/linc-webapp/app/linc-webapp.py --port=5080" >> $SUPERV/linc-webapp.conf
-sudo echo "environment=APPURL=http://linc-webapp.venidera.local,API_URL=http://localhost:5050,IsDevelopment=True" >> $SUPERV/linc-webapp.conf
+sudo echo "environment=APP_URL=http://localhost:5080,API_URL=http://localhost:5050" >> $SUPERV/linc-webapp.conf
 sudo echo "redirect_stderr=true" >> $SUPERV/linc-webapp.conf
 sudo echo "stdout_logfile=/tmp/linc-webapp.log" >> $SUPERV/linc-webapp.conf
 sudo echo "numprocs=1" >> $SUPERV/linc-webapp.conf
