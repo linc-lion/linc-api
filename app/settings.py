@@ -124,6 +124,7 @@ api['SMPT_PORT'] = os.environ.get('SMTP_PORT', '587')
 api['allowed_emails'] = os.environ.get('ALLOWED_EMAILS', '')
 
 api['url'] = os.environ.get('API_URL', 'http://localhost:5050/')
+api['APP_URL'] = os.environ.get('APP_URL', 'http://linc-webapp.venidera.local')
 
 redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
 api['cache'] = Redis(connection_pool=ConnectionPool.from_url(redis_url))
