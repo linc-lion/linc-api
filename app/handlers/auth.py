@@ -32,6 +32,7 @@ from tornado import web
 from json import loads, dumps
 from logging import info
 from uuid import uuid4
+from urllib.parse import quote, unquote
 from logging import info
 from models.agreement import Agreement
 
@@ -316,42 +317,117 @@ class ChangePasswordHandler(BaseHandler):
             self.response(400, 'To change your password, you must send it in a json object with the key \'new_password\'.')
 
 
-class RestorePassword(BaseHandler):
-    SUPPORTED_METHODS = ('POST')
+class RecoveryPassword(BaseHandler):
+    SUPPORTED_METHODS = ("GET", "POST")
 
     @asynchronous
     @coroutine
-    def post(self):
+    def get(self, code=None):
+        if code:
+            response = {
+                'title': 'Invalid Request',
+                'message': 'Authentication key is invalid.'
+            }
+            try:
+                token = token_decode(code, self.settings['token_secret'][:10])
+                if token:
+                    detoken = loads(token)
+                    lkeys = self.settings['cache'].keys()
+                    keys = list()
+                    for k in lkeys:
+                        if b'update_password:' in k:
+                            keys.append(k)
+
+                    for i in keys:
+                        obj = loads(self.settings['cache'].get(i))
+                        if obj['email'] == detoken['email'] and obj['password'] == detoken['password'] and\
+                                obj['token'] == detoken['token'] and obj['key'] == detoken['key']:
+                            ouser = yield self.Users.find_one({'email': detoken['email']})
+                            user_id = str(ouser['_id'])
+                            if ouser:
+                                try:
+                                    resp = yield Task(self.changePassword, ouser, obj['password'])
+                                    if resp:
+                                        self.settings['cache'].delete('update_password:' + user_id)
+                                        response['title'] = 'Change Password!'
+                                        response['message'] = 'The password was updated successfully.'
+                                        self.response(200, response['message'], response)
+                                    else:
+                                        self.response(400, 'Unable to change password.')
+                                except Exception as e:
+                                    self.response(400, 'Unable to change password. ' + str(e))
+                            else:
+                                self.response(400, 'Unable to change password. User not found')
+                            return
+                    self.response(400, 'Failed to change password.')
+                else:
+                    self.response(400, 'This code is invalid or expired.')
+            except Exception as e:
+                info(e)
+                self.response(400, 'This code is invalid or expired.')
+        else:
+            self.response(400, 'An code is required to use this resource.')
+
+    @asynchronous
+    @coroutine
+    def post(self, tokentype='app'):
         if 'email' in self.input_data.keys():
             email = self.input_data['email']
+            password = self.input_data['password']
             ouser = yield self.Users.find_one({'email': email})
             if ouser:
                 try:
-                    newpass = gen_token(10)
-                    resp = yield Task(self.changePassword, ouser, newpass)
-                    if resp[0] != 200:
-                        self.response(resp[0], resp[1])
-                        return
-                    emails = [email]
-                    # admin_emails = yield self.Users.find({'admin': True}).to_list(None)
-                    # for i in admin_emails:
-                        # emails.append(i['email'])
-                    emails = list(set(emails))
-                    pemail = False
-                    for emailaddress in emails:
-                        msg = """From: %s\nTo: %s\nSubject: LINC Lion: Password recovery\n
+                    user_id = str(ouser['_id'])
+                    remote_ip = self.request.headers.get("X-Real-IP") or self.request.remote_ip
 
-A password recovery was requested for the email %s.\nYou can use the credentials:\n\nUsername: %s\nPassword: %s\n\nto log-in the system in https://linc.linclion.org/ \n\nLinc Lion Team\n
+                    hashkey = str(uuid4())
+                    key = 'update_password:' + user_id
+                    data = {'email': email, 'password': password,
+                            'token': gen_token(6), 'key': hashkey}
+                    utoken = dumps(data, default=str)
+                    dtime = 300
+                    self.settings['cache'].set(name=key, value=utoken, ex=dtime)
 
-                        """
-                        msg = msg % (self.settings['EMAIL_FROM'], emailaddress, email, email, newpass)
-                        pemail = yield Task(self.sendEmail, emailaddress, msg)
+                    vdate = (datetime.now() + timedelta(seconds=dtime)).strftime("%Y/%m/%d")
+                    vtime = (datetime.now() + timedelta(seconds=dtime)).strftime("%H:%M:%S")
+                    code = token_encode(utoken, self.settings['token_secret'][:10])
+                    code = quote(code, safe='')
+                    ulink = self.settings['APP_URL'] + '/auth/recovery/' + code
+
+                    fromaddr = self.settings['EMAIL_FROM']
+                    toaddr = ouser['email']
+
+                    query = {'admin': True, 'email': {'$regex': 'venidera.com', '$options': 'i'}}
+
+                    bccddrs = yield self.Users.find(query, {'email': 1}).to_list(None)
+                    bccddrs = [str(x['email']) for x in bccddrs]
+
+                    message_subject = 'LINC Lion: Password recovery'
+                    message_text = """
+                        From the IP Address: %s \n
+                        A password recovery was requested for the email %s.\n
+                        If you have requested and want to change the password use the link: %s \n
+                        If you did not request or do not want to update your password, please disregard this email.\n
+                        Link is valid for %s minutes \n
+                        Valid until: %s at %s hours.\n\n
+                        Linc Lion Team\n
+                    """
+                    message_text = message_text % (remote_ip, ouser['email'], ouser['email'], ulink,
+                                                int(dtime / 60), vdate, vtime)
+
+                    message = "From: %s\r\n" % fromaddr + "To: %s\r\n" % toaddr + "Subject: %s\r\n" % message_subject + "\r\n" + message_text
+                    message = message.encode('utf-8')
+                    toaddrs = [toaddr] + bccddrs
+
+                    pemail = yield Task(self.sendEmail, toaddrs, message)
+
                     if pemail:
                         self.response(200, 'A new password was sent to the user.')
                     else:
                         self.response(400, 'The system can\'t generate a new password for the user. Ask for support in suporte@venidera.com')
                     return
                 except Exception as e:
+                    info(e)
                     self.response(400, 'Fail to generate new password.')
             else:
                 self.response(404, 'No user found with email: %s' % (email))
