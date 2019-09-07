@@ -58,7 +58,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
     override.vm.network "private_network", ip: "192.168.101.10", lxc__bridge_name: 'linc_bridge'
 
-    override.vm.provision :shell, path: "./provision/lxc-provision.sh"
+    override.vm.provision :shell, path: "./provision/provision.sh"
 
   end
 
