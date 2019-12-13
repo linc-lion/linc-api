@@ -59,7 +59,6 @@ def upload_to_s3(aws_access_key_id, aws_secret_access_key, file, bucket, key, ca
     if content_type:
         k.set_metadata('Content-Type', content_type)
     sent = k.set_contents_from_file(file, cb=callback, md5=md5, reduced_redundancy=reduced_redundancy, rewind=True)
-    k.set_acl('public-read')
 
     # Rewind for later use
     file.seek(0)
