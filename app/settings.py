@@ -105,20 +105,20 @@ api['CV_PASSWORD'] = os.environ.get('CV_PASSWORD', '')
 api['CVSERVER_URL'] = os.environ.get('CVSERVER_URL', 'http://52.207.96.155:5000')
 api['CV_APIKEY'] = os.environ.get('CV_APIKEY', '')
 
-api['S3_BUCKET'] = os.environ.get('S3_BUCKET', '')
+api['S3_BUCKET'] = os.environ.get('S3_BUCKET', 'backup-linc-media.linclion.org')
 api['S3_FOLDER'] = 'linc-api-' + api['animals']
-api['S3_URL'] = os.environ.get('S3_URL', 'https://linc-media.linclion.org/') + api['S3_FOLDER'] + '/'
+api['S3_URL'] = os.environ.get('S3_URL', 'https://backup-linc-media.linclion.org/') + api['S3_FOLDER'] + '/'
 
-api['S3_ACCESS_KEY'] = os.environ.get('S3_ACCESS_KEY', '')
-api['S3_SECRET_KEY'] = os.environ.get('S3_SECRET_KEY', '')
+api['S3_ACCESS_KEY'] = os.environ.get('S3_ACCESS_KEY', 'AKIAR62OD4FUFT7WCEZ5')
+api['S3_SECRET_KEY'] = os.environ.get('S3_SECRET_KEY', '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')
 api['S3_URL_EXPIRE_SECONDS'] = int(os.environ.get('S3_URL_EXPIRE_SECONDS', '3600'))
 
 api['EMAIL_FROM'] = os.environ.get('EMAIL_FROM', 'linclionproject@gmail.com')
 # new request access email address
 api['EMAIL_NEWUSER'] = os.environ.get('EMAIL_NEWUSER', 'info@lionguardians.org')
 api['SMTP_SERVER'] = os.environ.get('SMTP_SERVER', 'email-smtp.us-east-1.amazonaws.com')
-api['SMTP_USERNAME'] = os.environ.get('SMTP_USERNAME', '')
-api['SMTP_PASSWORD'] = os.environ.get('SMTP_PASSWORD')
+api['SMTP_USERNAME'] = os.environ.get('SMTP_USERNAME', 'AKIAIKENHKBY43SGICFQ')
+api['SMTP_PASSWORD'] = os.environ.get('SMTP_PASSWORD', "AuIgzLx4gcVv5IdxryWQtem/StpKeF1g5aY1YTYVf7/f")
 api['SMPT_PORT'] = os.environ.get('SMTP_PORT', '587')
 
 api['allowed_emails'] = os.environ.get('ALLOWED_EMAILS', '')
