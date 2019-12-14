@@ -60,7 +60,7 @@ general_format = Formatter(fmt="[%(levelname)-6s %(asctime)s %(name)s %(lineno)4
                             " %(message)s", datefmt="%y%m%d %H:%M:%S")
 stream_handler.setFormatter(general_format)
 
-file_handler = WatchedFileHandler(path_log, "w", delay=False)
+file_handler = FileHandler(path_log, "w")
 file_handler.setFormatter(general_format)
 
 voc_logger.addHandler(file_handler)
