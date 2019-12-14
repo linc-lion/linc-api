@@ -46,10 +46,11 @@ from tornado.httputil import HTTPHeaders
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest, HTTPError
 from requests import Request, Session
 from json import dumps
+from settings import appdir
 
 
 # Path to log file from app folder
-path_log = "lib/images.log"
+path_log = appdir + "/lib/images.log"
 
 voc_logger = getLogger("voc_logger")
 voc_logger.setLevel(logging.INFO)
@@ -60,7 +61,7 @@ general_format = Formatter(fmt="[%(levelname)-6s %(asctime)s %(name)s %(lineno)4
                             " %(message)s", datefmt="%y%m%d %H:%M:%S")
 stream_handler.setFormatter(general_format)
 
-file_handler = FileHandler(path_log, "w")
+file_handler = WatchedFileHandler(path_log, "w", delay=False)
 file_handler.setFormatter(general_format)
 
 voc_logger.addHandler(file_handler)
