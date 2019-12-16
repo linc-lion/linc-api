@@ -100,7 +100,7 @@ class AnnotatedImage:
                 raise
 
     def validate_voc(self):
-        XSD_path = "lib/PascalVOC_schema_justin.xsd"
+        XSD_path = appdir + "/lib/PascalVOC_schema_justin.xsd"
         xmlschema_doc = etree.parse(XSD_path)
         xmlschema = etree.XMLSchema(xmlschema_doc)
         xml_doc = etree.parse(self.voc_path)
