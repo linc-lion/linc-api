@@ -46,7 +46,7 @@ from tornado.httputil import HTTPHeaders
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest, HTTPError
 from requests import Request, Session
 from json import dumps
-from settings import appdir
+from settings import appdir, api
 
 
 # Path to log file from app folder
@@ -55,17 +55,19 @@ path_log = appdir + "/lib/images.log"
 voc_logger = getLogger("voc_logger")
 voc_logger.setLevel(logging.INFO)
 
-stream_handler = StreamHandler()
-
-general_format = Formatter(fmt="[%(levelname)-6s %(asctime)s %(name)s %(lineno)4s ]"
+stream_format = Formatter(fmt="[%(levelname)-6s %(asctime)s %(name)s %(lineno)4s ]"
                             " %(message)s", datefmt="%y%m%d %H:%M:%S")
-stream_handler.setFormatter(general_format)
+file_format = Formatter(fmt="[%(levelname)-6s %(asctime)s ]"
+                            " %(message)s", datefmt="%m-%d-%Y  %H:%M:%S")
+
+stream_handler = StreamHandler()
+stream_handler.setFormatter(stream_format)
 
 file_handler = WatchedFileHandler(path_log, "w", delay=False)
-file_handler.setFormatter(general_format)
+file_handler.setFormatter(file_format)
 
 voc_logger.addHandler(file_handler)
-voc_logger.addHandler(stream_handler)
+# voc_logger.addHandler(stream_handler)
 
 
 class AnnotatedImage:
@@ -94,10 +96,10 @@ class AnnotatedImage:
             try:
                 os.remove(img)
             except Exception as e:
+                info(e)
                 voc_logger.error("Error when deleting image %s."
                                 % basename(img)
                                 )
-                raise
 
     def validate_voc(self):
         XSD_path = appdir + "/lib/PascalVOC_schema_justin.xsd"
@@ -111,7 +113,7 @@ class AnnotatedImage:
         # Open Image
         im = Image.open(self.img_path)
         # Log image properties
-        voc_logger.info("Format: %s \t Size: %s \t Mode: %s" % (im.format, im.size, im.mode))
+        # voc_logger.info("Format: %s \t Size: %s \t Mode: %s" % (im.format, im.size, im.mode))
         # Parse voc file
         tree = etree.parse(self.voc_path)
         root = tree.getroot()
@@ -140,7 +142,7 @@ class AnnotatedImage:
                     ymax = float(box.find("ymax").text)
                     xmax = float(box.find("xmax").text)
             except ValueError as e:
-                voc_logger.error("Value Error on file %s: " % basename(self.voc_path) + e.args[0])
+                voc_logger.error("Value error on file %s: " % basename(self.voc_path) + e.args[0])
                 raise
 
             # voc_logger.info("%s" % (list_names[i][0] + "_" + \
@@ -173,18 +175,17 @@ class AnnotatedImage:
         for img in self.result_images:
             with open(img, "rb") as imageFile:
                 imgencoded = b64encode(imageFile.read())
-                cod = classes.get(splitext(basename(img))[0], None)
-                if cod:
-                    info(cod)
-                    tags = [v for k,v in tag_key.items() if cod in k]
-                else:
-                    info("Could not identify tag of image %s." % basename(img))
-                    tags = []
-                info(tags)
-                body["image"] = imgencoded.decode("utf-8")
-                body["image_tags"] = tags
-                body["filename"] = basename(img)
-                self.send_to_api(headers, body, _API_URL)
+            cod = classes.get(splitext(basename(img))[0], None)
+            if cod:
+                tags = [v for k,v in tag_key.items() if cod in k]
+            else:
+                voc_logger.info("Could not identify any tag of image %s." % basename(img))
+                tags = []
+            # info(tags)
+            body["image"] = imgencoded.decode("utf-8")
+            body["image_tags"] = tags
+            body["filename"] = basename(img)
+            self.send_to_api(headers, body, _API_URL)
 
     def send_to_api(self, headers, body, _API_URL):
         AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient")
@@ -193,7 +194,7 @@ class AnnotatedImage:
         if headers:
             for k, v in headers.items():
                 dictheaders[k] = v
-        info(dictheaders)
+        # info(dictheaders)
         h = HTTPHeaders(dictheaders)
         s = Session()
         prepped = Request('POST',
@@ -206,9 +207,9 @@ class AnnotatedImage:
                     timeout=720
                     )
         if response.status_code in [200, 201]:
-            voc_logger.info('File successfully uploaded.')
+            voc_logger.info('File %s successfully uploaded.' % body["filename"])
         elif response.status_code == 409:
-            voc_logger.error('The file already exists in the system.')
+            voc_logger.error('The file %s already exists in the system.' % body["filename"])
         elif response.status_code == 400:
             voc_logger.error('The data or file sent is invalid.')
         else:
@@ -237,15 +238,15 @@ def process_voc(inst, _dir=None, _API_URL=None, headers=None):
             else:
                 other_files.append(path + "/" + filename)
 
-        voc_logger.info("Total number of files: %s" % (len(image_files)
-                                                + len(xml_files)
-                                                + len(json_files)
-                                                + len(other_files)))
+        # voc_logger.info("Total number of files: %s" % (len(image_files)
+                                                # + len(xml_files)
+                                                # + len(json_files)
+                                                # + len(other_files)))
 
         voc_logger.info("Number of image files: %s" % len(image_files))
         voc_logger.info("Number of xml files: %s" % len(xml_files))
-        voc_logger.info("Number of json files: %s" % len(json_files))
-        voc_logger.info("Number of other files: %s" % len(other_files))
+        # voc_logger.info("Number of json files: %s" % len(json_files))
+        # voc_logger.info("Number of other files: %s" % len(other_files))
 
         # Iterate over image files.
         for img_path in image_files:
@@ -263,7 +264,7 @@ def process_voc(inst, _dir=None, _API_URL=None, headers=None):
                     time.sleep(2)
                     image.delete()
                 else:
-                    voc_logger.error("Voc file %s not valid." % basename(image.voc_path))
+                    voc_logger.error("Voc file %s not valid. Deleting files." % basename(image.voc_path))
                     image.delete()
             # If voc file doesn't exists, delete image.
             else:
@@ -281,16 +282,29 @@ def process_voc(inst, _dir=None, _API_URL=None, headers=None):
         for voc_path in xml_files:
             if os.path.exists(voc_path):
                 try:
+                    voc_logger.error("%s does not have a image file associated,"
+                                " it will be deleted."
+                                % os.path.basename(voc_path))
                     os.remove(voc_path)
                 except Exception as e:
                     info(e)
                     voc_logger.error("Error on removing voc file %s." % basename(voc_path))
                     raise
     else:
-        voc_logger.info("Folder uploaded_files does not exist yet.")
+        info("Folder %s doesn't exist yet." % path)
 
     if hasattr(inst, "sendEmail"):
-        msg = """Test email for voc files upload logging.""".encode('utf-8')
+        with open(path_log, "r") as l:
+            lines = l.read()
+        msg = """From: %s\nTo: %s\nSubject: LINC Lion: Upload voc log.\n
+
+Log of voc upload operation:\n\n%s\nLinc Lion Team\n
+
+            """
+        msg = msg % (api['EMAIL_FROM'],
+                    str(inst.current_user['username']),
+                    lines)
+        info(msg)
         resp = yield Task(inst.sendEmail, str(inst.current_user['username']), msg)
     time.sleep(5)
     info("Removing log file.")

@@ -236,7 +236,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
             newobj['url'] = url
             # adding the hash pre calculed
             newobj['hashcheck'] = filehash
-            info(newobj)
+            # info(newobj)
             if 'exif_data' in newobj.keys() and isinstance(newobj['exif_data'], dict):
                 newobj['exif_data'] = dumps(newobj['exif_data'])
             else:
@@ -244,7 +244,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                 newobj['exif_data'] = {}
             # Force joined as None since only associated imagesets can have images joined to the primary imageset
             newobj['joined'] = 0
-            info(newobj)
+            # info(newobj)
             newimage = Image(newobj)
             newimage.validate()
             # the new object is valid, so try to save
@@ -443,7 +443,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
             if updobj:
                 # check for references
                 try:
-                    info(updobj)
+                    # info(updobj)
                     delobj = yield self.Images.remove(query)
                     info(delobj)
                     # Delete the source file
