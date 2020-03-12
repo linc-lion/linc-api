@@ -92,7 +92,13 @@ class LoginHandler(BaseHandler):
                         dtime = 300
                         self.cache.set('agreement:' + user_id, authtoken, dtime)
                         code = token_encode(authtoken, self.settings['token_secret'][:10])
-                        self.response(412, 'Usuário precisa aceitar as condições do EULA.', {'agree_code': code})
+                        self.response(
+                            412,
+                            'The user must accept the EULA conditions. '
+                            'In order to do that, you must login in the '
+                            'LINC website and accept the terms. '
+                            'Note that this acceptance expires after 6 months.',
+                            {'agree_code': code})
                         return
 
                     # Ok: password matches and user has agreement
