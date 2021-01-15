@@ -46,35 +46,35 @@ jobs:
       - name: Build the Docker image
         run: |
           docker build \
-            --build-arg=API_PORT=${{ secrets.API_PORT}} \
-            --build-arg=ALLOWED_EMAILS=${{ secrets.ALLOWED_EMAILS}} \
-            --build-arg=API_URL=${{ secrets.API_URL}} \
-            --build-arg=APP_URL=${{ secrets.APP_URL}} \
-            --build-arg=ATLAS_DB=${{ secrets.ATLAS_DB}} \
-            --build-arg=COOKIE_SECRET=${{ secrets.COOKIE_SECRET}} \
-            --build-arg=CVREQ_TIMELIMIT=${{ secrets.CVREQ_TIMELIMIT}} \
-            --build-arg=CVSERVER_URL=${{ secrets.CVSERVER_URL}} \
-            --build-arg=CVSERVER_URL_IDENTIFICATION=${{ secrets.CVSERVER_URL_IDENTIFICATION}} \
-            --build-arg=CVSERVER_URL_RESULTS=${{ secrets.CVSERVER_URL_RESULTS}} \
-            --build-arg=CV_APIKEY=${{ secrets.CV_APIKEY}} \
-            --build-arg=CV_PASSWORD=${{ secrets.CV_PASSWORD}} \
-            --build-arg=CV_USERNAME=${{ secrets.CV_USERNAME}} \
-            --build-arg=EMAIL_FROM=${{ secrets.EMAIL_FROM}} \
-            --build-arg=MONGODB_URI=${{ secrets.MONGODB_URI}} \
-            --build-arg=MONGOLAB_URI=${{ secrets.MONGOLAB_URI}} \
-            --build-arg=REDISCLOUD_URL=${{ secrets.REDISCLOUD_URL}} \
-            --build-arg=REDIS_URL=${{ secrets.REDIS_URL}} \
-            --build-arg=S3_ACCESS_KEY=${{ secrets.S3_ACCESS_KEY}} \
-            --build-arg=S3_BUCKET=${{ secrets.S3_BUCKET}} \
-            --build-arg=S3_SECRET_KEY=${{ secrets.S3_SECRET_KEY}} \
-            --build-arg=S3_URL=${{ secrets.S3_URL}} \
-            --build-arg=S3_URL_EXPIRE_SECONDS=${{ secrets.S3_URL_EXPIRE_SECONDS}} \
-            --build-arg=SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD}} \
-            --build-arg=SMTP_PORT=${{ secrets.SMTP_PORT}} \
-            --build-arg=SMTP_SERVER=${{ secrets.SMTP_SERVER}} \
-            --build-arg=SMTP_USERNAME=${{ secrets.SMTP_USERNAME}} \
-            --build-arg=TOKEN_SECRET=${{ secrets.TOKEN_SECRET}} \
-            --build-arg=TZ=${{ secrets.TZ}} \
+            --build-arg=API_PORT=${{ secrets.API_PORT }} \
+            --build-arg=ALLOWED_EMAILS=${{ secrets.ALLOWED_EMAILS }} \
+            --build-arg=API_URL=${{ secrets.API_URL }} \
+            --build-arg=APP_URL=${{ secrets.APP_URL }} \
+            --build-arg=ATLAS_DB=${{ secrets.ATLAS_DB }} \
+            --build-arg=COOKIE_SECRET=${{ secrets.COOKIE_SECRET }} \
+            --build-arg=CVREQ_TIMELIMIT=${{ secrets.CVREQ_TIMELIMIT }} \
+            --build-arg=CVSERVER_URL=${{ secrets.CVSERVER_URL }} \
+            --build-arg=CVSERVER_URL_IDENTIFICATION=${{ secrets.CVSERVER_URL_IDENTIFICATION }} \
+            --build-arg=CVSERVER_URL_RESULTS=${{ secrets.CVSERVER_URL_RESULTS }} \
+            --build-arg=CV_APIKEY=${{ secrets.CV_APIKEY }} \
+            --build-arg=CV_PASSWORD=${{ secrets.CV_PASSWORD }} \
+            --build-arg=CV_USERNAME=${{ secrets.CV_USERNAME }} \
+            --build-arg=EMAIL_FROM=${{ secrets.EMAIL_FROM }} \
+            --build-arg=MONGODB_URI=${{ secrets.MONGODB_URI }} \
+            --build-arg=MONGOLAB_URI=${{ secrets.MONGOLAB_URI }} \
+            --build-arg=REDISCLOUD_URL=${{ secrets.REDISCLOUD_URL }} \
+            --build-arg=REDIS_URL=${{ secrets.REDIS_URL }} \
+            --build-arg=S3_ACCESS_KEY=${{ secrets.S3_ACCESS_KEY }} \
+            --build-arg=S3_BUCKET=${{ secrets.S3_BUCKET }} \
+            --build-arg=S3_SECRET_KEY=${{ secrets.S3_SECRET_KEY }} \
+            --build-arg=S3_URL=${{ secrets.S3_URL }} \
+            --build-arg=S3_URL_EXPIRE_SECONDS=${{ secrets.S3_URL_EXPIRE_SECONDS }} \
+            --build-arg=SMTP_PASSWORD=${{ secrets.SMTP_PASSWORD }} \
+            --build-arg=SMTP_PORT=${{ secrets.SMTP_PORT }} \
+            --build-arg=SMTP_SERVER=${{ secrets.SMTP_SERVER }} \
+            --build-arg=SMTP_USERNAME=${{ secrets.SMTP_USERNAME }} \
+            --build-arg=TOKEN_SECRET=${{ secrets.TOKEN_SECRET }} \
+            --build-arg=TZ=${{ secrets.TZ }} \
             --tag ${IMAGE_NAME}:${GITHUB_REF##*/} .
       # Publishing image to DockerHub
       - name: Publish the Docker image into DockerHub
