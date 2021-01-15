@@ -6,6 +6,6 @@ pycurl
 schematics
 bcrypt
 APScheduler
-git+https://github.com/venidera/tornadoist.git
+https://github.com/venidera/tornadoist/archive/master.zip
 boto
 redis

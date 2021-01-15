@@ -64,6 +64,7 @@ ENV SMTP_SERVER=${SMTP_SERVER}
 ENV SMTP_USERNAME=${SMTP_USERNAME}
 ENV TOKEN_SECRET=${TOKEN_SECRET}
 ENV TZ=${TZ}
+
 # Creating base image
 RUN apk update && apk upgrade && \
     # Installing common packages
@@ -75,6 +76,9 @@ RUN apk update && apk upgrade && \
         curl \
         gcc \
         g++ \
+        libxml2-dev \
+        libxslt-dev \
+        libgcc \
         linux-headers \
         musl-dev \
         libc-dev \
@@ -87,6 +91,13 @@ RUN apk update && apk upgrade && \
         tzdata \
         zlib-dev \
         lapack-dev \
+        jpeg-dev \
+        freetype-dev \
+        lcms2-dev \
+        openjpeg-dev \
+        tiff-dev \
+        tk-dev \
+        tcl-dev \
         openssl-dev && \
     rm -rf /tmp/* /var/cache/apk/*
 # Copying local repository
