@@ -1,4 +1,6 @@
-# linc-api
+# LINC-API
+![Supported Python Version](https://img.shields.io/badge/python-3.8.0-orange.svg "Supported Python Version") [![GitHub Actions](https://github.com/linc-lion/linc-api/workflows/CI/badge.svg)](https://github.com/linc-lion/linc-api/actions?query=workflow%3ACI) [![Image registry on Docker Hub](https://img.shields.io/badge/container-ready-blue.svg "Image registry on Docker Hub")](https://hub.docker.com/repository/docker/venideraco/linc-api/tags)
+
 LINC is a simple API allowing Lion Guardians to identify lions in Africa.
 This API coordinate interactions between front-ends and the computational vision service.
 
