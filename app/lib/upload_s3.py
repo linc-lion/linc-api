@@ -14,7 +14,7 @@ class RemoteS3Files(object):
             is_secure=False, calling_format=OrdinaryCallingFormat()
         )
         # Connecting to the bucket
-        self.bucket = conn.get_bucket(remote['bucket'], validate=True)
+        self.bucket = conn.get_bucket(remote['bucket'], validate=False)
         # Setting remote configurations
         self.folder = remote['folder']
 
