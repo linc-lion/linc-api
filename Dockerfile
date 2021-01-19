@@ -99,7 +99,9 @@ RUN apk update && apk upgrade && \
         tk-dev \
         tcl-dev \
         openssl-dev && \
-    rm -rf /tmp/* /var/cache/apk/*
+    rm -rf /tmp/* /var/cache/apk/* && \
+    # Adding timezone info
+    ln -s /usr/share/zoneinfo/${TZ} /etc/localtime
 # Copying local repository
 COPY . /linc-api
 # Updating pip and installing the dependencies
