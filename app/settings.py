@@ -133,26 +133,26 @@ api['cache'] = Redis(connection_pool=ConnectionPool.from_url(redis_url))
 api['scheduler'] = TornadoScheduler()
 api['scheduler'].start()
 # Check CV Server results - every 30 seconds
-api['scheduler'].add_job(checkresults, 'interval', seconds=30, args=[sdb, api])
+# api['scheduler'].add_job(checkresults, 'interval', seconds=30, args=[sdb, api])
 # Delete files in S3
-api['scheduler'].add_job(checkS3, 'interval', seconds=50, args=[sdb, api])
+# api['scheduler'].add_job(checkS3, 'interval', seconds=50, args=[sdb, api])
 # Dump the database hourly basis
-api['scheduler'].add_job(dbdump, 'interval',
-                         hours=1,
-                         args=[
-                             sdb, {
-                                 'S3_ACCESS_KEY': api['S3_ACCESS_KEY'],
-                                 'S3_SECRET_KEY': api['S3_SECRET_KEY'],
-                                 'S3_BUCKET': api['S3_BUCKET'],
-                                 'S3_FOLDER': api['S3_FOLDER'],
-                                 'S3_URL_EXPIRE_SECONDS': api['S3_URL_EXPIRE_SECONDS']
-                             }, appdir + '/static/export/'])
-api['scheduler'].add_job(dbdump,
-                         args=[
-                             sdb, {
-                                 'S3_ACCESS_KEY': api['S3_ACCESS_KEY'],
-                                 'S3_SECRET_KEY': api['S3_SECRET_KEY'],
-                                 'S3_BUCKET': api['S3_BUCKET'],
-                                 'S3_FOLDER': api['S3_FOLDER'],
-                                 'S3_URL_EXPIRE_SECONDS': api['S3_URL_EXPIRE_SECONDS']
-                             }, appdir + '/static/export/'])
+# api['scheduler'].add_job(dbdump, 'interval',
+#                          hours=1,
+#                          args=[
+#                              sdb, {
+#                                  'S3_ACCESS_KEY': api['S3_ACCESS_KEY'],
+#                                  'S3_SECRET_KEY': api['S3_SECRET_KEY'],
+#                                  'S3_BUCKET': api['S3_BUCKET'],
+#                                  'S3_FOLDER': api['S3_FOLDER'],
+#                                  'S3_URL_EXPIRE_SECONDS': api['S3_URL_EXPIRE_SECONDS']
+#                              }, appdir + '/static/export/'])
+# api['scheduler'].add_job(dbdump,
+#                          args=[
+#                              sdb, {
+#                                  'S3_ACCESS_KEY': api['S3_ACCESS_KEY'],
+#                                  'S3_SECRET_KEY': api['S3_SECRET_KEY'],
+#                                  'S3_BUCKET': api['S3_BUCKET'],
+#                                  'S3_FOLDER': api['S3_FOLDER'],
+#                                  'S3_URL_EXPIRE_SECONDS': api['S3_URL_EXPIRE_SECONDS']
+#                              }, appdir + '/static/export/'])
