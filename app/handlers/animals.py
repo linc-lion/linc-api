@@ -67,7 +67,7 @@ class AnimalsHandler(BaseHandler):
                 for org in orgs:
                     orgnames[org['iid']] = org['name']
                 if len(objs) > 0:
-                    output = yield Task(self.list, objs, orgnames)
+                    output = yield Task(self.list2, objs, orgnames)
                     self.response(200, 'Success.', output)
                 else:
                     self.response(404, 'Not found.')
@@ -560,10 +560,8 @@ class AnimalsHandler(BaseHandler):
     @engine
     def list(self, objs, orgnames, callback=None):
         """Implement the list output used for UI in the website."""
-        current_user = yield self.Users.find_one({'email': self.current_user['username']})
-        is_admin = current_user['admin']
-        current_organization = yield self.db.organizations.find_one({'iid': current_user['organization_iid']})
-
+        is_admin = (self.current_user['role'] == 'admin')
+        org_iid = self.current_user['org_id']
         output = list()
         for x in objs:
             obj = dict()
@@ -620,7 +618,7 @@ class AnimalsHandler(BaseHandler):
                     else:
                         obj['notes'] = ''
 
-                    can_show = (True if (is_admin or current_organization['iid'] == obj['organization_id']) else False) if obj['geopos_private'] else True
+                    can_show = (True if (is_admin or org_iid == obj['organization_id']) else False) if obj['geopos_private'] else True
                     if can_show:
                         if imgset['location']:
                             obj['latitude'] = imgset['location'][0][0]
@@ -669,10 +667,113 @@ class AnimalsHandler(BaseHandler):
 
     @asynchronous
     @engine
+    def list2(self, objs, orgnames, callback=None):
+        """Implement the list output used for UI in the website."""
+        is_admin = (self.current_user['role'] == 'admin')
+        org_iid = self.current_user['org_id']
+        output = list()
+        imagesets = yield self.ImageSets.find().to_list(None)
+        images = yield self.Images.find().to_list(None)
+        for x in objs:
+            obj = dict()
+            obj['id'] = x['iid']
+            obj['name'] = x['name']
+            obj['primary_image_set_id'] = x['primary_image_set_iid']
+            if orgnames and x['organization_iid'] in orgnames.keys():
+                obj['organization'] = orgnames[x['organization_iid']]
+                obj['organization_id'] = x['organization_iid']
+            else:
+                obj['organization'] = '-'
+                obj['organization_id'] = '-'
+            if 'dead' in x.keys():
+                obj['dead'] = x['dead']
+            else:
+                obj['dead'] = False
+            obj['age'] = None
+            obj['gender'] = None
+
+            ivc = [
+                imgs for imgs in imagesets if (
+                    x['iid'] == imgs['animal_iid'] and
+                    imgs['animal_iid'] == False and
+                    imgs['iid'] != x['primary_image_set_iid']
+                )
+            ]
+            obj['is_verified'] = False if len(ivc) == 0 else True
+            if x['primary_image_set_iid'] > 0:
+                imgset = next((imgs for imgs in imagesets if imgs['iid'] == x['primary_image_set_iid']), None)
+                if imgset:
+                    if imgset['date_of_birth']:
+                        obj['age'] = self.age(imgset['date_of_birth'])
+                        obj['date_of_birth'] = imgset['date_of_birth'].date().isoformat()
+                    else:
+                        obj['age'] = '-'
+                        obj['date_of_birth'] = '-'
+                    if imgset['date_stamp']:
+                        obj['date_stamp'] = imgset['date_stamp']
+                    else:
+                        obj['date_stamp'] = '-'
+                    if imgset['tags']:
+                        obj['tags'] = imgset['tags']
+                    else:
+                        obj['tags'] = None
+
+                    if 'geopos_private' in imgset.keys():
+                        obj['geopos_private'] = imgset['geopos_private']
+                    else:
+                        obj['geopos_private'] = False
+
+                    if imgset['notes']:
+                        obj['notes'] = imgset['notes']
+                    else:
+                        obj['notes'] = ''
+
+                    can_show = (True if (is_admin or org_iid == obj['organization_id']) else False) if obj['geopos_private'] else True
+                    if can_show:
+                        if imgset['location']:
+                            obj['latitude'] = imgset['location'][0][0]
+                            obj['longitude'] = imgset['location'][0][1]
+                        else:
+                            obj['latitude'] = None
+                            obj['longitude'] = None
+
+                        if 'tag_location' in imgset.keys():
+                            obj['tag_location'] = imgset['tag_location']
+                        else:
+                            obj['tag_location'] = None
+                    else:
+                        obj['latitude'] = None
+                        obj['longitude'] = None
+                        obj['tag_location'] = None
+
+                    obj['gender'] = imgset['gender']
+                    img = next((imgs for imgs in images if imgs['iid'] == imgset['main_image_iid']), None)
+                    if img:
+                        obj['thumbnail'] = self.imgurl(img['url'], 'icon')
+                        obj['image'] = self.imgurl(img['url'], 'medium')
+            limagesets = [imgs['iid'] for imgs in imagesets if (x['iid'] == imgs['animal_iid'])]
+            resp_cv = None
+            resp_wh = None
+            try:
+                cv_images = [imgs for imgs in images if (imgs['image_tags'] == 'cv' and imgs['image_set_iid'] in limagesets)]
+                resp_cv = len(cv_images)
+                wh_images = [imgs for imgs in images if (
+                    (imgs['image_tags'] == 'whisker' or
+                     imgs['image_tags'] == 'whisker-left' or
+                     imgs['image_tags'] == 'whisker-right') and imgs['image_set_iid'] in limagesets)]
+                resp_wh = len(wh_images)
+            except Exception as e:
+                info(e)
+            obj['cv'] = bool(resp_cv)
+            obj['whisker'] = bool(resp_wh)
+            output.append(obj)
+        callback(output)
+
+    @asynchronous
+    @engine
     def prepare_output(self, objs, noimages=False, callback=None):
-        current_user = yield Task(self.get_user_by_email, self.current_user['username'])
-        is_admin = current_user['admin']
-        current_organization = yield self.Orgs.find_one({'iid': current_user['organization_iid']})
+        is_admin = (self.current_user['role'] == 'admin')
+        org_iid = self.current_user['org_id']
 
         objanimal = dict()
         objanimal['id'] = objs['iid']
@@ -697,7 +798,7 @@ class AnimalsHandler(BaseHandler):
             else:
                 obj['geopos_private'] = False
 
-            can_show = (True if (is_admin or current_organization['iid'] == objs['organization_id']) else False) if obj['geopos_private'] else True
+            can_show = (True if (is_admin or org_iid == objs['organization_id']) else False) if obj['geopos_private'] else True
             if can_show:
                 if 'location' in oimgst.keys() and oimgst['location']:
                     obj['latitude'] = oimgst['location'][0][0]
