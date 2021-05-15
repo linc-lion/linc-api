@@ -43,10 +43,9 @@ class AnimalsHandler(BaseHandler):
     @coroutine
     @api_authenticated
     def get(self, animal_id=None, xurl=None):
-        current_user = yield self.Users.find_one(
-            {'email': self.current_user['username'] if self.current_user and 'username' in self.current_user else None})
-        is_admin = current_user['admin']
-        current_organization = yield self.db.organizations.find_one({'iid': current_user['organization_iid']})
+        is_admin = (self.current_user['role'] == 'admin')
+        org_iid = self.current_user['org_id']
+
         apiout = self.get_argument('api', None)
         noimages = self.get_argument('no_images', '')
         if noimages.lower() == 'true':
@@ -136,7 +135,7 @@ class AnimalsHandler(BaseHandler):
                     if 'geopos_private' not in output.keys():
                         output['geopos_private'] = False
 
-                    can_show = (True if (is_admin or current_organization['iid'] == output['organization_id']) else False) if output['geopos_private'] else True
+                    can_show = (True if (is_admin or org_iid == output['organization_id']) else False) if output['geopos_private'] else True
                     if can_show:
                         # Location
                         if output['location']:
@@ -194,7 +193,7 @@ class AnimalsHandler(BaseHandler):
                             else:
                                 geop = i['geopos_private']
 
-                            can_show = (True if (is_admin or current_organization['iid'] == i['owner_organization_iid']) else False) if geop else True
+                            can_show = (True if (is_admin or org_iid == i['owner_organization_iid']) else False) if geop else True
                             if can_show:
                                 latitude = i['location'][0][0]
                                 longitude = i['location'][0][1]
@@ -560,9 +559,8 @@ class AnimalsHandler(BaseHandler):
     @engine
     def list(self, objs, orgnames, callback=None):
         """Implement the list output used for UI in the website."""
-        current_user = yield self.Users.find_one({'email': self.current_user['username']})
-        is_admin = current_user['admin']
-        current_organization = yield self.db.organizations.find_one({'iid': current_user['organization_iid']})
+        is_admin = (self.current_user['role'] == 'admin')
+        org_iid = self.current_user['org_id']
 
         output = list()
         for x in objs:
@@ -620,7 +618,7 @@ class AnimalsHandler(BaseHandler):
                     else:
                         obj['notes'] = ''
 
-                    can_show = (True if (is_admin or current_organization['iid'] == obj['organization_id']) else False) if obj['geopos_private'] else True
+                    can_show = (True if (is_admin or org_iid == obj['organization_id']) else False) if obj['geopos_private'] else True
                     if can_show:
                         if imgset['location']:
                             obj['latitude'] = imgset['location'][0][0]
@@ -670,9 +668,8 @@ class AnimalsHandler(BaseHandler):
     @asynchronous
     @engine
     def prepare_output(self, objs, noimages=False, callback=None):
-        current_user = yield Task(self.get_user_by_email, self.current_user['username'])
-        is_admin = current_user['admin']
-        current_organization = yield self.Orgs.find_one({'iid': current_user['organization_iid']})
+        is_admin = (self.current_user['role'] == 'admin')
+        org_iid = self.current_user['org_id']
 
         objanimal = dict()
         objanimal['id'] = objs['iid']
@@ -697,7 +694,7 @@ class AnimalsHandler(BaseHandler):
             else:
                 obj['geopos_private'] = False
 
-            can_show = (True if (is_admin or current_organization['iid'] == objs['organization_id']) else False) if obj['geopos_private'] else True
+            can_show = (True if (is_admin or org_iid == objs['organization_id']) else False) if obj['geopos_private'] else True
             if can_show:
                 if 'location' in oimgst.keys() and oimgst['location']:
                     obj['latitude'] = oimgst['location'][0][0]
