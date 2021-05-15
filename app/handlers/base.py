@@ -25,6 +25,7 @@ from tornado.gen import engine
 from tornado import web
 import string
 import time
+import pytz
 from datetime import date
 from logging import info
 import bcrypt
@@ -58,6 +59,7 @@ class BaseHandler(RequestHandler, DBMethods, HTTPMethods):
         self.CVRequests = self.settings['db'].cvrequests
         self.CVResults = self.settings['db'].cvresults
         self.cache = self.settings['cache']
+        self.scheduler = self.settings['scheduler']
         # Creating remote s3 instance
         self.remote = RemoteS3Files({
             'access_key': self.settings['S3_ACCESS_KEY'],
@@ -65,6 +67,7 @@ class BaseHandler(RequestHandler, DBMethods, HTTPMethods):
             'bucket': self.settings['S3_BUCKET'],
             'folder': self.settings['S3_FOLDER']
         })
+        self.utc = pytz.timezone('UTC')
 
     def prepare(self):
         # self.auth_check()
@@ -275,6 +278,64 @@ class BaseHandler(RequestHandler, DBMethods, HTTPMethods):
         else:
             info(kwargs)
             self.response(status_code, 'Error: ' + str(kwargs))
+
+    @engine
+    def read_token(self, key, callback=None):
+        email = self.current_user['username']
+        prefix = 'polling:'+ email + ':'
+        name = prefix + str(key)
+        info(name)
+        cache = self.cache.get(name)
+        if cache:
+            cache = loads(cache)
+        callback(cache)
+
+    @engine
+    def write_token(self, key='', data='', expiration_s=60, callback=None):
+        email = self.current_user['username']
+        name = 'polling:'+ email + ':' + str(key)
+        info(name)
+        rresult = self.cache.set(
+            name=name, value=dumps(data, default=str), ex=expiration_s)
+        callback(rresult)
+
+    @engine
+    def check_token(self, key='', callback=None):
+        email = self.current_user['username']
+        prefix = 'polling:'+ email + ':'
+        size = len(prefix)
+        name = prefix + str(key)
+        lkeys = self.cache.keys()
+        cache = dict()
+        for k in lkeys:
+            try:
+                if bytes(name, encoding='utf-8') in k[size:]:
+                    data = loads(self.cache.get(k))
+                    sid = k.decode('utf-8')
+                    cache = {
+                        'cache': data,
+                        'token': {'id': sid[size:], 'expires': data['expires']}}
+            except Exception as e:
+                info(e)
+        callback(cache)
+
+    @engine
+    def clear_token(self, token=None, callback=None):
+        email = self.current_user['username']
+        prefix = 'polling:'+ email + ':'
+        size = len(prefix)
+        name = prefix + str(token)
+        if token:
+            self.cache.delete(name)
+        else:
+            lkeys = self.cache.keys()
+            for k in lkeys:
+                try:
+                    if bytes(name, encoding='utf-8') in k[size:]:
+                        self.cache.delete(k)
+                except Exception as e:
+                    info(e)
+        callback(True)
 
 
 class VersionHandler(BaseHandler):
