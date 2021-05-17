@@ -260,6 +260,8 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                 self.dt = dt
                 self.imgobjid = output['obj_id']
                 self.folder_name = folder_name
+                # Remove Imageset Cache
+                rem = yield Task(self.cache_remove, output['image_set_id'], 'imgset')
                 # Returning success
                 self.response(201, 'New image saved. The image processing will start for this new image.', output)
             except ValidationError as e:
