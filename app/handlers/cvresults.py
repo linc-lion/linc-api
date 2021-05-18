@@ -136,14 +136,14 @@ class CVResultsHandler(BaseHandler):
                                     {'image_set_iid': aobj['primary_image_set_iid'],
                                      'image_tags': 'main-id'})
                                 if img:
-                                    objres['thumbnail'] = self.settings['S3_URL'] + img['url'] + '_icon.jpg'
-                                    objres['image'] = self.settings['S3_URL'] + img['url'] + '_medium.jpg'
+                                    objres['thumbnail'] = self.imgurl(img['url'], 'icon') # self.settings['S3_URL'] + img['url'] + '_icon.jpg'
+                                    objres['image'] = self.imgurl(img['url'], 'medium') # self.settings['S3_URL'] + img['url'] + '_medium.jpg'
                                 else:
                                     img = yield self.Images.find(
                                         {'image_set_iid': aobj['primary_image_set_iid']}).to_list(length=1)
                                     if len(img) > 0:
-                                        objres['thumbnail'] = self.settings['S3_URL'] + img[0]['url'] + '_icon.jpg'
-                                        objres['image'] = self.settings['S3_URL'] + img[0]['url'] + '_medium.jpg'
+                                        objres['thumbnail'] = self.imgurl(img['url'], 'icon') # self.settings['S3_URL'] + img[0]['url'] + '_icon.jpg'
+                                        objres['image'] = self.imgurl(img['url'], 'medium') # self.settings['S3_URL'] + img[0]['url'] + '_medium.jpg'
                                     else:
                                         objres['thumbnail'] = ''
                                         objres['image'] = ''
