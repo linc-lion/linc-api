@@ -20,6 +20,7 @@
 #
 # For more information or to contact visit linclion.org or email tech@linclion.org
 
+import os
 from tornado.web import asynchronous
 from tornado.gen import engine, coroutine, Task
 from handlers.base import BaseHandler
@@ -27,7 +28,7 @@ from models.imageset import Image
 from bson import ObjectId as ObjId
 from datetime import datetime
 from schematics.exceptions import ValidationError
-from os.path import realpath, dirname
+from os.path import realpath, dirname, exists, splitext
 from lib.image_utils import generate_images
 from os import remove
 from lib.rolecheck import api_authenticated
@@ -39,9 +40,15 @@ from base64 import b64decode
 from json import dumps
 from lib.upload_s3 import upload_to_s3, s3_copy, s3_delete
 
+from functools import partial
+from lib.voc_routines import process_voc
+from concurrent.futures import ThreadPoolExecutor
+from tornado.httpclient import AsyncHTTPClient, HTTPRequest, HTTPError
+from tornado.httputil import HTTPHeaders
+
 
 class ImagesHandler(BaseHandler, ProcessMixin):
-    """A class that handles requests about images informartion."""
+    """A class that handles requests about images information."""
     SUPPORTED_METHODS = ('GET', 'POST', 'PUT', 'DELETE')
 
     def initialize(self):
@@ -148,6 +155,11 @@ class ImagesHandler(BaseHandler, ProcessMixin):
     @engine
     @api_authenticated
     def post(self, updopt=None):
+        info(updopt)
+        # if updopt == 'start':
+        #     info('Success calling from itself.')
+        #     self.response(200, 'Success calling from itself.')
+        #     return
         # create a new image
         ########################################################################
         # Checking everything
@@ -224,7 +236,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
             newobj['url'] = url
             # adding the hash pre calculed
             newobj['hashcheck'] = filehash
-            info(newobj)
+            # info(newobj)
             if 'exif_data' in newobj.keys() and isinstance(newobj['exif_data'], dict):
                 newobj['exif_data'] = dumps(newobj['exif_data'])
             else:
@@ -232,7 +244,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                 newobj['exif_data'] = {}
             # Force joined as None since only associated imagesets can have images joined to the primary imageset
             newobj['joined'] = 0
-            info(newobj)
+            # info(newobj)
             newimage = Image(newobj)
             newimage.validate()
             # the new object is valid, so try to save
@@ -433,7 +445,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
             if updobj:
                 # check for references
                 try:
-                    info(updobj)
+                    # info(updobj)
                     delobj = yield self.Images.remove(query)
                     info(delobj)
                     # Delete the source file
@@ -478,3 +490,71 @@ class ImagesHandler(BaseHandler, ProcessMixin):
             obj['url'] = url
             output.append(obj)
         return output
+
+
+class ImagesVocHandler(BaseHandler, ProcessMixin):
+    """A class that handles requests about VOC files."""
+    SUPPORTED_METHODS = ('POST')
+
+    @asynchronous
+    @engine
+    @api_authenticated
+    def post(self, process=False):
+        info(process)
+        dirfs = dirname(realpath(__file__))
+        # upload_folder = dirfs + '/upload_folder'
+        # info(upload_folder)
+        # if not exists(upload_folder):
+        #     os.mkdir(upload_folder)
+        if process == 'start':
+            dictheaders = {}
+            # if hasattr(self, 'current_user') and self.current_user and 'token' in self.current_user:
+            #     dictheaders['Linc-Api-AuthToken'] = self.current_user.get('token', '')
+            #     info(dictheaders)
+            info(self.input_data)
+            info("Launching ThreadPoolExecutor")
+            EXECUTOR = ThreadPoolExecutor(max_workers=2)
+            future = EXECUTOR.submit(process_voc, self, dirfs, self.input_data["API_URL"], self.input_data)
+            # yield future
+            # future.add_done_callback(lambda future: info("Processing has been done.))
+            # future.add_done_callback(lambda future: send_to_api(future.result()))
+            self.response(200, 'Received start.')
+            return
+        # Check whether image file.
+        elif 'image_file' in self.input_data.keys():
+            image_file = self.input_data['image_file']
+            imgname = dirfs + '/' + image_file['filename']
+            try:
+                # Save image
+                fh = open(imgname, 'wb')
+                fh.write(b64decode(image_file['image']))
+                fh.close()
+                del image_file['image']
+                # Save image metadata
+                fh = open(splitext(imgname)[0] + '.json', 'w')
+                fh.write(dumps(image_file))
+                fh.close()
+            except Exception as e:
+                self.remove_file(imgname)
+                self.response(400, 'The encoded image is invalid, \
+                    you must remake the encode using base64.')
+                return
+            self.response(200, "Image file received.")
+            return
+        # Check whether voc file.
+        elif 'xml_file' in self.input_data.keys():
+            xmlname = dirfs + '/' + self.input_data['xml_file']['filename']
+            try:
+                fh = open(xmlname, 'wb')
+                fh.write(b64decode(self.input_data['xml_file']['content']))
+                fh.close()
+                self.response(200, "Voc file received.")
+                return
+            except Exception as e:
+                self.remove_file(xmlname)
+                self.response(400, 'The encoded voc file is invalid, \
+                    you must remake the encode using base64.')
+                return
+        else:
+            self.response(400, 'Neither image or xml file received.')
+            return
