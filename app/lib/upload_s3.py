@@ -10,7 +10,7 @@ class RemoteS3Files(object):
     def __init__(self, remote=dict()):
         # Establishing a new connection
         conn = boto.connect_s3(
-            remote["access_key"], remote["secret_key"], 
+            remote["access_key"], remote["secret_key"],
             is_secure=False, calling_format=OrdinaryCallingFormat()
         )
         # Connecting to the bucket

@@ -30,7 +30,7 @@ from handlers.animals_relatives import AnimalsRelativesHandler
 from handlers.organizations import OrganizationsHandler
 from handlers.users import UsersHandler
 from handlers.imagesets import ImageSetsHandler, ImageSetsCheckReqHandler
-from handlers.images import ImagesHandler
+from handlers.images import ImagesHandler, ImagesVocHandler
 from handlers.cvrequests import CVRequestsHandler
 from handlers.cvresults import CVResultsHandler
 
@@ -67,6 +67,9 @@ def url_patterns(animals='lions'):
 
         (r"/images/?$", ImagesHandler),
         (r"/images/(\w+$)/?", ImagesHandler),
+
+        (r"/imagesvoc/?$", ImagesVocHandler),
+        (r"/imagesvoc/(\w+)/?$", ImagesVocHandler),
 
         (r"/imagesets/?$", ImageSetsHandler),
         (r"/imagesets/(\w+)/?$", ImageSetsHandler),

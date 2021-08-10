@@ -1,0 +1,48 @@
+<xs:schema attributeFormDefault="unqualified" elementFormDefault="qualified" xmlns:xs="http://www.w3.org/2001/XMLSchema">
+  <xs:element name="annotation">
+    <xs:complexType>
+      <xs:sequence>
+        <xs:element type="xs:string" name="folder"/>
+        <xs:element type="xs:string" name="filename"/>
+        <xs:element type="xs:string" name="path"/>
+        <xs:element name="source">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element type="xs:string" name="database"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element name="size">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element type="xs:short" name="width"/>
+              <xs:element type="xs:short" name="height"/>
+              <xs:element type="xs:byte" name="depth"/>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+        <xs:element type="xs:byte" name="segmented"/>
+        <xs:element name="object" maxOccurs="unbounded" minOccurs="0">
+          <xs:complexType>
+            <xs:sequence>
+              <xs:element type="xs:string" name="name"/>
+              <xs:element type="xs:string" name="pose"/>
+              <xs:element type="xs:byte" name="truncated"/>
+              <xs:element type="xs:byte" name="difficult"/>
+              <xs:element name="bndbox">
+                <xs:complexType>
+                  <xs:sequence>
+                    <xs:element type="xs:float" name="xmin"/>
+                    <xs:element type="xs:float" name="ymin"/>
+                    <xs:element type="xs:float" name="xmax"/>
+                    <xs:element type="xs:float" name="ymax"/>
+                  </xs:sequence>
+                </xs:complexType>
+              </xs:element>
+            </xs:sequence>
+          </xs:complexType>
+        </xs:element>
+      </xs:sequence>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>
