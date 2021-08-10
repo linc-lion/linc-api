@@ -13,7 +13,5 @@ schematics
 cryptography>=3.2
 python-dateutil
 pytz
-APScheduler
 git+https://github.com/venidera/tornadoist.git
-boto
 redis
