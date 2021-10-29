@@ -80,10 +80,11 @@ api['animals'] = 'lions'
 # MongoDB Connection
 URI = os.environ.get("MONGOLAB_URI", "local")
 if URI == "local":
+    dbname = 'heroku_twzd61j5'
     conn = connect("mongodb://localhost:27017")
     pm = MongoClient("mongodb://localhost:27017")
-    db = conn['linc-api-' + api['animals']]
-    sdb = pm['linc-api-' + api['animals']]
+    db = conn[dbname]
+    sdb = pm[dbname]
 else:
     dbname = URI.split("://")[1].split(":")[0]
     conn = connect(URI)
@@ -133,26 +134,26 @@ api['cache'] = Redis(connection_pool=ConnectionPool.from_url(redis_url))
 api['scheduler'] = TornadoScheduler()
 api['scheduler'].start()
 # Check CV Server results - every 30 seconds
-api['scheduler'].add_job(checkresults, 'interval', seconds=30, args=[sdb, api])
+# api['scheduler'].add_job(checkresults, 'interval', seconds=30, args=[sdb, api])
 # Delete files in S3
 api['scheduler'].add_job(checkS3, 'interval', seconds=50, args=[sdb, api])
 # Dump the database hourly basis
-api['scheduler'].add_job(dbdump, 'interval',
-                         hours=1,
-                         args=[
-                             sdb, {
-                                 'S3_ACCESS_KEY': api['S3_ACCESS_KEY'],
-                                 'S3_SECRET_KEY': api['S3_SECRET_KEY'],
-                                 'S3_BUCKET': api['S3_BUCKET'],
-                                 'S3_FOLDER': api['S3_FOLDER'],
-                                 'S3_URL_EXPIRE_SECONDS': api['S3_URL_EXPIRE_SECONDS']
-                             }, appdir + '/static/export/'])
-api['scheduler'].add_job(dbdump,
-                         args=[
-                             sdb, {
-                                 'S3_ACCESS_KEY': api['S3_ACCESS_KEY'],
-                                 'S3_SECRET_KEY': api['S3_SECRET_KEY'],
-                                 'S3_BUCKET': api['S3_BUCKET'],
-                                 'S3_FOLDER': api['S3_FOLDER'],
-                                 'S3_URL_EXPIRE_SECONDS': api['S3_URL_EXPIRE_SECONDS']
-                             }, appdir + '/static/export/'])
+# api['scheduler'].add_job(dbdump, 'interval',
+#                          hours=1,
+#                          args=[
+#                              sdb, {
+#                                  'S3_ACCESS_KEY': api['S3_ACCESS_KEY'],
+#                                  'S3_SECRET_KEY': api['S3_SECRET_KEY'],
+#                                  'S3_BUCKET': api['S3_BUCKET'],
+#                                  'S3_FOLDER': api['S3_FOLDER'],
+#                                  'S3_URL_EXPIRE_SECONDS': api['S3_URL_EXPIRE_SECONDS']
+#                              }, appdir + '/static/export/'])
+# api['scheduler'].add_job(dbdump,
+#                          args=[
+#                              sdb, {
+#                                  'S3_ACCESS_KEY': api['S3_ACCESS_KEY'],
+#                                  'S3_SECRET_KEY': api['S3_SECRET_KEY'],
+#                                  'S3_BUCKET': api['S3_BUCKET'],
+#                                  'S3_FOLDER': api['S3_FOLDER'],
+#                                  'S3_URL_EXPIRE_SECONDS': api['S3_URL_EXPIRE_SECONDS']
+#                              }, appdir + '/static/export/'])
