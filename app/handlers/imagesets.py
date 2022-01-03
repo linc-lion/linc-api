@@ -360,13 +360,15 @@ class ImageSetsHandler(BaseHandler):
                         for x in cv_imgs:
                             cv_calls.append({
                                 'type': 'cv',
-                                'url': self.settings['S3_URL'] + x['url'] + '_full.jpg'})
+                                'url': self.imgurl(x['url'], "full") # self.settings['S3_URL'] + x['url'] + '_full.jpg'
+                                })
                     wh_calls = list()
                     if check_algo.get('whisker', False):
                         for x in wh_imgs:
                             wh_calls.append({
                                 'type': 'whisker',
-                                'url': self.settings['S3_URL'] + x['url'] + '_full.jpg'})
+                                'url': self.imgurl(x['url'], "full") # self.settings['S3_URL'] + x['url'] + '_full.jpg'
+                                })
                     if cv_calls or wh_calls:
                         request_base_body['cv_calls'] = cv_calls if cv_calls else []
                         request_base_body['whisker_calls'] = wh_calls if wh_calls else []
