@@ -80,7 +80,7 @@ api['animals'] = 'lions'
 # MongoDB Connection
 URI = os.environ.get("MONGOLAB_URI", "local")
 if URI == "local":
-    dbname = 'heroku_twzd61j5'
+    dbname = 'linc-dev'
     conn = connect("mongodb://localhost:27017")
     pm = MongoClient("mongodb://localhost:27017")
     db = conn[dbname]
@@ -114,13 +114,20 @@ api['S3_ACCESS_KEY'] = os.environ.get('S3_ACCESS_KEY', '')
 api['S3_SECRET_KEY'] = os.environ.get('S3_SECRET_KEY', '')
 api['S3_URL_EXPIRE_SECONDS'] = int(os.environ.get('S3_URL_EXPIRE_SECONDS', '3600'))
 
-api['EMAIL_FROM'] = os.environ.get('EMAIL_FROM', '')
+# api['EMAIL_FROM'] = os.environ.get('EMAIL_FROM', '')
+# # new request access email address
+# api['EMAIL_NEWUSER'] =  os.environ.get('EMAIL_NEWUSER', '')
+# api['SMTP_SERVER'] = os.environ.get('SMTP_SERVER', '')
+# api['SMTP_USERNAME'] = os.environ.get('SMTP_USERNAME', '')
+# api['SMTP_PASSWORD'] = os.environ.get('SMTP_PASSWORD', '')
+# api['SMPT_PORT'] = os.environ.get('SMTP_PORT', '587')
+api['EMAIL_FROM'] = "mail@{}".format(os.environ.get('MAILGUN_DOMAIN', '')) #os.environ.get('EMAIL_FROM', '')
 # new request access email address
-api['EMAIL_NEWUSER'] = os.environ.get('EMAIL_NEWUSER', '')
-api['SMTP_SERVER'] = os.environ.get('SMTP_SERVER', '')
-api['SMTP_USERNAME'] = os.environ.get('SMTP_USERNAME', '')
-api['SMTP_PASSWORD'] = os.environ.get('SMTP_PASSWORD', '')
-api['SMPT_PORT'] = os.environ.get('SMTP_PORT', '587')
+api['EMAIL_NEWUSER'] =  "info@{}".format(os.environ.get('MAILGUN_DOMAIN', '')) #os.environ.get('EMAIL_NEWUSER', '')
+api['SMTP_SERVER'] = os.environ.get('MAILGUN_SMTP_SERVER', '') #os.environ.get('SMTP_SERVER', '')
+api['SMTP_USERNAME'] = os.environ.get('MAILGUN_SMTP_LOGIN', '')# os.environ.get('SMTP_USERNAME', '')
+api['SMTP_PASSWORD'] = os.environ.get('MAILGUN_SMTP_PASSWORD', '') #os.environ.get('SMTP_PASSWORD', '')
+api['SMPT_PORT'] = os.environ.get('MAILGUN_SMTP_PORT', '587') #os.environ.get('SMTP_PORT', '587')
 
 api['allowed_emails'] = os.environ.get('ALLOWED_EMAILS', '')
 
