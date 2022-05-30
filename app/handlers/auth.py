@@ -324,62 +324,107 @@ class ChangePasswordHandler(BaseHandler):
 
 
 class RecoveryPassword(BaseHandler):
-    SUPPORTED_METHODS = ("GET", "POST")
+    SUPPORTED_METHODS = ("POST")
+
+    # @asynchronous
+    # @coroutine
+    # def get(self, code=None):
+    #     if code:
+    #         response = {
+    #             'title': 'Invalid Request',
+    #             'message': 'Authentication key is invalid.'
+    #         }
+    #         try:
+    #             token = token_decode(code, self.settings['token_secret'][:10])
+    #             if token:
+    #                 detoken = loads(token)
+    #                 lkeys = self.settings['cache'].keys()
+    #                 keys = list()
+    #                 for k in lkeys:
+    #                     if b'update_password:' in k:
+    #                         keys.append(k)
+
+    #                 for i in keys:
+    #                     obj = loads(self.settings['cache'].get(i))
+    #                     if obj['email'] == detoken['email'] and obj['password'] == detoken['password'] and\
+    #                             obj['token'] == detoken['token'] and obj['key'] == detoken['key']:
+    #                         ouser = yield self.Users.find_one({'email': detoken['email']})
+    #                         user_id = str(ouser['_id'])
+    #                         if ouser:
+    #                             try:
+    #                                 resp = yield Task(self.changePassword, ouser, obj['password'])
+    #                                 if resp:
+    #                                     self.settings['cache'].delete('update_password:' + user_id)
+    #                                     response['title'] = 'Change Password!'
+    #                                     response['message'] = 'The password was updated successfully.'
+    #                                     self.response(200, response['message'], response)
+    #                                 else:
+    #                                     self.response(400, 'Unable to change password.')
+    #                             except Exception as e:
+    #                                 self.response(400, 'Unable to change password. ' + str(e))
+    #                         else:
+    #                             self.response(400, 'Unable to change password. User not found')
+    #                         return
+    #                 self.response(400, 'Failed to change password.')
+    #             else:
+    #                 self.response(400, 'This code is invalid or expired.')
+    #         except Exception as e:
+    #             info(e)
+    #             self.response(400, 'This code is invalid or expired.')
+    #     else:
+    #         self.response(400, 'An code is required to use this resource.')
 
     @asynchronous
     @coroutine
-    def get(self, code=None):
+    def post(self, code=None):
         if code:
-            response = {
-                'title': 'Invalid Request',
-                'message': 'Authentication key is invalid.'
-            }
-            try:
-                token = token_decode(code, self.settings['token_secret'][:10])
-                if token:
-                    detoken = loads(token)
-                    lkeys = self.settings['cache'].keys()
-                    keys = list()
-                    for k in lkeys:
-                        if b'update_password:' in k:
-                            keys.append(k)
+            if 'password' in self.input_data.keys() and len(self.input_data['password']) >= 8:
+                response = {
+                    'title': 'Invalid Request',
+                    'message': 'Authentication key is invalid.'
+                }
+                try:
+                    token = token_decode(code, self.settings['token_secret'][:10])
+                    if token:
+                        detoken = loads(token)
+                        lkeys = self.settings['cache'].keys()
+                        keys = list()
+                        for k in lkeys:
+                            if b'update_password:' in k:
+                                keys.append(k)
 
-                    for i in keys:
-                        obj = loads(self.settings['cache'].get(i))
-                        if obj['email'] == detoken['email'] and obj['password'] == detoken['password'] and\
-                                obj['token'] == detoken['token'] and obj['key'] == detoken['key']:
-                            ouser = yield self.Users.find_one({'email': detoken['email']})
-                            user_id = str(ouser['_id'])
-                            if ouser:
-                                try:
-                                    resp = yield Task(self.changePassword, ouser, obj['password'])
-                                    if resp:
-                                        self.settings['cache'].delete('update_password:' + user_id)
-                                        response['title'] = 'Change Password!'
-                                        response['message'] = 'The password was updated successfully.'
-                                        self.response(200, response['message'], response)
-                                    else:
-                                        self.response(400, 'Unable to change password.')
-                                except Exception as e:
-                                    self.response(400, 'Unable to change password. ' + str(e))
-                            else:
-                                self.response(400, 'Unable to change password. User not found')
-                            return
-                    self.response(400, 'Failed to change password.')
-                else:
+                        for i in keys:
+                            obj = loads(self.settings['cache'].get(i))
+                            if obj['email'] == detoken['email'] and\
+                                    obj['token'] == detoken['token'] and obj['key'] == detoken['key']:
+                                ouser = yield self.Users.find_one({'email': detoken['email']})
+                                user_id = str(ouser['_id'])
+                                if ouser:
+                                    try:
+                                        resp = yield Task(self.changePassword, ouser, self.input_data['password'])
+                                        if resp:
+                                            self.settings['cache'].delete('update_password:' + user_id)
+                                            response['title'] = 'Change Password!'
+                                            response['message'] = 'The password was updated successfully.'
+                                            self.response(200, response['message'], response)
+                                        else:
+                                            self.response(400, 'Unable to change password.')
+                                    except Exception as e:
+                                        self.response(400, 'Unable to change password. ' + str(e))
+                                else:
+                                    self.response(400, 'Unable to change password. User not found')
+                                return
+                        self.response(400, 'Failed to change password.')
+                    else:
+                        self.response(400, 'This code is invalid or expired.')
+                except Exception as e:
+                    info(e)
                     self.response(400, 'This code is invalid or expired.')
-            except Exception as e:
-                info(e)
+            else:
                 self.response(400, 'This code is invalid or expired.')
-        else:
-            self.response(400, 'An code is required to use this resource.')
-
-    @asynchronous
-    @coroutine
-    def post(self, tokentype='app'):
-        if 'email' in self.input_data.keys():
+        elif 'email' in self.input_data.keys():
             email = self.input_data['email']
-            password = self.input_data['password']
+            # password = self.input_data['password']
             ouser = yield self.Users.find_one({'email': email})
             if ouser:
                 try:
@@ -388,7 +433,7 @@ class RecoveryPassword(BaseHandler):
 
                     hashkey = str(uuid4())
                     key = 'update_password:' + user_id
-                    data = {'email': email, 'password': password,
+                    data = {'email': email,
                             'token': gen_token(6), 'key': hashkey}
                     utoken = dumps(data, default=str)
                     dtime = 300
@@ -398,7 +443,7 @@ class RecoveryPassword(BaseHandler):
                     vtime = (datetime.now() + timedelta(seconds=dtime)).strftime("%H:%M:%S")
                     code = token_encode(utoken, self.settings['token_secret'][:10])
                     code = quote(code, safe='')
-                    ulink = self.settings['APP_URL'] + '/auth/recovery/' + code
+                    ulink = self.settings['APP_URL'] + '/#!/auth/recovery/' + code
 
                     fromaddr = self.settings['EMAIL_FROM']
                     toaddr = ouser['email']
