@@ -466,21 +466,21 @@ class RecoveryPassword(BaseHandler):
 
                     pemail = yield Task(self.sendEmail, toaddrs, message)
                     # admin email
-                    query = {'admin': True, 'email': {'$regex': 'venidera.com', '$options': 'i'}}
-                    bccddrs = yield self.Users.find(query, {'email': 1}).to_list(None)
-                    toaddrs = [str(x['email']) for x in bccddrs]
-                    message_text = """
-                        From the IP Address: %s \n
-                        A password recovery was requested for the email %s.\n
-                        Date: %s.\n\n
-                        Linc Lion Team\n
-                    """
-                    message_text = message_text % (remote_ip, ouser['email'], datetime.now().strftime("%Y/%m/%d"))
-                    message = "From: %s\r\n" % fromaddr + "To: %s\r\n" % toaddr + "Subject: %s\r\n" % message_subject + "\r\n" + message_text
-                    message = message.encode('utf-8')
+                    # query = {'admin': True, 'email': {'$regex': 'venidera.com', '$options': 'i'}}
+                    # bccddrs = yield self.Users.find(query, {'email': 1}).to_list(None)
+                    # toaddrs = [str(x['email']) for x in bccddrs]
+                    # message_text = """
+                    #     From the IP Address: %s \n
+                    #     A password recovery was requested for the email %s.\n
+                    #     Date: %s.\n\n
+                    #     Linc Lion Team\n
+                    # """
+                    # message_text = message_text % (remote_ip, ouser['email'], datetime.now().strftime("%Y/%m/%d"))
+                    # message = "From: %s\r\n" % fromaddr + "To: %s\r\n" % toaddr + "Subject: %s\r\n" % message_subject + "\r\n" + message_text
+                    # message = message.encode('utf-8')
 
-                    if pemail:
-                        pemail = yield Task(self.sendEmail, toaddrs, message)
+                    # if pemail:
+                    #     pemail = yield Task(self.sendEmail, toaddrs, message)
 
                     if pemail:
                         self.response(200, 'A new password was sent to the user.')
