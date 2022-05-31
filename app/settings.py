@@ -121,13 +121,6 @@ api['SMTP_SERVER'] = os.environ.get('SMTP_SERVER', '')
 api['SMTP_USERNAME'] = os.environ.get('SMTP_USERNAME', '')
 api['SMTP_PASSWORD'] = os.environ.get('SMTP_PASSWORD', '')
 api['SMPT_PORT'] = os.environ.get('SMTP_PORT', '587')
-# api['EMAIL_FROM'] = "mail@{}".format(os.environ.get('MAILGUN_DOMAIN', '')) #os.environ.get('EMAIL_FROM', '')
-# # new request access email address
-# api['EMAIL_NEWUSER'] =  "info@{}".format(os.environ.get('MAILGUN_DOMAIN', '')) #os.environ.get('EMAIL_NEWUSER', '')
-# api['SMTP_SERVER'] = os.environ.get('MAILGUN_SMTP_SERVER', '') #os.environ.get('SMTP_SERVER', '')
-# api['SMTP_USERNAME'] = os.environ.get('MAILGUN_SMTP_LOGIN', '')# os.environ.get('SMTP_USERNAME', '')
-# api['SMTP_PASSWORD'] = os.environ.get('MAILGUN_SMTP_PASSWORD', '') #os.environ.get('SMTP_PASSWORD', '')
-# api['SMPT_PORT'] = os.environ.get('MAILGUN_SMTP_PORT', '587') #os.environ.get('SMTP_PORT', '587')
 
 api['allowed_emails'] = os.environ.get('ALLOWED_EMAILS', '')
 
