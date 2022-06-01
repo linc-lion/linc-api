@@ -469,7 +469,7 @@ class RecoveryPassword(BaseHandler):
                     if pemail:
                         self.response(200, 'A new password was sent to the user.')
                     else:
-                        self.response(400, 'The system can\'t generate a new password for the user. Ask for support in suporte@venidera.com')
+                        self.response(400, 'The system can\'t generate a new password for the user. Ask for support in tech@linclion.org')
                     return
                 except Exception as e:
                     info(e)
@@ -503,6 +503,6 @@ A new user is requesting access to Linc.\nThe user data is:\nemail: %s\nFull Nam
             if pemail:
                 self.response(200, 'A new access request email was sent to %s.' % (self.settings['EMAIL_NEWUSER']))
             else:
-                self.response(400, 'The system can not send the access request. Ask for support in info@lionguardians.org')
+                self.response(400, 'The system can not send the access request. Ask for support in tech@linclion.org')
         else:
             self.response(400, 'An email is required to request access')
