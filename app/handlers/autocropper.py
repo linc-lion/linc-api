@@ -23,8 +23,6 @@ from os import remove
 
 
 class AutoCropperUploadHandler(BaseHandler):
-    def get(self):
-        self.write("Hello, world")
 
     def crop_and_show_image(self, image, coords):
         try:
@@ -46,7 +44,7 @@ class AutoCropperUploadHandler(BaseHandler):
 
     def upload_image_s3(self, cropped_img_name, coordinates, imgid, imgobjid, folder_name, dt):
 
-        fupdname = dt.date().isoformat() + '_image_' + imgid + '_' + imgobjid
+        fupdname =  dt.date().isoformat() + '_image_' + imgid + '_' + imgobjid + '_cropped'
         generate_images(cropped_img_name)
 
         for suf in ['_full.jpg', '_icon.jpg', '_medium.jpg', '_thumbnail.jpg']:
@@ -197,7 +195,7 @@ class AutoCropperUploadHandler(BaseHandler):
                     # the new object is valid, so try to save
                     try:
                         newsaved = yield self.Images.insert(newimage.to_native())
-                        updurl = yield self.Images.update({'_id': newsaved}, {'$set': {'url': url + str(newsaved)}})
+                        updurl = yield self.Images.update({'_id': newsaved}, {'$set': {'url': url + str(newsaved) + '_cropped'}})
                         info(updurl)
                         output = newimage.to_native()
                         # File data saved, now start to
@@ -237,8 +235,6 @@ class AutoCropperUploadHandler(BaseHandler):
 
 
 class AutoCropperHandler(BaseHandler):
-    def get(self):
-        self.write("Hello, world")
 
     #post method which takes image as input
     def post(self):
