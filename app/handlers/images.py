@@ -454,6 +454,10 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                     imgset = yield self.ImageSets.find_one({'iid': updobj['image_set_iid']})
                     srcurl = self.settings['S3_FOLDER'] + '/imageset_' + str(imgset['iid']) + '_' + str(imgset['_id']) + '/'
                     srcurl = srcurl + updobj['created_at'].date().isoformat() + '_image_' + str(updobj['iid']) + '_' + str(updobj['_id'])
+
+                    if 'is_auto_cropped' in updobj and updobj['is_auto_cropped']:
+                        srcurl = srcurl + '_cropped'
+
                     # try:
                     #    self.s3con.delete(bkpcopy, self.settings['S3_BUCKET'])
                     # except Exception as e:
