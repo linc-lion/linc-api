@@ -376,8 +376,6 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                         folder_name = 'imageset_' + str(imgset['iid']) + '_' + str(imgset['_id'])
                         url = folder_name + '/' + updobj['created_at'].date().isoformat() + '_image_' + str(updobj['iid']) + '_' + str(updobj['_id'])
 
-                        if 'is_auto_cropped' in updobj and updobj['is_auto_cropped']:
-                            url = url + '_cropped'
 
                         # copy image
                         # No need to specify the target bucket if we're copying inside the same bucket
@@ -385,8 +383,6 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                         srcurl = self.settings['S3_FOLDER'] + '/imageset_' + str(oldimgset['iid']) + '_' + str(oldimgset['_id']) + '/'
                         srcurl = srcurl + updobj['created_at'].date().isoformat() + '_image_' + str(updobj['iid']) + '_' + str(updobj['_id'])
 
-                        if 'is_auto_cropped' in updobj and updobj['is_auto_cropped']:
-                            srcurl = srcurl + '_cropped'
 
                         desurl = self.settings['S3_FOLDER'] + '/' + url
                     objupdid = ObjId(str(updobj['_id']))
@@ -412,9 +408,6 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                             # image set was changed
                             try:
                                 bkpcopy = self.settings['S3_FOLDER'] + '/backup/' + updobj['created_at'].date().isoformat() + '_image_' + str(updobj['iid']) + '_' + str(updobj['_id'])
-
-                                if 'is_auto_cropped' in updobj and updobj['is_auto_cropped']:
-                                    bkpcopy = bkpcopy + '_cropped'
 
 
                             except Exception as e:
@@ -468,8 +461,6 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                     srcurl = self.settings['S3_FOLDER'] + '/imageset_' + str(imgset['iid']) + '_' + str(imgset['_id']) + '/'
                     srcurl = srcurl + updobj['created_at'].date().isoformat() + '_image_' + str(updobj['iid']) + '_' + str(updobj['_id'])
 
-                    if 'is_auto_cropped' in updobj and updobj['is_auto_cropped']:
-                        srcurl = srcurl + '_cropped'
 
                     # try:
                     #    self.s3con.delete(bkpcopy, self.settings['S3_BUCKET'])

@@ -44,7 +44,7 @@ class AutoCropperUploadHandler(BaseHandler):
 
     def upload_image_s3(self, cropped_img_name, coordinates, imgid, imgobjid, folder_name, dt):
 
-        fupdname =  dt.date().isoformat() + '_image_' + imgid + '_' + imgobjid + '_cropped'
+        fupdname =  dt.date().isoformat() + '_image_' + imgid + '_' + imgobjid
         generate_images(cropped_img_name)
 
         for suf in ['_full.jpg', '_icon.jpg', '_medium.jpg', '_thumbnail.jpg']:
@@ -179,7 +179,9 @@ class AutoCropperUploadHandler(BaseHandler):
 
                     if auto_coords:
                         for index in range(0, len(auto_coords)):
-                            if values['coords'][index] != auto_coords[index]:
+                            value1 = round(auto_coords[index], 3)
+                            value2 = round(values['coords'][index], 3)
+                            if value1 != value2:
                                 should_include_manual = True
                                 break
 
@@ -195,7 +197,7 @@ class AutoCropperUploadHandler(BaseHandler):
                     # the new object is valid, so try to save
                     try:
                         newsaved = yield self.Images.insert(newimage.to_native())
-                        updurl = yield self.Images.update({'_id': newsaved}, {'$set': {'url': url + str(newsaved) + '_cropped'}})
+                        updurl = yield self.Images.update({'_id': newsaved}, {'$set': {'url': url + str(newsaved)}})
                         info(updurl)
                         output = newimage.to_native()
                         # File data saved, now start to

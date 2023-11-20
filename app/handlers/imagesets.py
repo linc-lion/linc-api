@@ -660,9 +660,6 @@ class ImageSetsHandler(BaseHandler):
                     srcurl = srcurl + img['created_at'].date().isoformat() + \
                         '_image_' + str(img['iid']) + '_' + str(img['_id'])
 
-                    if 'is_auto_cropped' in img and img['is_auto_cropped']:
-                        srcurl = srcurl + '_cropped'
-
                     try:
                         for suf in ['_full.jpg', '_icon.jpg', '_medium.jpg', '_thumbnail.jpg']:
                             rmlist.append(srcurl + suf)
