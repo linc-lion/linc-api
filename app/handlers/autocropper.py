@@ -179,8 +179,8 @@ class AutoCropperUploadHandler(BaseHandler):
 
                     if auto_coords:
                         for index in range(0, len(auto_coords)):
-                            value1 = round(auto_coords[index], 3)
-                            value2 = round(values['coords'][index], 3)
+                            value1 = int(auto_coords[index])
+                            value2 = int(values['coords'][index])
                             if value1 != value2:
                                 should_include_manual = True
                                 break
