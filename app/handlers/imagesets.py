@@ -659,7 +659,6 @@ class ImageSetsHandler(BaseHandler):
                         str(imgobj['iid']) + '_' + str(imgobj['_id']) + '/'
                     srcurl = srcurl + img['created_at'].date().isoformat() + \
                         '_image_' + str(img['iid']) + '_' + str(img['_id'])
-
                     try:
                         for suf in ['_full.jpg', '_icon.jpg', '_medium.jpg', '_thumbnail.jpg']:
                             rmlist.append(srcurl + suf)

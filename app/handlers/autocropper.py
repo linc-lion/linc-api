@@ -6,7 +6,7 @@ import io
 from os.path import realpath, dirname
 from uuid import uuid4
 from hashlib import md5
-from logging import info
+from logging import info, error
 from models.imageset import Image
 from tornado.gen import Task, engine
 from json import dumps
@@ -17,14 +17,15 @@ from tornado.web import asynchronous
 from PIL import Image as PILImage
 from lib.image_utils import generate_images
 from lib.upload_s3 import upload_to_s3
-from os import remove
+from os import remove, path
+
 
 
 
 
 class AutoCropperUploadHandler(BaseHandler):
 
-    def crop_and_show_image(self, image, coords):
+    def crop_image_with_coords(self, image, coords):
         try:
 
             # Create a BytesIO object to read binary image data
@@ -39,24 +40,21 @@ class AutoCropperUploadHandler(BaseHandler):
             return cropped_img
 
         except Exception as e:
-            print(f"An error occurred: {e}")
+            info(f"An error occurred: {e}")
 
-
-    def upload_image_s3(self, cropped_img_name, coordinates, imgid, imgobjid, folder_name, dt):
+    def upload_image_s3(self, cropped_img_name, imgid, imgobjid, folder_name, dt):
 
         fupdname =  dt.date().isoformat() + '_image_' + imgid + '_' + imgobjid
         generate_images(cropped_img_name)
 
         for suf in ['_full.jpg', '_icon.jpg', '_medium.jpg', '_thumbnail.jpg']:
             keynames3 = self.settings['S3_FOLDER'] + '/' + folder_name + '/' + fupdname + suf
-            info(str(keynames3))
             f = open(cropped_img_name[:-4] + suf, 'rb')
-            # self.s3con.upload(keynames3,f,expires=t,content_type='image/jpeg',public=True)
             resp = upload_to_s3(self.settings['S3_ACCESS_KEY'], self.settings['S3_SECRET_KEY'], f,  self.settings['S3_BUCKET'], keynames3)
             if resp:
                 info('File upload OK: ' + str(keynames3))
             else:
-                info('FAIL to upload: ' + str(keynames3))
+                error('FAIL to upload: ' + str(keynames3))
             f.close()
             remove(cropped_img_name[:-4] + suf)
 
@@ -76,7 +74,7 @@ class AutoCropperUploadHandler(BaseHandler):
             return
         # Check if its a valid image
         dirfs = dirname(realpath(__file__))
-        imgname = dirfs + '/' + str(uuid4()) + '.img'
+        imgname = path.join(dirfs, str(uuid4()) + '.img')
 
         try:
             fh = open(imgname, 'wb')
@@ -120,8 +118,8 @@ class AutoCropperUploadHandler(BaseHandler):
         for current_box_dict in images_to_create:
             for tag, values in current_box_dict.items():
                 values['image_set_id'] = self.input_data['image_set_id']
-                cropped_img = self.crop_and_show_image(image_file, values['coords'])
-                cropped_img_name = dirfs + '/' + str(uuid4()) + '.jpg'
+                cropped_img = self.crop_image_with_coords(image_file, values['coords'])
+                cropped_img_name = path.join(dirfs, str(uuid4()) + '.jpg')
                 cropped_img.save(cropped_img_name, 'JPEG')
                 cropped_image_file = open(cropped_img_name, 'rb').read()
 
@@ -156,7 +154,6 @@ class AutoCropperUploadHandler(BaseHandler):
                     newobj['url'] = url
                     # adding the hash pre calculed
                     newobj['hashcheck'] = filehash
-                    # info(newobj)
                     if 'exif_data' in newobj.keys() and isinstance(newobj['exif_data'], dict):
                         newobj['exif_data'] = dumps(newobj['exif_data'])
                     else:
@@ -191,7 +188,6 @@ class AutoCropperUploadHandler(BaseHandler):
                             tag: values['coords']
                         }
 
-                    # info(newobj)
                     newimage = Image(newobj)
                     newimage.validate()
                     # the new object is valid, so try to save
@@ -214,7 +210,7 @@ class AutoCropperUploadHandler(BaseHandler):
                             info(updiscover)
 
                         # upload cropped image to s3 bucket
-                        self.upload_image_s3(cropped_img_name, values['coords'], str(output['id']), output['obj_id'], folder_name, dt)
+                        self.upload_image_s3(cropped_img_name, str(output['id']), output['obj_id'], folder_name, dt)
 
 
                     except ValidationError as e:

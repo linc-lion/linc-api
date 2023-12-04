@@ -516,8 +516,6 @@ class AnimalsHandler(BaseHandler):
                     # Delete the source file
                     srcurl = self.settings['S3_FOLDER'] + '/imageset_' + str(rem_pis) + '_' + str(rem_pis_obj['_id']) + '/'
                     srcurl = srcurl + img['created_at'].date().isoformat() + '_image_' + str(img['iid']) + '_' + str(img['_id'])
-
-
                     try:
                         for suf in ['_full.jpg', '_icon.jpg', '_medium.jpg', '_thumbnail.jpg']:
                             rmlist.append(srcurl + suf)

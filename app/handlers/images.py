@@ -63,7 +63,6 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                 keynames3 = self.settings['S3_FOLDER'] + '/' + self.folder_name + '/' + fupdname + suf
                 info(str(keynames3))
                 f = open(self.imgname[:-4] + suf, 'rb')
-                # self.s3con.upload(keynames3,f,expires=t,content_type='image/jpeg',public=True)
                 resp = upload_to_s3(self.settings['S3_ACCESS_KEY'], self.settings['S3_SECRET_KEY'], f, self.settings['S3_BUCKET'], keynames3)
                 if resp:
                     info('File upload OK: ' + str(keynames3))
@@ -375,15 +374,11 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                         # The url will be changed since the imageset will be other
                         folder_name = 'imageset_' + str(imgset['iid']) + '_' + str(imgset['_id'])
                         url = folder_name + '/' + updobj['created_at'].date().isoformat() + '_image_' + str(updobj['iid']) + '_' + str(updobj['_id'])
-
-
                         # copy image
                         # No need to specify the target bucket if we're copying inside the same bucket
                         oldimgset = yield self.ImageSets.find_one({'iid': orig_imgset_id})
                         srcurl = self.settings['S3_FOLDER'] + '/imageset_' + str(oldimgset['iid']) + '_' + str(oldimgset['_id']) + '/'
                         srcurl = srcurl + updobj['created_at'].date().isoformat() + '_image_' + str(updobj['iid']) + '_' + str(updobj['_id'])
-
-
                         desurl = self.settings['S3_FOLDER'] + '/' + url
                     objupdid = ObjId(str(updobj['_id']))
                     del updobj['_id']
@@ -408,8 +403,6 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                             # image set was changed
                             try:
                                 bkpcopy = self.settings['S3_FOLDER'] + '/backup/' + updobj['created_at'].date().isoformat() + '_image_' + str(updobj['iid']) + '_' + str(updobj['_id'])
-
-
                             except Exception as e:
                                 pass
                             # self.s3con.copy(srcurl+'_full.jpg', self.settings['S3_BUCKET'],bkpcopy+'_full.jpg')
@@ -460,8 +453,6 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                     imgset = yield self.ImageSets.find_one({'iid': updobj['image_set_iid']})
                     srcurl = self.settings['S3_FOLDER'] + '/imageset_' + str(imgset['iid']) + '_' + str(imgset['_id']) + '/'
                     srcurl = srcurl + updobj['created_at'].date().isoformat() + '_image_' + str(updobj['iid']) + '_' + str(updobj['_id'])
-
-
                     # try:
                     #    self.s3con.delete(bkpcopy, self.settings['S3_BUCKET'])
                     # except Exception as e:
