@@ -6,7 +6,6 @@ import io
 from os.path import realpath, dirname
 from uuid import uuid4
 from hashlib import md5
-from logging import info, error
 from models.imageset import Image
 from tornado.gen import Task, engine
 from json import dumps
@@ -18,6 +17,8 @@ from PIL import Image as PILImage
 from lib.image_utils import generate_images
 from lib.upload_s3 import upload_to_s3
 from os import remove, path
+import logging
+from http import HTTPStatus
 
 
 
@@ -40,7 +41,7 @@ class AutoCropperUploadHandler(BaseHandler):
             return cropped_img
 
         except Exception as e:
-            info(f"An error occurred: {e}")
+            logging.info(f"An error occurred: {e}")
 
     def upload_image_s3(self, cropped_img_name, imgid, imgobjid, folder_name, dt):
 
@@ -52,9 +53,9 @@ class AutoCropperUploadHandler(BaseHandler):
             f = open(cropped_img_name[:-4] + suf, 'rb')
             resp = upload_to_s3(self.settings['S3_ACCESS_KEY'], self.settings['S3_SECRET_KEY'], f,  self.settings['S3_BUCKET'], keynames3)
             if resp:
-                info('File upload OK: ' + str(keynames3))
+                logging.info('File upload OK: ' + str(keynames3))
             else:
-                error('FAIL to upload: ' + str(keynames3))
+                logging.error('FAIL to upload: ' + str(keynames3))
             f.close()
             remove(cropped_img_name[:-4] + suf)
 
@@ -129,7 +130,7 @@ class AutoCropperUploadHandler(BaseHandler):
                 if imgaexists:
                     self.remove_file(cropped_img_name)
                     self.remove_file(imgname)
-                    info('File already exists!')
+                    logging.info('File already exists!')
                     self.response(409, 'The file already exists in the system.')
 
                 isexists = yield self.ImageSets.find_one({'iid': imgsetid})
@@ -157,7 +158,7 @@ class AutoCropperUploadHandler(BaseHandler):
                     if 'exif_data' in newobj.keys() and isinstance(newobj['exif_data'], dict):
                         newobj['exif_data'] = dumps(newobj['exif_data'])
                     else:
-                        info('No exif data found.')
+                        logging.info('No exif data found.')
                         newobj['exif_data'] = {}
                     # Force joined as None since only associated imagesets can have images joined to the primary imageset
                     newobj['joined'] = 0
@@ -194,7 +195,7 @@ class AutoCropperUploadHandler(BaseHandler):
                     try:
                         newsaved = yield self.Images.insert(newimage.to_native())
                         updurl = yield self.Images.update({'_id': newsaved}, {'$set': {'url': url + str(newsaved)}})
-                        info(updurl)
+                        logging.info(updurl)
                         output = newimage.to_native()
                         # File data saved, now start to
                         output['obj_id'] = str(newsaved)
@@ -207,7 +208,7 @@ class AutoCropperUploadHandler(BaseHandler):
                             updiscover = self.ImageSets.update(
                                 {'iid': output['image_set_id']},
                                 {'$set': {'updated_at': datetime.now(), 'main_image_iid': output['id']}})
-                            info(updiscover)
+                            logging.info(updiscover)
 
                         # upload cropped image to s3 bucket
                         self.upload_image_s3(cropped_img_name, str(output['id']), output['obj_id'], folder_name, dt)
@@ -215,11 +216,11 @@ class AutoCropperUploadHandler(BaseHandler):
 
                     except ValidationError as e:
                         self.remove_file(imgname)
-                        self.response(400, 'Fail to save image. Errors: ' + str(e) + '.')
+                        self.response(HTTPStatus.BAD_REQUEST, 'Fail to save image. Errors: ' + str(e) + '.')
                 except ValidationError as e:
                     self.remove_file(imgname)
                     # received data is invalid in some way
-                    self.response(400, 'Invalid input data. Errors: ' + str(e) + '.')
+                    self.response(HTTPStatus.BAD_REQUEST, 'Invalid input data. Errors: ' + str(e) + '.')
 
 
 
@@ -228,7 +229,7 @@ class AutoCropperUploadHandler(BaseHandler):
         # Returning success
 
         self.remove_file(imgname)
-        self.response(201, 'New image saved. The image processing will start for this new image.', output)
+        self.response(HTTPStatus.CREATED, 'New image saved. The image processing will start for this new image.', output)
 
 
 
@@ -253,7 +254,7 @@ class AutoCropperHandler(BaseHandler):
         response = requests.request("POST", url, headers=headers, data=payload, files=files)
 
         #return the response from the api
-        self.set_status(200)
+        self.set_status(HTTPStatus.OK)
         self.finish(self.json_encode({'status': 'success', 'data': response.json()}))
 
 
