@@ -23,7 +23,7 @@
 
 from schematics.models import Model
 from schematics.types import ModelType, StringType, IntType, DateTimeType,\
-    FloatType, BooleanType
+    FloatType, BooleanType, DictType
 from schematics.types.compound import ListType
 from datetime import datetime
 
@@ -77,6 +77,10 @@ class Image(Model):
     filename = StringType(required=True, default='')
     exif_data = StringType(required=True, default='{}')
     joined = IntType(required=True, default=0)
+    is_auto_cropped = BooleanType(required=True, default=False)
+    auto_bounding_box_coords = DictType(ListType(FloatType), required=False, default={})
+    manual_bounding_box_coords = DictType(ListType(FloatType), required=False, default={})
+
     created_at = DateTimeType(required=True, default=datetime.now())
     updated_at = DateTimeType(required=True, default=datetime.now())
 

@@ -33,6 +33,7 @@ from handlers.imagesets import ImageSetsHandler, ImageSetsCheckReqHandler
 from handlers.images import ImagesHandler, ImagesVocHandler
 from handlers.cvrequests import CVRequestsHandler
 from handlers.cvresults import CVResultsHandler
+from handlers.autocropper import AutoCropperHandler, AutoCropperUploadHandler
 
 
 # Defining routes
@@ -83,6 +84,10 @@ def url_patterns(animals='lions'):
 
         (r"/cvresults/?$", CVResultsHandler),
         (r"/cvresults/(\w+$)/?", CVResultsHandler),
-        (r"/cvresults/(\w+)/(list)/?$", CVResultsHandler)
+        (r"/cvresults/(\w+)/(list)/?$", CVResultsHandler),
+
+        (r"/autocropper/?$", AutoCropperHandler),
+        (r"/autocropper/upload/?$", AutoCropperUploadHandler),
+
     ]
     return routes

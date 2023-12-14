@@ -96,6 +96,9 @@ info('MongoDB Database set to: %s' % (URI))
 api['db'] = db
 api['sdb'] = sdb
 
+api['AUTOCROPPER_TOKEN'] = os.environ.get('AUTOCROPPER_TOKEN', '')
+api['AUTOCROPPER_URL'] = os.environ.get('AUTOCROPPER_URL', '')
+
 api['cookie_secret'] = os.environ.get('COOKIE_SECRET', gen_token(50))
 api['token_secret'] = os.environ.get('TOKEN_SECRET', mksecret(50))
 
