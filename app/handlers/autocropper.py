@@ -252,12 +252,13 @@ class AutoCropperHandler(BaseHandler):
         }
 
         response = requests.request("POST", url, headers=headers, data=payload, files=files)
+        response_status_code = response.status_code
+        response_json = response.json()
+
+        logging.info("Response from %s:", url)
+        logging.info("Status code: %s", response_status_code)
+        logging.info("Response json: %s", response_json)
 
         #return the response from the api
-        self.set_status(HTTPStatus.OK)
-        self.finish(self.json_encode({'status': 'success', 'data': response.json()}))
-
-
-
-
-
+        self.set_status(response_status_code)
+        self.finish(self.json_encode({'data': response_json}))
