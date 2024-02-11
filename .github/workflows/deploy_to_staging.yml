@@ -1,0 +1,24 @@
+name: Deploy to Heroku
+
+on:
+  push:
+    branches:
+      - gha   # change to main before merging PR
+  workflow_dispatch:
+    inputs:
+      deploy_env:
+        description: 'Deployment Environment'
+        required: true
+        options: ['stage', 'prod']
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      HEROKU_APP_NAME: ${{ github.event.inputs.deploy_env == 'prod' && 'linc-api-foo' || 'linc-api-staging' }}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: akhileshns/heroku-deploy@581dd286c962b6972d427fcf8980f60755c15520 # v3.13.15
+        with:
+          heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
+          heroku_app_name: ${{ env.HEROKU_APP_NAME }}
+          heroku_email: ${{ secrets.HEROKU_SERVICE_ACCOUNT_EMAIL }}
