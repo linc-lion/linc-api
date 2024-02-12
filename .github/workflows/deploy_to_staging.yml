@@ -3,10 +3,10 @@ name: Deploy to Heroku
 on:
   push:
     branches:
-      - gha
+      - main
   workflow_dispatch:
     branches:
-      - gha
+      - main
     inputs:
       deploy_env:
         description: 'Deployment Environment'
