@@ -3,7 +3,7 @@ name: Deploy to Heroku
 on:
   push:
     branches:
-      - main
+      - gha
   workflow_dispatch:
     inputs:
       deploy_env:
@@ -14,7 +14,7 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     env:
-      HEROKU_APP_NAME: ${{ github.event.inputs.deploy_env == 'prod' && 'linc-api' || 'linc-api-staging' }}
+      HEROKU_APP_NAME: ${{ github.event.inputs.deploy_env == 'prod' && github.event.ref == 'refs/heads/main' && 'linc-api' || 'linc-api-staging' }}
     steps:
       - uses: actions/checkout@v2
       - uses: akhileshns/heroku-deploy@581dd286c962b6972d427fcf8980f60755c15520 # v3.13.15
