@@ -1,1 +1,1 @@
-web: python app/linc-api.py --port=5050
+web: python app/linc-api.py --port=$PORT
