@@ -3,15 +3,19 @@ name: Deploy to Heroku
 on:
   push:
     branches:
-      - main
+      - gha2
   workflow_dispatch:
     branches:
-      - main
+      - gha2
     inputs:
       deploy_env:
+        type: choice
         description: 'Deployment Environment'
         required: true
-        options: ['stage', 'prod']
+        options:
+          - stage
+          - prod
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
