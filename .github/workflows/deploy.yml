@@ -9,9 +9,13 @@ on:
       - main
     inputs:
       deploy_env:
+        type: choice
         description: 'Deployment Environment'
         required: true
-        options: ['stage', 'prod']
+        options:
+          - stage
+          - prod
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
