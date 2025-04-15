@@ -20,8 +20,6 @@
 #
 # For more information or to contact visit linclion.org or email tech@linclion.org
 
-from tornado.web import asynchronous
-from tornado.gen import coroutine, engine, Task
 from handlers.base import BaseHandler
 from datetime import datetime
 from lib.rolecheck import api_authenticated
@@ -52,13 +50,11 @@ class AnimalsRelativesHandler(BaseHandler):
 
     SUPPORTED_METHODS = ('GET', 'POST', 'PUT', 'DELETE')
 
-    @asynchronous
-    @coroutine
     @api_authenticated
     @check_relative_endpoint
-    def get(self, animal_id=None, rurl=None, relid=None):
-        relations = yield self.Relatives.find({'id_from': int(animal_id)}).to_list(None)
-        trelations = yield self.Relatives.find({'id_to': int(animal_id)}).to_list(None)
+    async def get(self, animal_id=None, rurl=None, relid=None):
+        relations = await self.Relatives.find({'id_from': int(animal_id)}).to_list(None)
+        trelations = await self.Relatives.find({'id_to': int(animal_id)}).to_list(None)
         for obj in trelations:
             if obj['relation'] in ['suspected_father', 'mother']:
                 obj['relation'] = 'cub'
@@ -70,8 +66,8 @@ class AnimalsRelativesHandler(BaseHandler):
         fmsg = 'for the id: %d' % int(animal_id)
         for obj in relations:
             id_to = obj['id_to']
-            animal = yield self.Animals.find_one({'iid': int(id_to)})
-            image_set = yield self.ImageSets.find_one({'iid': int(animal['primary_image_set_iid'])})
+            animal = await self.Animals.find_one({'iid': int(id_to)})
+            image_set = await self.ImageSets.find_one({'iid': int(animal['primary_image_set_iid'])})
             if(animal):
                 obj['name_to'] = animal['name']
                 obj['gender_to'] = image_set['gender']
@@ -83,15 +79,11 @@ class AnimalsRelativesHandler(BaseHandler):
         else:
             self.response(404, 'Relations not found ' + fmsg)
 
-    @engine
-    def relation_is_valid(self, lobj, robj, relation, callback=None):
-        # lobj = is the data object of the lion
-        # robj = is the relative lion object
+    async def relation_is_valid(self, lobj, robj, relation, callback=None):
         valid_relations = [
             'mother', 'suspected_father', 'sibling', 'associate']
-        # check gender
         try:
-            gender = yield self.ImageSets.find_one({'iid': robj['primary_image_set_iid']}, {'gender': 1})
+            gender = await self.ImageSets.find_one({'iid': robj['primary_image_set_iid']}, {'gender': 1})
             gender = gender.get('gender', None)
             if gender not in ['female', 'male']:
                 gender = None
@@ -108,16 +100,13 @@ class AnimalsRelativesHandler(BaseHandler):
             resp = True, relation.lower(), gender
         callback(resp)
 
-    @asynchronous
-    @engine
     @check_relative_endpoint
     @api_authenticated
-    def post(self, animal_id=None, rurl=None):
-        lobj = yield Task(self.get_animal_by_id, animal_id)
+    async def post(self, animal_id=None, rurl=None):
+        lobj = await self.get_animal_by_id(animal_id)
         if not lobj:
             self.response(404, 'Animal not found for the id: ' + str(animal_id))
             return
-        # check data
         id_from = animal_id
         id_to = self.input_data.get('relative_id', None)
         if int(id_from) == int(id_to):
@@ -128,25 +117,25 @@ class AnimalsRelativesHandler(BaseHandler):
             self.response(400, 'Invalid request.')
             return
         try:
-            robj = yield Task(self.get_animal_by_id, id_to)
+            robj = await self.get_animal_by_id(id_to)
         except Exception as e:
             info(e)
             robj = None
         if not robj:
             self.response(400, 'Relative not found with the id: %d' % (id_to))
             return
-        already_relative_f = yield Task(self.check_relative, animal_id, id_to)
-        already_relative_t = yield Task(self.check_relative, id_to, animal_id)
+        already_relative_f = await self.check_relative(animal_id, id_to)
+        already_relative_t = await self.check_relative(id_to, animal_id)
         already_relative = already_relative_f or already_relative_t
         if already_relative:
             self.response(409, 'Relation already defined.', already_relative)
             return
-        valid, relation, gender = yield Task(self.relation_is_valid, lobj, robj, relation)
+        valid, relation, gender = await self.relation_is_valid(lobj, robj, relation)
         if not valid:
             self.response(400, 'Invalid relationship assignment request with the relation: %s. (The individual with the id %d is a "%s" animal.)' % (relation, int(id_to), gender))
             return
         try:
-            radd = yield self.Relatives.insert(
+            radd = await self.Relatives.insert(
                 {'id_from': int(animal_id),
                  'id_to': int(id_to),
                  'relation': relation.lower(),
@@ -160,31 +149,29 @@ class AnimalsRelativesHandler(BaseHandler):
         else:
             self.response(500, 'Fail to add relation.')
 
-    @asynchronous
-    @coroutine
     @check_relative_endpoint
     @api_authenticated
-    def put(self, animal_id=None, rurl=None, relid=None):
+    async def put(self, animal_id=None, rurl=None, relid=None):
         relation = self.input_data.get('relation', None)
         if not animal_id or not relid or not relation:
             self.response(400, 'Invalid request.')
             return
-        already_relative = yield Task(self.check_relative, animal_id, relid)
+        already_relative = await self.check_relative(animal_id, relid)
         if not already_relative:
-            already_relative = yield Task(self.check_relative, relid, animal_id)
+            already_relative = await self.check_relative(relid, animal_id)
             if not already_relative:
                 self.response(404, 'Relation not found.')
                 return
 
-        lobj = yield Task(self.get_animal_by_id, animal_id)
-        robj = yield Task(self.get_animal_by_id, relid)
-        valid, relation, gender = yield Task(self.relation_is_valid, lobj, robj, relation)
+        lobj = await self.get_animal_by_id(animal_id)
+        robj = await self.get_animal_by_id(relid)
+        valid, relation, gender = await self.relation_is_valid(lobj, robj, relation)
         if not valid:
             self.response(400, 'Invalid relationship assignment request with the relation: %s. (The individual with the id %d is a "%s" animal.)' % (
                 relation, int(relid), gender))
             return
         try:
-            radd = yield self.Relatives.update(
+            radd = await self.Relatives.update(
                 {'_id': already_relative['_id']},
                 {'$set': {
                     'relation': relation.lower(),
@@ -200,13 +187,11 @@ class AnimalsRelativesHandler(BaseHandler):
         else:
             self.response(500, 'Fail to change relation.')
 
-    @asynchronous
-    @coroutine
     @check_relative_endpoint
     @api_authenticated
-    def delete(self, animal_id=None, rurl=None, relid=None):
-        already_relative_f = yield Task(self.check_relative, animal_id, relid)
-        already_relative_t = yield Task(self.check_relative, relid, animal_id)
+    async def delete(self, animal_id=None, rurl=None, relid=None):
+        already_relative_f = await self.check_relative(animal_id, relid)
+        already_relative_t = await self.check_relative(relid, animal_id)
         already_relative = already_relative_f or already_relative_t
         if already_relative:
             try:

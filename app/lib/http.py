@@ -1,5 +1,3 @@
-from tornado.web import asynchronous
-from tornado.gen import engine
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest, HTTPError
 from tornado.httputil import HTTPHeaders
 from logging import info
@@ -38,11 +36,8 @@ class HTTPMethods:
         self.write(self.json_encode(output_response))
         self.finish()
 
-    @asynchronous
-    @engine
-    def api(self, url, method, body=None, headers=None, auth_username=None, auth_password=None, callback=None):
-        AsyncHTTPClient.configure(
-            "tornado.curl_httpclient.CurlAsyncHTTPClient")
+    async def api(self, url, method, body=None, headers=None, auth_username=None, auth_password=None):
+        AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient")
         http_client = AsyncHTTPClient()
         dictheaders = {"content-type": "application/json"}
         if headers:
@@ -54,7 +49,8 @@ class HTTPMethods:
             'url': url,
             'method': method,
             'request_timeout': 720,
-            'validate_cert': False}
+            'validate_cert': False
+        }
         if method in ['POST', 'PUT']:
             params['body'] = body
         if auth_username:
@@ -62,7 +58,7 @@ class HTTPMethods:
             params['auth_password'] = auth_password
         request = HTTPRequest(**params)
         try:
-            response = yield http_client.fetch(request)
+            response = await http_client.fetch(request)
         except HTTPError as e:
             info('HTTTP error returned... ')
             info(str(e))
@@ -74,7 +70,6 @@ class HTTPMethods:
             else:
                 response = e
         except Exception as e:
-            # Other errors are possible, such as IOError.
             info("Other Errors: " + str(e))
             response = e
-        callback(response)
+        return response

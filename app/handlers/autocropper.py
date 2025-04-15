@@ -7,19 +7,15 @@ from os.path import realpath, dirname
 from uuid import uuid4
 from hashlib import md5
 from models.imageset import Image
-from tornado.gen import Task, engine
-from json import dumps
 from datetime import datetime
 from schematics.exceptions import ValidationError
 from lib.rolecheck import api_authenticated
-from tornado.web import asynchronous
 from PIL import Image as PILImage
 from lib.image_utils import generate_images
 from lib.upload_s3 import upload_to_s3
 from os import remove, path
 import logging
 from http import HTTPStatus
-
 
 
 
@@ -61,14 +57,11 @@ class AutoCropperUploadHandler(BaseHandler):
 
         self.remove_file(cropped_img_name)
 
-    @asynchronous
-    @engine
     @api_authenticated
-    def post(self):
+    async def post(self):
 
         if 'image' not in self.input_data.keys():
-            self.response(400, 'The request to add image require the key \
-                "image" with the file encoded with base64.')
+            self.response(400, 'The request to add image require the key                 "image" with the file encoded with base64.')
             return
         if 'joined' in self.input_data.keys():
             self.response(400, 'The "joined" attribute can\'t be defined for a new image.')
@@ -83,8 +76,7 @@ class AutoCropperUploadHandler(BaseHandler):
             fh.close()
         except Exception as e:
             self.remove_file(imgname)
-            self.response(400, 'The encoded image is invalid, \
-                you must remake the encode using base64.')
+            self.response(400, 'The encoded image is invalid,                 you must remake the encode using base64.')
             return
         # Ok, image is valid
         # Now, check if it already exists in the database
@@ -125,7 +117,7 @@ class AutoCropperUploadHandler(BaseHandler):
                 cropped_image_file = open(cropped_img_name, 'rb').read()
 
                 filehash = md5(cropped_image_file).hexdigest()
-                imgaexists = yield self.Images.find_one({'hashcheck': filehash})
+                imgaexists = await self.Images.find_one({'hashcheck': filehash})
 
                 if imgaexists:
                     self.remove_file(cropped_img_name)
@@ -133,11 +125,11 @@ class AutoCropperUploadHandler(BaseHandler):
                     logging.info('File already exists!')
                     self.response(409, 'The file already exists in the system.')
 
-                isexists = yield self.ImageSets.find_one({'iid': imgsetid})
+                isexists = await self.ImageSets.find_one({'iid': imgsetid})
 
                 newobj = self.parseInput(Image)
                 # getting new integer id
-                newobj['iid'] = yield Task(self.new_iid, Image.collection())
+                newobj['iid'] = await self.new_iid(Image.collection())
                 # prepare new obj
                 dt = datetime.now()
                 newobj['created_at'] = dt
@@ -193,8 +185,8 @@ class AutoCropperUploadHandler(BaseHandler):
                     newimage.validate()
                     # the new object is valid, so try to save
                     try:
-                        newsaved = yield self.Images.insert(newimage.to_native())
-                        updurl = yield self.Images.update({'_id': newsaved}, {'$set': {'url': url + str(newsaved)}})
+                        newsaved = await self.Images.insert(newimage.to_native())
+                        updurl = await self.Images.update({'_id': newsaved}, {'$set': {'url': url + str(newsaved)}})
                         logging.info(updurl)
                         output = newimage.to_native()
                         # File data saved, now start to
@@ -225,7 +217,7 @@ class AutoCropperUploadHandler(BaseHandler):
 
 
         # Remove Imageset Cache
-        rem = yield Task(self.cache_remove, output['image_set_id'], 'imgset')
+        rem = await self.cache_remove(output['image_set_id'], 'imgset')
         # Returning success
 
         self.remove_file(imgname)

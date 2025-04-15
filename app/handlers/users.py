@@ -20,8 +20,6 @@
 #
 # For more information or to contact visit linclion.org or email tech@linclion.org
 
-from tornado.web import asynchronous
-from tornado.gen import engine, coroutine, Task
 from handlers.base import BaseHandler
 from models.user import User
 from bson import ObjectId as ObjId
@@ -48,15 +46,13 @@ class UsersHandler(BaseHandler):
                 query = {'email': user_id}
         return query
 
-    @asynchronous
-    @coroutine
     @api_authenticated
-    def get(self, user_id=None):
+    async def get(self, user_id=None):
         if user_id:
             if user_id == 'list':
-                objs = yield self.Users.find().to_list(None)
-                orgs = yield self.Orgs.find().to_list(None)
-                agrees = yield self.Agreements.find({}).to_list(None)
+                objs = await self.Users.find().to_list(None)
+                orgs = await self.Orgs.find().to_list(None)
+                agrees = await self.Agreements.find({}).to_list(None)
                 users_agree={agr['user_iid']:agr['agree_date'] for agr in agrees}
                 orgnames = dict()
                 for org in orgs:
@@ -72,8 +68,8 @@ class UsersHandler(BaseHandler):
                     {'status': 'success',
                      'data': self.list(objs, orgnames)}))
             elif user_id == 'conservationists':
-                orgs = yield self.Orgs.find().to_list(None)
-                users = yield self.Users.find().to_list(None)
+                orgs = await self.Orgs.find().to_list(None)
+                users = await self.Users.find().to_list(None)
                 orglist = dict()
                 for org in orgs:
                     if org['name'] not in orglist.keys():
@@ -90,10 +86,9 @@ class UsersHandler(BaseHandler):
                 self.response(200, 'Conservationists list.', orglist)
                 return
             else:
-                # return a specific user accepting as id the integer id, hash and name
                 query = self.query_id(user_id)
-                objs = yield self.Users.find_one(query)
-                agree = yield self.Agreements.find_one({'user_iid': int(user_id)})
+                objs = await self.Users.find_one(query)
+                agree = await self.Agreements.find_one({'user_iid': int(user_id)})
                 if objs:
                     objuser = objs
                     objuser['obj_id'] = str(objs['_id'])
@@ -113,8 +108,8 @@ class UsersHandler(BaseHandler):
                     self.set_status(404)
                     self.finish(self.json_encode({'status': 'error', 'message': 'not found'}))
         else:
-            objs = yield self.Users.find().to_list(None)
-            agrees = yield self.Agreements.find({}).to_list(None)
+            objs = await self.Users.find().to_list(None)
+            agrees = await self.Agreements.find({}).to_list(None)
             users_agree={agr['user_iid']:agr['agree_date'] for agr in agrees}
             output = list()
             for x in objs:
@@ -133,20 +128,14 @@ class UsersHandler(BaseHandler):
             self.set_status(200)
             self.finish(self.json_encode({'status': 'success', 'data': output}))
 
-    @asynchronous
-    @engine
     @api_authenticated
     @allowedRole('admin')
-    def post(self):
-        # create a new user
-        # parse data recept by POST and get only fields of the object
+    async def post(self):
         newobj = self.parseInput(User)
-        # getting new integer id
-        newobj['iid'] = yield Task(self.new_iid, User.collection())
-        # encrypt password
+        newobj['iid'] = await self.new_iid(User.collection())
         newobj['encrypted_password'] = self.encryptPassword(self.input_data['password'])
         orgiid = self.input_data['organization_id']
-        orgexists = yield self.Orgs.find_one({'iid': orgiid})
+        orgexists = await self.Orgs.find_one({'iid': orgiid})
         if orgexists:
             newobj['organization_iid'] = orgiid
         else:
@@ -155,9 +144,8 @@ class UsersHandler(BaseHandler):
         try:
             newuser = User(newobj)
             newuser.validate()
-            # the new object is valid, so try to save
             try:
-                newsaved = yield self.Users.insert(newuser.to_native())
+                newsaved = await self.Users.insert(newuser.to_native())
                 output = newuser.to_native()
                 output['obj_id'] = str(newsaved)
                 output['organization_id'] = output['organization_iid']
@@ -169,30 +157,23 @@ class UsersHandler(BaseHandler):
                      'message': 'New user added.',
                      'data': output}))
             except Exception as e:
-                # duplicated index error
                 self.response(409, 'Key violation.')
         except ValidationError as e:
-            # received data is invalid in some way
             self.response(400, 'Invalid input data. Errors: %s.' % (str(e)))
 
-    @asynchronous
-    @coroutine
     @api_authenticated
     @allowedRole('admin')
-    def put(self, user_id=None):
-        # update an user
-        # parse data recept by PUT and get only fields of the object
+    async def put(self, user_id=None):
         update_data = self.parseInput(User)
         fields_allowed_to_be_update = ['email', 'organization_iid', 'admin', 'password']
         if 'organization_id' in self.input_data.keys():
             orgiid = self.input_data['organization_id']
-            orgexists = yield self.Orgs.find_one({'iid': orgiid})
+            orgexists = await self.Orgs.find_one({'iid': orgiid})
             if orgexists:
                 update_data['organization_iid'] = orgiid
             else:
                 self.response(409, "Organization referenced doesn't exist.")
                 return
-        # validate the input for update
         update_ok = False
         for k in fields_allowed_to_be_update:
             if k in self.input_data.keys():
@@ -200,7 +181,7 @@ class UsersHandler(BaseHandler):
                 break
         if user_id and update_ok:
             query = self.query_id(user_id)
-            updobj = yield self.Users.find_one(query)
+            updobj = await self.Users.find_one(query)
             if updobj:
                 for field in fields_allowed_to_be_update:
                     if field in update_data.keys():
@@ -213,55 +194,46 @@ class UsersHandler(BaseHandler):
                 try:
                     updobj = User(updobj)
                     updobj.validate()
-                    # the object is valid, so try to save
                     try:
                         updobj = updobj.to_native()
                         updobj['_id'] = updid
-                        saved = yield self.Users.update({'_id': updid}, updobj)
+                        saved = await self.Users.update({'_id': updid}, updobj)
                         info(saved)
                         output = updobj
                         output['obj_id'] = str(updid)
                         del output['_id']
-                        # Change iid to id in the output
                         self.switch_iid(output)
                         del output['encrypted_password']
                         output['organization_id'] = output['organization_iid']
                         del output['organization_iid']
                         self.finish(self.json_encode({'status': 'success', 'message': 'User updated.', 'data': output}))
                     except Exception as e:
-                        # duplicated index error
                         self.response(409, 'Invalid data for update.')
                 except ValidationError as e:
-                    # received data is invalid in some way
                     self.response(400, 'Invalid input data. Errors: ' + str(e) + '.')
             else:
                 self.response(404, 'User not found.')
         else:
             self.response(400, 'Update requests (PUT) must have a resource ID and update pairs for key and value.')
 
-    @asynchronous
-    @coroutine
     @api_authenticated
     @allowedRole('admin')
-    def delete(self, user_id=None):
-        # delete an user
+    async def delete(self, user_id=None):
         if user_id:
             query = self.query_id(user_id)
-            updobj = yield self.Users.find_one(query)
+            updobj = await self.Users.find_one(query)
             if updobj:
                 iid = updobj['iid']
-                # imageset - uploading_user_iid
-                # Imagesets now will be uploaded by the admin iid
-                imgsetrc = yield self.ImageSets.update_many(
+                imgsetrc = await self.ImageSets.update_many(
                     {'uploading_user_iid': iid},
                     {'$set':
                         {'uploading_user_iid': self.current_user['id'],
                          'updated_at': datetime.now()}})
                 info(imgsetrc)
                 try:
-                    rmagree = yield self.Agreements.remove({'user_iid': int(user_id)})
+                    rmagree = await self.Agreements.remove({'user_iid': int(user_id)})
                     info("user agree removed %s", rmagree)
-                    updobj = yield self.Users.remove(query)
+                    updobj = await self.Users.remove(query)
                     self.response(200, 'User successfully deleted.')
                 except Exception as e:
                     info(e)
@@ -272,8 +244,6 @@ class UsersHandler(BaseHandler):
             self.response(400, 'Remove requests (DELETE) must have a resource ID.')
 
     def list(self, objs, orgnames=None):
-        """ Implements the list output used for UI in the website
-        """
         output = list()
         info(orgnames)
         for x in objs:

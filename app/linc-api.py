@@ -33,6 +33,7 @@ import logging
 from settings import api as settings
 from routes import url_patterns
 import os
+import asyncio  # Required for asyncio.run()
 
 logger = logging.getLogger()
 url_routes = url_patterns(settings['animals'])
@@ -45,7 +46,7 @@ class Application(tornado.web.Application):
 
 
 # Run server
-def main():
+async def main():
     app = Application()
     if len(logger.handlers) > 0:
         formatter = logging.Formatter("[%(levelname).1s %(asctime)s %(module)s:%(lineno)s] %(message)s", datefmt='%y%m%d %H:%M:%S')
@@ -61,8 +62,8 @@ def main():
         logging.info(h)
     httpserver = tornado.httpserver.HTTPServer(app)
     httpserver.listen(os.environ.get("PORT", options.port))
-    tornado.ioloop.IOLoop.instance().start()
+    await asyncio.Event().wait()  # Keeps the server running
 
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())

@@ -20,8 +20,7 @@
 #
 # For more information or to contact visit linclion.org or email tech@linclion.org
 
-from tornado.web import asynchronous
-from tornado.gen import engine, coroutine, Task
+from tornado.web import RequestHandler
 from handlers.base import BaseHandler
 from bson import ObjectId as ObjId
 from lib.rolecheck import api_authenticated
@@ -29,21 +28,19 @@ from logging import info
 
 
 class CVRequestsHandler(BaseHandler):
-    """ A class that handles requests about CV indentification informartion """
+    """ A class that handles requests about CV indentification information """
     SUPPORTED_METHODS = ('GET', 'POST', 'PUT', 'DELETE')
 
-    @asynchronous
-    @coroutine
     @api_authenticated
-    def get(self, req_id=None):
+    async def get(self, req_id=None):
         if req_id:
             if req_id == 'list':
-                objs = yield self.CVRequests.find().skip(self.skip).limit(self.limit).to_list(None)
-                output = yield Task(self.list, objs)
+                objs = await self.CVRequests.find().skip(self.skip).limit(self.limit).to_list(None)
+                output = await self.list(objs)
                 self.response(200, 'CV Requests list.', output)
             else:
                 query = self.query_id(req_id)
-                obj = yield self.CVRequests.find_one(query)
+                obj = await self.CVRequests.find_one(query)
                 if obj:
                     objreq = obj
                     objreq['id'] = obj['iid']
@@ -54,11 +51,11 @@ class CVRequestsHandler(BaseHandler):
                     del objreq['image_set_iid']
                     objreq['requesting_organization_id'] = objreq['requesting_organization_iid']
                     del objreq['requesting_organization_iid']
-                    self.response(200, 'CV Request found.',  objreq)
+                    self.response(200, 'CV Request found.', objreq)
                 else:
                     self.response(404, 'CV Request object not found.')
         else:
-            objs = yield self.CVRequests.find().skip(self.skip).limit(self.limit).to_list(None)
+            objs = await self.CVRequests.find().skip(self.skip).limit(self.limit).to_list(None)
             output = list()
             for x in objs:
                 obj = dict(x)
@@ -80,33 +77,27 @@ class CVRequestsHandler(BaseHandler):
     def put(self, req_id=None):
         self.response(400, 'CV Requests are created and updated automatically.')
 
-    @asynchronous
-    @coroutine
     @api_authenticated
-    def delete(self, req_id=None):
+    async def delete(self, req_id=None):
         # delete a req
         if req_id:
             query = self.query_id(req_id)
-            updobj = yield self.CVRequests.find_one(query)
+            updobj = await self.CVRequests.find_one(query)
             if updobj:
-                # removing cvrequest and cvresult related and they will be added in
-                # a history collection
                 try:
-                    # get cvresult if it exists
-                    cvres = yield self.CVResults.find_one({'cvrequest_iid': req_id})
+                    cvres = await self.CVResults.find_one({'cvrequest_iid': req_id})
                     if cvres:
                         info(cvres)
                         idcvres = ObjId(cvres['_id'])
                         del cvres['_id']
                         info(cvres)
-                        newhres = yield self.db.cvresults_history.insert(cvres)
+                        newhres = await self.db.cvresults_history.insert(cvres)
                         info(newhres)
-                        cvres = yield self.CVResults.remove({'_id': idcvres})
+                        await self.CVResults.remove({'_id': idcvres})
                     del updobj['_id']
-                    newhreq = yield self.db.cvrequests_history.insert(updobj)
+                    newhreq = await self.db.cvrequests_history.insert(updobj)
                     info(newhreq)
-                    cvreq = yield self.CVRequests.remove(query)
-                    info(cvreq)
+                    await self.CVRequests.remove(query)
                     self.response(200, 'CV Request successfully deleted.')
                 except Exception as e:
                     self.response(500, 'Fail to delete cvrequest.')
@@ -115,17 +106,16 @@ class CVRequestsHandler(BaseHandler):
         else:
             self.response(400, 'Remove requests (DELETE) must have a resource ID.')
 
-    @asynchronous
-    @engine
-    def list(self, objs, callback=None):
-        """ Implements the list output used for UI in the website
-        """
+    async def list(self, objs):
+        """ Implements the list output used for UI in the website """
         output = list()
-        cvresl = yield self.CVResults.find().to_list(None)
+        cvresl = await self.CVResults.find().to_list(None)
         cvresd = dict()
         for cvres in cvresl:
-            cvresd[cvres['cvrequest_iid']] = {'cvres_id': cvres['iid'],
-                                              'cvres_obj_id': str(cvres['_id'])}
+            cvresd[cvres['cvrequest_iid']] = {
+                'cvres_id': cvres['iid'],
+                'cvres_obj_id': str(cvres['_id'])
+            }
         for x in objs:
             obj = dict()
             obj['cvreq_id'] = x['iid']
@@ -140,4 +130,4 @@ class CVRequestsHandler(BaseHandler):
                 obj['cvres_id'] = None
                 obj['cvres_obj_id'] = None
             output.append(obj)
-        callback(output)
+        return output
