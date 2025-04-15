@@ -112,7 +112,7 @@ class LoginHandler(BaseHandler):
                         'current_sign_in_at': datetime.now(),
                         'current_sign_in_ip': remote_ip
                     }}
-                    await self.Users.update({'iid': ouser['iid']}, datupd)
+                    await self.Users.update_one({'iid': ouser['iid']}, datupd)
                     authtoken = web.create_signed_value(self.settings['cookie_secret'], 'authtoken', dumps(objuser))
                     count.pop(username, None)
                     wlist.pop(username, None)
@@ -178,7 +178,7 @@ class AgreementHandler(BaseHandler):
                         try:
                             query = {'$set': {'agree_date': dtnow, 'updated_at': dtnow}}
                             info(query)
-                            await self.Agreements.update({'_id': agree['_id']}, query)
+                            await self.Agreements.update_one({'_id': agree['_id']}, query)
                         except Exception as e:
                             info(e)
 
@@ -206,7 +206,7 @@ class AgreementHandler(BaseHandler):
                         'current_sign_in_at': datetime.now(),
                         'current_sign_in_ip': remote_ip
                     }}
-                    await self.Users.update({'iid': ouser['iid']}, datupd)
+                    await self.Users.update_one({'iid': ouser['iid']}, datupd)
                     authtoken = web.create_signed_value(self.settings['cookie_secret'], 'authtoken', dumps(objuser))
                     self.settings['tokens'][ouser['email']] = {'token': token, 'dt': datetime.now()}
                     outputtoken = token_encode(authtoken, self.settings['token_secret'])
