@@ -182,7 +182,7 @@ class ImageSetsHandler(BaseHandler):
                     if cvreqchk:
                         if cvreqchk['status'] == 'error':
                             info('Removing old CV Request of the image set {} that was marked with error.'.format(imageset_id))
-                            cvreqdel = await self.CVRequests.remove({'iid': cvreqchk['iid']})
+                            await self.CVRequests.delete_one({'iid': cvreqchk['iid']})
                         else:
                             self.response(
                                 409,
@@ -244,7 +244,8 @@ class ImageSetsHandler(BaseHandler):
                         try:
                             newsaved = CVRequest(newobj)
                             newsaved.validate()
-                            newreqadd = await self.CVRequests.insert(newsaved.to_native())
+                            result = await self.CVRequests.insert_one(newsaved.to_native())
+                            newreqadd = result.inserted_id
                         except Exception as e:
                             info(e)
                             self.response(500, 'Fail to create the CV Request.')
@@ -420,7 +421,11 @@ class ImageSetsHandler(BaseHandler):
                     objimgset = ImageSet(objimgset)
                     objimgset.validate()
                     objimgset = objimgset.to_native()
-                    updnobj = await self.ImageSets.update({'_id': imgid}, {'$set': objimgset}, upsert=True)
+                    updnobj = await self.ImageSets.update_one(
+                        {'_id': imgid}, 
+                        {'$set': objimgset}, 
+                        upsert=True
+                    )
                     info(updnobj)
                     output = objimgset
                     self.switch_iid(output)
@@ -461,7 +466,7 @@ class ImageSetsHandler(BaseHandler):
                                   ' is a primary one, it must be deleted through its ' + self.animal + '.')
                     return
                 # 1 - Remove image set
-                rmved = await self.ImageSets.remove({'iid': imgobj['iid']})
+                rmved = await self.ImageSets.delete_one({'iid': imgobj['iid']})
                 info(str(rmved))
                 rem = await self.cache_remove(imgobj['iid'], 'imgset')
                 info(rem)
@@ -470,7 +475,10 @@ class ImageSetsHandler(BaseHandler):
                 rmlist = list()
                 for img in imgl:
                     # Remove joined referenced
-                    resp = await self.ImageSets.update({'main_image_iid': img['iid']}, {'$set': {'main_image_iid': None}})
+                    resp = await self.ImageSets.update_one(
+                        {'main_image_iid': img['iid']}, 
+                        {'$set': {'main_image_iid': None}}
+                    )
                     info(resp)
                     # Delete the source file
                     srcurl = self.settings['S3_FOLDER'] + '/imageset_' + \
@@ -484,18 +492,18 @@ class ImageSetsHandler(BaseHandler):
                         self.response(500, 'Fail to delete image in S3. Errors: ' + str(e) + '.')
                         return
                 if len(rmlist) > 0:
-                    rmladd = await self.db.dellist.insert({'list': rmlist, 'ts': datetime.now()})
-                    info(rmladd)
-                rmved = await self.Images.remove({'image_set_iid': imgobj['iid']}, multi=True)
+                    result = await self.db.dellist.insert_one({'list': rmlist, 'ts': datetime.now()})
+                    info(result)
+                rmved = await self.Images.delete_many({'image_set_iid': imgobj['iid']})
                 info(str(rmved))
                 # 3 - Removing cvrequests and cvresults
                 cvreql = await self.CVRequests.find({'image_set_iid': imgobj['iid']}).to_list(None)
                 for cvreq in cvreql:
                     # Removing cvresult
-                    rmved = await self.CVResults.remove({'cvrequest_iid': cvreq['iid']})
+                    rmved = await self.CVResults.delete_one({'cvrequest_iid': cvreq['iid']})
                     info(str(rmved))
                     # Removing cvrequest
-                    rmved = await self.CVRequests.remove({'_id': cvreq['_id']})
+                    rmved = await self.CVRequests.delete_one({'_id': cvreq['_id']})
                     info(str(rmved))
                 self.response(200, 'Image set deleted.')
             else:

@@ -66,7 +66,7 @@ class DBMethods:
             try:
                 updobj = updobj.to_native()
                 updobj['_id'] = updid
-                saved = await self.Users.update({'_id': updid}, updobj)
+                saved = await self.Users.update_one({'_id': updid}, {'$set': updobj})
                 info(saved)
                 return [200, 'Password changed successfully.']
             except Exception:
@@ -137,7 +137,8 @@ class DBMethods:
         try:
             newimgset = ImageSet(newobj)
             newimgset.validate()
-            newobj_id = await self.db.imagesets.insert(newimgset.to_native())
+            result = await self.db.imagesets.insert_one(newimgset.to_native())
+            newobj_id = result.inserted_id
             output = newimgset.to_native()
             self.switch_iid(output)
             output['obj_id'] = str(newobj_id)

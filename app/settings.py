@@ -34,7 +34,7 @@ from lib.tokens import gen_token, mksecret
 from apscheduler.schedulers.tornado import TornadoScheduler
 from pymongo import MongoClient
 from logging import info
-from redis import Redis, ConnectionPool
+import aioredis
 from lib.dbdump import dbdump
 
 
@@ -131,8 +131,12 @@ api['url'] = os.environ.get('API_URL', 'http://localhost:5050')
 api['APP_URL'] = os.environ.get('APP_URL', 'http://localhost:5080')
 
 redis_url = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
-api['cache'] = Redis(connection_pool=ConnectionPool.from_url(redis_url))
+# Create Redis connection pool asynchronously
+async def init_redis():
+    return await aioredis.from_url(redis_url, encoding='utf-8', decode_responses=True)
 
+# Initialize Redis connection in the application startup
+api['cache'] = None  # Will be set during application startup
 
 api['scheduler'] = TornadoScheduler()
 api['scheduler'].start()

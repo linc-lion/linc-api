@@ -33,9 +33,11 @@ from lib.tokens import token_decode
 from os import remove
 from lib.db import DBMethods
 from lib.http import HTTPMethods
-import smtplib
+import aiosmtplib
+from email.mime.text import MIMEText
 from tornado.web import HTTPError
 from lib.upload_s3 import RemoteS3Files
+import asyncio
 
 
 class BaseHandler(RequestHandler, DBMethods, HTTPMethods):
@@ -158,21 +160,21 @@ class BaseHandler(RequestHandler, DBMethods, HTTPMethods):
             self.set_url_token(urlpath, url)
         return url.decode('utf-8') if isinstance(url, bytes) else url
 
-    def set_url_token(self, token, value):
+    async def set_url_token(self, token, value):
         for attempt in range(5):
             try:
-                self.settings['cache'].set('urltoken-' + token,
+                await self.settings['cache'].set('urltoken-' + token,
                     value, ex=self.settings['S3_URL_EXPIRE_SECONDS'])
                 break
             except:
-                time.sleep(0.5)
+                await asyncio.sleep(0.5)
 
-    def get_url_token(self, token):
+    async def get_url_token(self, token):
         for attempt in range(5):
             try:
-                return self.settings['cache'].get('urltoken-' + token)
+                return await self.settings['cache'].get('urltoken-' + token)
             except:
-                time.sleep(0.5)
+                await asyncio.sleep(0.5)
         return False
 
     def remove_file(self, fname):
@@ -192,15 +194,18 @@ class BaseHandler(RequestHandler, DBMethods, HTTPMethods):
             smtp_username = self.settings['SMTP_USERNAME']
             smtp_password = self.settings['SMTP_PASSWORD']
             smtp_port = self.settings['SMPT_PORT']
-            server = smtplib.SMTP(host=smtp_server,
-                                  port=smtp_port,
-                                  timeout=10)
-            server.set_debuglevel(10)
-            server.starttls()
-            server.ehlo()
-            server.login(smtp_username, smtp_password)
-            server.sendmail(fromaddr, toaddr, msg)
-            server.quit()
+            
+            # Create message
+            message = MIMEText(msg)
+            message["From"] = fromaddr
+            message["To"] = toaddr
+            
+            # Send email asynchronously
+            async with aiosmtplib.SMTP(hostname=smtp_server,
+                                     port=smtp_port,
+                                     use_tls=True) as server:
+                await server.login(smtp_username, smtp_password)
+                await server.send_message(message)
             return True
         except Exception as e:
             info(e)
@@ -208,7 +213,7 @@ class BaseHandler(RequestHandler, DBMethods, HTTPMethods):
 
     async def cache_read(self, key, prefix):
         if key:
-            val = self.cache.get(str(prefix) + '-' + str(key))
+            val = await self.cache.get(str(prefix) + '-' + str(key))
             if val:
                 try:
                     return loads(val)
@@ -219,12 +224,12 @@ class BaseHandler(RequestHandler, DBMethods, HTTPMethods):
 
     async def cache_set(self, key, prefix, data=None, ttl=432000):
         if key and prefix and data:
-            return self.cache.set(str(prefix) + '-' + str(key), dumps(data), ttl)
+            return await self.cache.set(str(prefix) + '-' + str(key), dumps(data), ttl)
         return None
 
     async def cache_remove(self, key, prefix):
         if key and prefix:
-            return self.cache.delete(str(prefix) + '-' + str(key))
+            return await self.cache.delete(str(prefix) + '-' + str(key))
         return None
 
     def write_error(self, status_code=404, **kwargs):
@@ -244,7 +249,7 @@ class BaseHandler(RequestHandler, DBMethods, HTTPMethods):
         email = self.current_user['username']
         name = f'polling:{email}:{key}'
         info(name)
-        cache = self.cache.get(name)
+        cache = await self.cache.get(name)
         if cache:
             cache = loads(cache)
         return cache
@@ -253,7 +258,7 @@ class BaseHandler(RequestHandler, DBMethods, HTTPMethods):
         email = self.current_user['username']
         name = f'polling:{email}:{key}'
         info(name)
-        return self.cache.set(
+        return await self.cache.set(
             name=name, value=dumps(data, default=str), ex=expiration_s)
 
     async def check_token(self, key=''):
@@ -261,12 +266,12 @@ class BaseHandler(RequestHandler, DBMethods, HTTPMethods):
         prefix = f'polling:{email}:'
         size = len(prefix)
         name = prefix + str(key)
-        lkeys = self.cache.keys()
+        lkeys = await self.cache.keys()
         cache = dict()
         for k in lkeys:
             try:
                 if bytes(name, encoding='utf-8') in k[size:]:
-                    data = loads(self.cache.get(k))
+                    data = loads(await self.cache.get(k))
                     sid = k.decode('utf-8')
                     cache = {
                         'cache': data,
@@ -281,13 +286,13 @@ class BaseHandler(RequestHandler, DBMethods, HTTPMethods):
         size = len(prefix)
         name = prefix + str(token)
         if token:
-            self.cache.delete(name)
+            await self.cache.delete(name)
         else:
-            lkeys = self.cache.keys()
+            lkeys = await self.cache.keys()
             for k in lkeys:
                 try:
                     if bytes(name, encoding='utf-8') in k[size:]:
-                        self.cache.delete(k)
+                        await self.cache.delete(k)
                 except Exception as e:
                     info(e)
         return True
