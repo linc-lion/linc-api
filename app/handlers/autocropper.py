@@ -148,7 +148,7 @@ class AutoCropperUploadHandler(BaseHandler):
                     # adding the hash pre calculed
                     newobj['hashcheck'] = filehash
                     if 'exif_data' in newobj.keys() and isinstance(newobj['exif_data'], dict):
-                        newobj['exif_data'] = dumps(newobj['exif_data'])
+                        newobj['exif_data'] = json.dumps(newobj['exif_data'])
                     else:
                         logging.info('No exif data found.')
                         newobj['exif_data'] = {}
@@ -185,8 +185,9 @@ class AutoCropperUploadHandler(BaseHandler):
                     newimage.validate()
                     # the new object is valid, so try to save
                     try:
-                        newsaved = await self.Images.insert(newimage.to_native())
-                        updurl = await self.Images.update({'_id': newsaved}, {'$set': {'url': url + str(newsaved)}})
+                        result = await self.Images.insert_one(newimage.to_native())
+                        newsaved = result.inserted_id
+                        updurl = await self.Images.update_one({'_id': newsaved}, {'$set': {'url': url + str(newsaved)}})
                         logging.info(updurl)
                         output = newimage.to_native()
                         # File data saved, now start to
@@ -197,7 +198,7 @@ class AutoCropperUploadHandler(BaseHandler):
                         self.switch_iid(output)
                         # if is Cover
                         if values['iscover']:
-                            updiscover = self.ImageSets.update(
+                            updiscover = await self.ImageSets.update_one(
                                 {'iid': output['image_set_id']},
                                 {'$set': {'updated_at': datetime.now(), 'main_image_iid': output['id']}})
                             logging.info(updiscover)
