@@ -144,7 +144,7 @@ class BaseHandler(RequestHandler, DBMethods, HTTPMethods):
     def checkPassword(self, password, hashed):
         return bcrypt.hashpw(password, hashed) == hashed
 
-    def imgurl(self, urlpath, imgtype='thumbnail'):
+    async def imgurl(self, urlpath, imgtype='thumbnail'):
         if imgtype == 'thumbnail':
             urlpath = urlpath + '_thumbnail.jpg'
         elif imgtype == 'full':
@@ -153,11 +153,11 @@ class BaseHandler(RequestHandler, DBMethods, HTTPMethods):
             urlpath = urlpath + '_icon.jpg'
         else:
             urlpath = urlpath + '_medium.jpg'
-        url = self.get_url_token(urlpath)
+        url = await self.get_url_token(urlpath)
         if not url:
             url = self.remote.generate_presigned_url(
                 urlpath, expires_in=self.settings['S3_URL_EXPIRE_SECONDS'])
-            self.set_url_token(urlpath, url)
+            await self.set_url_token(urlpath, url)
         return url.decode('utf-8') if isinstance(url, bytes) else url
 
     async def set_url_token(self, token, value):

@@ -91,7 +91,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
             if len(limgs) > 0:
                 urls = list()
                 for x in limgs:
-                    iurl = self.imgurl(x['url'], 'full')
+                    iurl = await self.imgurl(x['url'], 'full')
                     if 'filename' not in x.keys() or x['filename'] == '':
                         fname = 'imageset_' + str(x['image_set_iid']) + '_image_' + str(x['iid']) + '.jpg'
                     else:
@@ -119,7 +119,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                         del objimage['_id']
                         objimage['image_set_id'] = objimage['image_set_iid']
                         del objimage['image_set_iid']
-                        objimage['url'] = self.imgurl(objimage['url'], 'medium')
+                        objimage['url'] = await self.imgurl(objimage['url'], 'medium')
                         self.set_status(200)
                         self.finish(self.json_encode({'status': 'success', 'data': objimage}))
                     else:
@@ -135,7 +135,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                     self.switch_iid(obj)
                     obj['image_set_id'] = obj['image_set_iid']
                     del obj['image_set_iid']
-                    obj['url'] = self.imgurl(obj['url'], 'medium')
+                    obj['url'] = await self.imgurl(obj['url'], 'medium')
                     output.append(obj)
                 self.set_status(200)
                 n_images = await self.Images.count_documents({})
@@ -406,13 +406,13 @@ class ImagesHandler(BaseHandler, ProcessMixin):
         else:
             self.response(400, 'Remove requests (DELETE) must have a resource ID.')
 
-    def list(self, objs, callback=None):
+    async def list(self, objs, callback=None):
         """Implement the list output used for UI in the website."""
         output = list()
         for x in objs:
             obj = dict()
             obj['id'] = x['iid']
-            url = self.imgurl(x['url'], 'icon')
+            url = await self.imgurl(x['url'], 'icon')
             obj['url'] = url
             output.append(obj)
         return output

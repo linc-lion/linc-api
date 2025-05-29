@@ -109,13 +109,13 @@ class ImageSetsHandler(BaseHandler):
 
                 img = await self.Images.find_one({'iid': output['main_image_id']})
                 if img:
-                    output['image'] = self.imgurl(img['url'], 'thumbnail')
-                    output['thumbnail'] = self.imgurl(img['url'], 'icon')
+                    output['image'] = await self.imgurl(img['url'], 'thumbnail')
+                    output['thumbnail'] = await self.imgurl(img['url'], 'icon')
                 else:
                     img = await self.Images.find({'image_set_iid': output['id']}).to_list(None)
                     if img:
-                        output['image'] = self.imgurl(img[0]['url'], 'thumbnail')
-                        output['thumbnail'] = self.imgurl(img[0]['url'], 'icon')
+                        output['image'] = await self.imgurl(img[0]['url'], 'thumbnail')
+                        output['thumbnail'] = await self.imgurl(img[0]['url'], 'icon')
                     else:
                         output['image'] = ''
                         output['thumbnail'] = ''
@@ -223,15 +223,15 @@ class ImageSetsHandler(BaseHandler):
                         for x in cv_imgs:
                             cv_calls.append({
                                 'type': 'cv',
-                                'url': self.imgurl(x['url'], "full")
-                                })
+                                'url': await self.imgurl(x['url'], "full")
+                            })
                     wh_calls = list()
                     if check_algo.get('whisker', False):
                         for x in wh_imgs:
                             wh_calls.append({
                                 'type': 'whisker',
-                                'url': self.imgurl(x['url'], "full")
-                                })
+                                'url': await self.imgurl(x['url'], "full")
+                            })
                     if cv_calls or wh_calls:
                         request_base_body['cv_calls'] = cv_calls if cv_calls else []
                         request_base_body['whisker_calls'] = wh_calls if wh_calls else []
@@ -549,13 +549,13 @@ class ImageSetsHandler(BaseHandler):
 
                 obji = await self.Images.find_one({'iid': obj['main_image_iid']})
                 if obji:
-                    imgset_obj['thumbnail'] = self.imgurl(obji['url'], 'icon')
-                    imgset_obj['image'] = self.imgurl(obji['url'], 'medium')
+                    imgset_obj['thumbnail'] = await self.imgurl(obji['url'], 'icon')
+                    imgset_obj['image'] = await self.imgurl(obji['url'], 'medium')
                 else:
                     obji = await self.Images.find({'image_set_iid': obj['iid']}).to_list(None)
                     if len(obji) > 0:
-                        imgset_obj['thumbnail'] = self.imgurl(obji[0]['url'], 'icon')
-                        imgset_obj['image'] = self.imgurl(obji[0]['url'], 'medium')
+                        imgset_obj['thumbnail'] = await self.imgurl(obji[0]['url'], 'icon')
+                        imgset_obj['image'] = await self.imgurl(obji[0]['url'], 'medium')
                     else:
                         imgset_obj['thumbnail'] = ''
                         imgset_obj['image'] = ''

@@ -122,14 +122,14 @@ class CVResultsHandler(BaseHandler):
                                 img = await self.Images.find_one(
                                     {'image_set_iid': aobj['primary_image_set_iid'], 'image_tags': 'main-id'})
                                 if img:
-                                    objres['thumbnail'] = self.imgurl(img['url'], 'icon')
-                                    objres['image'] = self.imgurl(img['url'], 'medium')
+                                    objres['thumbnail'] = await self.imgurl(img['url'], 'icon')
+                                    objres['image'] = await self.imgurl(img['url'], 'medium')
                                 else:
                                     img = await self.Images.find(
                                         {'image_set_iid': aobj['primary_image_set_iid']}).to_list(length=1)
                                     if len(img) > 0:
-                                        objres['thumbnail'] = self.imgurl(img[0]['url'], 'thumbnail')
-                                        objres['image'] = self.imgurl(img[0]['url'], 'icon')
+                                        objres['thumbnail'] = await self.imgurl(img[0]['url'], 'thumbnail')
+                                        objres['image'] = await self.imgurl(img[0]['url'], 'icon')
                                     else:
                                         objres['thumbnail'] = ''
                                         objres['image'] = ''
