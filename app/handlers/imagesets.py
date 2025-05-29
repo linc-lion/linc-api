@@ -159,6 +159,60 @@ class ImageSetsHandler(BaseHandler):
             else:
                 self.response(404, 'Imageset not found.')
                 return
+        elif imageset_id and param == 'gallery':
+            query = self.query_id(imageset_id)
+            objimgset = await self.ImageSets.find_one(query)
+            if objimgset:
+                # Check if is Primary Imageset
+                imgprim = await self.Animals.find_one({'iid': objimgset['animal_iid']}, {'primary_image_set_iid': 1})
+                is_primary = False
+                if imgprim and imgprim['primary_image_set_iid'] == objimgset['animal_iid']:
+                    is_primary = True
+                images = await self.Images.find(
+                    {'$or': [
+                        {'image_set_iid': int(objimgset['iid'])},
+                        {'joined': int(objimgset['iid'])}
+                    ]}).to_list(None)
+                output = dict()
+                output['id'] = imageset_id
+                cover = objimgset['main_image_iid']
+                output['images'] = list()
+                for img in images:
+                    if 'joined' not in img.keys():
+                        vjoined = False
+                    else:
+                        vjoined = (img['joined'] > 0)
+                    imgout = {'id': img['iid'], 'tags': img['image_tags'],
+                              'is_public': img['is_public'], 'joined': vjoined}
+                    if vjoined:
+                        if is_primary:
+                            imgout['joined_from'] = objimgset['iid']
+                            imgout['joined_to'] = img['image_set_iid']
+                        else:
+                            imgout['joined_from'] = img['image_set_iid']
+                            imgout['joined_to'] = imgprim['primary_image_set_iid']
+                    if 'filename' in img.keys() and img['filename'] != '':
+                        imgout['filename'] = img['filename']
+                    else:
+                        imgout['filename'] = 'undefined'
+                    imgout['imgset_date_stamp'] = objimgset['date_stamp']
+                    imgout['imgset_updated_at'] = objimgset['updated_at'].date().isoformat()
+                    imgout['updated_at'] = img['updated_at'].date().isoformat()
+                    imgout['created_at'] = img['created_at'].date().isoformat()
+                    imgout['date_stamp'] = None
+                    if 'exif_data' in img.keys():
+                        exifd = loads(img['exif_data'])
+                        if 'date_stamp' in exifd.keys() and exifd['date_stamp']:
+                            imgout['date_stamp'] = datetime.strptime(
+                                exifd['date_stamp'], '%Y-%m-%dT%H:%M:%S').date().isoformat()
+                    for suf in ['icon', 'medium', 'thumbnail']:
+                        imgout[suf] = await self.imgurl(img['url'], suf)
+                    imgout['cover'] = (img['iid'] == cover)
+                    output['images'].append(imgout)
+                self.response(200, 'Gallery images for the image set ' + str(imageset_id) + '.', output)
+            else:
+                self.response(404, 'Imageset not found.')
+            return
 
     @api_authenticated
     async def post(self, imageset_id=None, cvrequest=None):
