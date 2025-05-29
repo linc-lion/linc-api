@@ -216,8 +216,8 @@ class AnimalsListHandler(BaseHandler):
                     obj['gender'] = imgset['gender']
                     img = await self.Images.find_one({'iid': imgset['main_image_iid']})
                     if img:
-                        obj['thumbnail'] = self.imgurl(img['url'], 'icon')
-                        obj['image'] = self.imgurl(img['url'], 'medium')
+                        obj['thumbnail'] = await self.imgurl(img['url'], 'icon')
+                        obj['image'] = await self.imgurl(img['url'], 'medium')
 
             limagesets = await self.ImageSets.find({'animal_iid': x['iid']}, {'iid': 1}).to_list(None)
             limagesets = [x['iid'] for x in limagesets]
@@ -299,9 +299,9 @@ class AnimalsListHandler(BaseHandler):
                     }
                     img = await self.Images.find_one({'iid': image['iid']})
                     if img:
-                        obji['thumbnail_url'] = self.imgurl(img['url'], 'thumbnail')
-                        obji['main_url'] = self.imgurl(img['url'], 'full')
-                        obji['url'] = self.imgurl(img['url'], 'full')
+                        obji['thumbnail_url'] = await self.imgurl(img['url'], 'thumbnail')
+                        obji['main_url'] = await self.imgurl(img['url'], 'full')
+                        obji['url'] = await self.imgurl(img['url'], 'full')
                     outimages.append(obji)
                 obj['_embedded'] = {'images': outimages}
             imgsets_output.append(obj)

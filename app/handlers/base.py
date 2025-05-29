@@ -153,11 +153,16 @@ class BaseHandler(RequestHandler, DBMethods, HTTPMethods):
             urlpath = urlpath + '_icon.jpg'
         else:
             urlpath = urlpath + '_medium.jpg'
+        
         url = await self.get_url_token(urlpath)
         if not url:
+            # Generate new URL synchronously since S3 presigned URL generation is not async
             url = self.remote.generate_presigned_url(
                 urlpath, expires_in=self.settings['S3_URL_EXPIRE_SECONDS'])
-            await self.set_url_token(urlpath, url)
+            if url:
+                await self.set_url_token(urlpath, url)
+        
+        # Handle bytes vs string conversion
         return url.decode('utf-8') if isinstance(url, bytes) else url
 
     async def set_url_token(self, token, value):
@@ -172,7 +177,8 @@ class BaseHandler(RequestHandler, DBMethods, HTTPMethods):
     async def get_url_token(self, token):
         for attempt in range(5):
             try:
-                return await self.settings['cache'].get('urltoken-' + token)
+                result = await self.settings['cache'].get('urltoken-' + token)
+                return result
             except:
                 await asyncio.sleep(0.5)
         return False
