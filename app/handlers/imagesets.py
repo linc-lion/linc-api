@@ -662,16 +662,10 @@ class ImageSetsCheckReqHandler(BaseHandler):
                         'A previous request for indentification of this image set already exists in the database.',
                         {'cv_request_id': cvreqchk['iid'], 'status': cvreqchk['status']})
                     return
-            resp_cv = 0
-            resp_wh = 0
-            try:
-                resp_cv = await self.Images.find({'image_tags': 'cv', 'image_set_iid': imageset_id}).count()
-                resp_wh = await self.Images.find(
-                    {'$or': [
-                        {'image_tags': 'whisker-left'},
-                        {'image_tags': 'whisker-right'}], 'image_set_iid': imageset_id}).count()
-            except Exception as e:
-                info(e)
+            resp_cv = await self.Images.count_documents({'image_tags': 'cv', 'image_set_iid': imageset_id})
+            resp_wh = await self.Images.count_documents(
+                {'$or': [{'image_tags': 'whisker-left'},
+                {'image_tags': 'whisker-right'}], 'image_set_iid': imageset_id})
             output = {
                 'cv': bool(resp_cv),
                 'whisker': bool(resp_wh)

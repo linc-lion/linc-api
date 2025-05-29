@@ -144,7 +144,7 @@ class AnimalsHandler(BaseHandler):
                     ivcquery = {'animal_iid': output['id'],
                                 'is_verified': False,
                                 'iid': {"$ne": output['primary_image_set_id']}}
-                    ivc = await self.ImageSets.find(ivcquery).count()
+                    ivc = await self.ImageSets.count_documents(ivcquery)
                     if ivc == 0:
                         output['is_verified'] = True
                     else:
@@ -515,7 +515,7 @@ class AnimalsHandler(BaseHandler):
             obj['gender'] = None
             ivcquery = {'animal_iid': x['iid'], 'is_verified': False,
                         'iid': {"$ne": x['primary_image_set_iid']}}
-            ivc = await self.ImageSets.find(ivcquery).count()
+            ivc = await self.ImageSets.count_documents(ivcquery)
             if ivc == 0:
                 obj['is_verified'] = True
             else:
@@ -580,14 +580,14 @@ class AnimalsHandler(BaseHandler):
             resp_cv = None
             resp_wh = None
             try:
-                resp_cv = await self.Images.find(
+                resp_cv = await self.Images.count_documents(
                     {'image_tags': ['cv'],
-                        'image_set_iid': {'$in': limagesets}}).count()
-                resp_wh = await self.Images.find(
+                     'image_set_iid': {'$in': limagesets}})
+                resp_wh = await self.Images.count_documents(
                     {'$or': [
                         {'image_tags': ['whisker-left']},
                         {'image_tags': ['whisker-right']}],
-                     'image_set_iid': {'$in': limagesets}}).count()
+                     'image_set_iid': {'$in': limagesets}})
             except Exception as e:
                 info(e)
             obj['cv'] = bool(resp_cv)

@@ -138,7 +138,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                     obj['url'] = self.imgurl(obj['url'], 'medium')
                     output.append(obj)
                 self.set_status(200)
-                n_images = await self.Images.count()
+                n_images = await self.Images.count_documents({})
                 stats = {'number_of_images': n_images, 'skip': self.skip, 'limit': self.limit}
                 self.response(200, 'Images list.', output, stats=stats)
 

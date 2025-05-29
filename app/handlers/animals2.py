@@ -33,6 +33,7 @@ from lib.rolecheck import api_authenticated
 from logging import info
 # from json import loads, dumps
 # from os import listdir
+from tornado.ioloop import IOLoop
 
 
 class AnimalsListHandler(BaseHandler):
@@ -137,14 +138,21 @@ class AnimalsListHandler(BaseHandler):
             if not len(objs):
                 self.response(404, 'Not found.')
                 return
-            await self.write_token(key=token, data=data, expiration_s=expiration_ex)
-            # Inserting task on APSchedule
-            self.scheduler.add_job(
-                AnimalsListHandler.process_list, args=(self, token, objs, orgnames), id='process_list')
+
+            # Process data directly instead of using APScheduler
+            outputs = await self.list(objs, orgnames)
+            expiresat = (
+                datetime.now(self.utc) +
+                timedelta(seconds=60)).strftime("%Y/%m/%d/ %H:%M:%S")
+            data = {'status_code': 200,
+                    'message': 'Os dados foram processados.',
+                    'data': outputs,
+                    'expires': expiresat}
+            await self.write_token(token, data, 60)
             self.response(
                 200,
-                'Processamento Agendado. Token para obter os dados: '
-                '?token=<id>.', {'token': {'id': token, 'expires': expiresat}})
+                'Dados processados com sucesso.',
+                {'token': {'id': token, 'expires': expiresat}})
 
     @api_authenticated
     async def list(self, objs, orgnames):
@@ -172,7 +180,7 @@ class AnimalsListHandler(BaseHandler):
             obj['gender'] = None
             ivcquery = {'animal_iid': x['iid'], 'is_verified': False,
                         'iid': {"$ne": x['primary_image_set_iid']}}
-            ivc = await self.ImageSets.find(ivcquery).count()
+            ivc = await self.ImageSets.count_documents(ivcquery)
             obj['is_verified'] = (ivc == 0)
             obj['thumbnail'] = ''
             obj['image'] = ''
@@ -216,14 +224,14 @@ class AnimalsListHandler(BaseHandler):
             resp_cv = None
             resp_wh = None
             try:
-                resp_cv = await self.Images.find(
+                resp_cv = await self.Images.count_documents(
                     {'image_tags': ['cv'],
-                     'image_set_iid': {'$in': limagesets}}).count()
-                resp_wh = await self.Images.find(
+                     'image_set_iid': {'$in': limagesets}})
+                resp_wh = await self.Images.count_documents(
                     {'$or': [
                         {'image_tags': ['whisker-left']},
                         {'image_tags': ['whisker-right']}],
-                     'image_set_iid': {'$in': limagesets}}).count()
+                     'image_set_iid': {'$in': limagesets}})
             except Exception as e:
                 info(e)
             obj['cv'] = bool(resp_cv)

@@ -270,7 +270,10 @@ class BaseHandler(RequestHandler, DBMethods, HTTPMethods):
         cache = dict()
         for k in lkeys:
             try:
-                if bytes(name, encoding='utf-8') in k[size:]:
+                # Convert both to bytes for comparison
+                k_bytes = k if isinstance(k, bytes) else k.encode('utf-8')
+                name_bytes = name.encode('utf-8')
+                if name_bytes in k_bytes[size:]:
                     data = loads(await self.cache.get(k))
                     sid = k.decode('utf-8')
                     cache = {
