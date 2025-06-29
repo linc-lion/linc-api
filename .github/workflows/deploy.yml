@@ -27,40 +27,10 @@ jobs:
           exit 1
       
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      
-      - name: Install Heroku CLI
-        run: |
-          curl https://cli-assets.heroku.com/install.sh | sh
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-          heroku --version
-      
-      - name: Login to Heroku
-        run: |
-          echo "machine api.heroku.com" >> ~/.netrc
-          echo "  login ${{ secrets.HEROKU_SERVICE_ACCOUNT_EMAIL }}" >> ~/.netrc
-          echo "  password ${{ secrets.HEROKU_API_KEY }}" >> ~/.netrc
-          echo "machine git.heroku.com" >> ~/.netrc
-          echo "  login ${{ secrets.HEROKU_SERVICE_ACCOUNT_EMAIL }}" >> ~/.netrc
-          echo "  password ${{ secrets.HEROKU_API_KEY }}" >> ~/.netrc
-          chmod 600 ~/.netrc
-          heroku auth:whoami
-      
-      - name: Check Heroku app exists
-        run: |
-          heroku apps:info --app ${{ env.HEROKU_APP_NAME }}
-      
-      - name: Add Heroku remote
-        run: |
-          heroku git:remote -a ${{ env.HEROKU_APP_NAME }}
-          git remote -v
       
       - name: Deploy to Heroku
-        run: |
-          git push heroku HEAD:main --force
-      
-      - name: Check deployment status
-        run: |
-          heroku ps --app ${{ env.HEROKU_APP_NAME }}
-          heroku logs --tail --app ${{ env.HEROKU_APP_NAME }} --num 50
+        uses: heroku/heroku-buildpack-deploy@v1.0.0
+        with:
+          heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
+          heroku_app_name: ${{ env.HEROKU_APP_NAME }}
+          heroku_email: ${{ secrets.HEROKU_SERVICE_ACCOUNT_EMAIL }}
