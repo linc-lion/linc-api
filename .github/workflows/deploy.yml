@@ -64,4 +64,3 @@ jobs:
         run: |
           heroku ps --app ${{ env.HEROKU_APP_NAME }}
           heroku logs --tail --app ${{ env.HEROKU_APP_NAME }} --num 50
-git s
