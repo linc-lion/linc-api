@@ -38,7 +38,13 @@ jobs:
       
       - name: Login to Heroku
         run: |
-          echo ${{ secrets.HEROKU_API_KEY }} | heroku auth:token --stdin
+          echo "machine api.heroku.com" >> ~/.netrc
+          echo "  login ${{ secrets.HEROKU_SERVICE_ACCOUNT_EMAIL }}" >> ~/.netrc
+          echo "  password ${{ secrets.HEROKU_API_KEY }}" >> ~/.netrc
+          echo "machine git.heroku.com" >> ~/.netrc
+          echo "  login ${{ secrets.HEROKU_SERVICE_ACCOUNT_EMAIL }}" >> ~/.netrc
+          echo "  password ${{ secrets.HEROKU_API_KEY }}" >> ~/.netrc
+          chmod 600 ~/.netrc
           heroku auth:whoami
       
       - name: Check Heroku app exists
@@ -58,3 +64,4 @@ jobs:
         run: |
           heroku ps --app ${{ env.HEROKU_APP_NAME }}
           heroku logs --tail --app ${{ env.HEROKU_APP_NAME }} --num 50
+git s
