@@ -25,12 +25,36 @@ jobs:
         run: |
           echo "Error: Deployment to production from a branch other than main is not allowed."
           exit 1
+
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Install Heroku CLI
         run: |
-          curl https://cli-assets.heroku.com/install.sh | sh 
-      - uses: actions/checkout@v2
-      - uses: akhileshns/heroku-deploy@581dd286c962b6972d427fcf8980f60755c15520 # v3.13.15
-        with:
-          heroku_api_key: ${{ secrets.HEROKU_API_KEY }}
-          heroku_app_name: ${{ env.HEROKU_APP_NAME }}
-          heroku_email: ${{ secrets.HEROKU_SERVICE_ACCOUNT_EMAIL }}
+          curl https://cli-assets.heroku.com/install.sh | sh
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+          heroku --version
+
+      - name: Login to Heroku
+        run: |
+          echo ${{ secrets.HEROKU_API_KEY }} | heroku auth:token --stdin
+          heroku auth:whoami
+
+      - name: Check Heroku app exists
+        run: |
+          heroku apps:info --app ${{ env.HEROKU_APP_NAME }}
+
+      - name: Add Heroku remote
+        run: |
+          heroku git:remote -a ${{ env.HEROKU_APP_NAME }}
+          git remote -v
+
+      - name: Deploy to Heroku
+        run: |
+          git push heroku HEAD:main --force
+
+      - name: Check deployment status
+        run: |
+          heroku ps --app ${{ env.HEROKU_APP_NAME }}
+          heroku logs --tail --app ${{ env.HEROKU_APP_NAME }} --num 50
