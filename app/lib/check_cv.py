@@ -68,10 +68,16 @@ def checkresults(db, api):
         cvres = db.cvresults.find_one({'cvrequest_iid': cvreq['iid']})
         # Restart after 10 minutes
         if cvres:
+            # Get timestamps in a consistent format for comparison
+            created_at_timestamp = cvres['created_at'].timestamp()
+            now_timestamp = datetime.now().timestamp()
+            time_diff = now_timestamp - created_at_timestamp
+            
             info('  >> Created at: {}'.format(cvres['created_at']))
             info('  >>        now: {}'.format(datetime.now()))
-            if (datetime.now() - cvres['created_at']).seconds > time_limit:
-                #info("  !!! The recognition process took more than 10 minutes... restarting")
+            info('  >> Time difference in seconds: {}'.format(time_diff))
+            
+            if time_diff > time_limit:
                 info("!!! The CV Request took more than 2 hours to finish")
                 info("!!! Marking it with error status")
                 db.cvrequests.update({'iid': cvreq['iid']}, {'$set': {'status': 'error', 'updated_at': datetime.now()}})
