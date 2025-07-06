@@ -19,6 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       HEROKU_APP_NAME: ${{ github.event.inputs.deploy_env == 'prod' && 'linc-api' || 'linc-api-staging' }}
+      HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
     steps:
       - name: Check if deploying to prod from non-main branch
         if: ${{ github.event.inputs.deploy_env == 'prod' && github.ref != 'refs/heads/main' }}
