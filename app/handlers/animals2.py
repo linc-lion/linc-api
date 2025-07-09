@@ -29,8 +29,6 @@ from datetime import timedelta
 from lib.rolecheck import api_authenticated
 # from schematics.exceptions import ValidationError
 from logging import info
-# from json import loads, dumps
-# from os import listdir
 from tornado.ioloop import IOLoop
 
 
