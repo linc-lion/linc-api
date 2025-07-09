@@ -21,8 +21,6 @@
 # For more information or to contact visit linclion.org or email tech@linclion.org
 
 from handlers.base import BaseHandler
-# from models.animal import Animal
-# from models.imageset import ImageSet
 from datetime import datetime, time
 # from bson import ObjectId as ObjId
 from uuid import uuid4
