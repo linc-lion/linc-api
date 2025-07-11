@@ -20,7 +20,6 @@
 #
 # For more information or to contact visit linclion.org or email tech@linclion.org
 
-from tornado.web import RequestHandler
 from handlers.base import BaseHandler
 from bson import ObjectId as ObjId
 from lib.rolecheck import api_authenticated
@@ -28,7 +27,7 @@ from logging import info
 
 
 class CVRequestsHandler(BaseHandler):
-    """ A class that handles requests about CV indentification information """
+    """ A class that handles requests about CV indentification informartion """
     SUPPORTED_METHODS = ('GET', 'POST', 'PUT', 'DELETE')
 
     @api_authenticated
@@ -51,7 +50,7 @@ class CVRequestsHandler(BaseHandler):
                     del objreq['image_set_iid']
                     objreq['requesting_organization_id'] = objreq['requesting_organization_iid']
                     del objreq['requesting_organization_iid']
-                    self.response(200, 'CV Request found.', objreq)
+                    self.response(200, 'CV Request found.',  objreq)
                 else:
                     self.response(404, 'CV Request object not found.')
         else:
@@ -84,20 +83,24 @@ class CVRequestsHandler(BaseHandler):
             query = self.query_id(req_id)
             updobj = await self.CVRequests.find_one(query)
             if updobj:
+                # removing cvrequest and cvresult related and they will be added in
+                # a history collection
                 try:
+                    # get cvresult if it exists
                     cvres = await self.CVResults.find_one({'cvrequest_iid': req_id})
                     if cvres:
                         info(cvres)
                         idcvres = ObjId(cvres['_id'])
                         del cvres['_id']
                         info(cvres)
-                        newhres = await self.db.cvresults_history.insert(cvres)
+                        newhres = await self.db.cvresults_history.insert_one(cvres)
                         info(newhres)
-                        await self.CVResults.remove({'_id': idcvres})
+                        cvres = await self.CVResults.delete_one({'_id': idcvres})
                     del updobj['_id']
-                    newhreq = await self.db.cvrequests_history.insert(updobj)
+                    newhreq = await self.db.cvrequests_history.insert_one(updobj)
                     info(newhreq)
-                    await self.CVRequests.remove(query)
+                    cvreq = await self.CVRequests.delete_one(query)
+                    info(cvreq)
                     self.response(200, 'CV Request successfully deleted.')
                 except Exception as e:
                     self.response(500, 'Fail to delete cvrequest.')
@@ -107,15 +110,14 @@ class CVRequestsHandler(BaseHandler):
             self.response(400, 'Remove requests (DELETE) must have a resource ID.')
 
     async def list(self, objs):
-        """ Implements the list output used for UI in the website """
+        """ Implements the list output used for UI in the website
+        """
         output = list()
         cvresl = await self.CVResults.find().to_list(None)
         cvresd = dict()
         for cvres in cvresl:
-            cvresd[cvres['cvrequest_iid']] = {
-                'cvres_id': cvres['iid'],
-                'cvres_obj_id': str(cvres['_id'])
-            }
+            cvresd[cvres['cvrequest_iid']] = {'cvres_id': cvres['iid'],
+                                              'cvres_obj_id': str(cvres['_id'])}
         for x in objs:
             obj = dict()
             obj['cvreq_id'] = x['iid']

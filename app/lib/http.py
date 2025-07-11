@@ -1,3 +1,4 @@
+
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest, HTTPError
 from tornado.httputil import HTTPHeaders
 from logging import info
@@ -37,7 +38,8 @@ class HTTPMethods:
         self.finish()
 
     async def api(self, url, method, body=None, headers=None, auth_username=None, auth_password=None):
-        AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient")
+        AsyncHTTPClient.configure(
+            "tornado.curl_httpclient.CurlAsyncHTTPClient")
         http_client = AsyncHTTPClient()
         dictheaders = {"content-type": "application/json"}
         if headers:
@@ -49,8 +51,7 @@ class HTTPMethods:
             'url': url,
             'method': method,
             'request_timeout': 720,
-            'validate_cert': False
-        }
+            'validate_cert': False}
         if method in ['POST', 'PUT']:
             params['body'] = body
         if auth_username:
@@ -70,6 +71,7 @@ class HTTPMethods:
             else:
                 response = e
         except Exception as e:
+            # Other errors are possible, such as IOError.
             info("Other Errors: " + str(e))
             response = e
         return response

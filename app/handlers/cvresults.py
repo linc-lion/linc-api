@@ -65,14 +65,18 @@ class CVResultsHandler(BaseHandler):
                         del objres['cvrequest_iid']
                         output = objres
                     else:
+                        # List data following the website form
                         obj_cvq = await self.CVRequests.find_one({'iid': obj_cvr['cvrequest_iid']})
                         if obj_cvq['status'] not in ['finished', 'error']:
                             self.response(400, 'CV Request still processing...')
                             return
                         req_body = loads(obj_cvq['request_body'])
+                        # for k, v in req_body.items():
+                        #     info('{} = {}'.format(k, v))
                         obj_cvr['results'] = loads(obj_cvr['match_probability'])
                         del obj_cvr['match_probability']
                         output = {'results': list()}
+                        # Prepare output
                         capabilities = obj_cvr['results']['capabilities'].copy()
                         exec_time = obj_cvr['results']['execution']
                         del obj_cvr['results']['execution']
@@ -83,15 +87,18 @@ class CVResultsHandler(BaseHandler):
                         for clf in ['cv', 'whisker']:
                             calc[clf] = dict()
                             mcalc[clf] = dict()
+                            # info(obj_cvr['results'][clf])
                             for x in obj_cvr['results'][clf]:
                                 if 'predictions' in x:
                                     for v in x['predictions']:
                                         if v['lion_id'] not in calc[clf]:
                                             calc[clf][v['lion_id']] = list()
                                         calc[clf][v['lion_id']].append(v['probability'])
-                            for l, v in calc[clf].items():
+                            for l, v  in calc[clf].items():
                                 mcalc[clf][l] = sum(v) / len(obj_cvr['results'][clf])
                             lion_keys += calc[clf].keys()
+                        # lion_keys = list(set(lion_keys + [str(i) for i in req_body['lions_submitted']]))
+                        # info(capabilities)
                         try:
                             cv_pred_accu = capabilities['cv_topk_classifier_accuracy'][len(obj_cvr['results']['cv']) - 1]
                         except Exception as e:
@@ -102,6 +109,7 @@ class CVResultsHandler(BaseHandler):
                         except Exception as e:
                             info(e)
                             whisker_pred_accu = capabilities['whisker_topk_classifier_accuracy'][-1]
+                        # for k in lion_keys:
                         for k in [str(i) for i in req_body['lions_submitted']]:
                             objres = dict()
                             objres['id'] = int(k)
@@ -115,21 +123,23 @@ class CVResultsHandler(BaseHandler):
                             objres['is_verified'] = False
                             objres['organization'] = ''
                             objres['organization_id'] = ''
+                            # get the animal
                             aobj = await self.Animals.find_one({'iid': objres['id']})
                             if aobj:
                                 objres['name'] = aobj['name']
                                 objres['primary_image_set_id'] = aobj['primary_image_set_iid']
                                 img = await self.Images.find_one(
-                                    {'image_set_iid': aobj['primary_image_set_iid'], 'image_tags': 'main-id'})
+                                    {'image_set_iid': aobj['primary_image_set_iid'],
+                                     'image_tags': 'main-id'})
                                 if img:
-                                    objres['thumbnail'] = await self.imgurl(img['url'], 'icon')
-                                    objres['image'] = await self.imgurl(img['url'], 'medium')
+                                    objres['thumbnail'] = self.imgurl(img['url'], 'icon')  # self.settings['S3_URL'] + img['url'] + '_icon.jpg'
+                                    objres['image'] = self.imgurl(img['url'], 'medium')  # self.settings['S3_URL'] + img['url'] + '_medium.jpg'
                                 else:
                                     img = await self.Images.find(
                                         {'image_set_iid': aobj['primary_image_set_iid']}).to_list(length=1)
                                     if len(img) > 0:
-                                        objres['thumbnail'] = await self.imgurl(img[0]['url'], 'thumbnail')
-                                        objres['image'] = await self.imgurl(img[0]['url'], 'icon')
+                                        objres['thumbnail'] = self.imgurl(img[0]['url'], 'thumbnail')  # self.settings['S3_URL'] + img[0]['url'] + '_icon.jpg'
+                                        objres['image'] = self.imgurl(img[0]['url'], 'icon')  # self.settings['S3_URL'] + img[0]['url'] + '_medium.jpg'
                                     else:
                                         objres['thumbnail'] = ''
                                         objres['image'] = ''
@@ -139,25 +149,31 @@ class CVResultsHandler(BaseHandler):
                                     objres['gender'] = imgss['gender']
                                     objres['tags'] = imgss['tags']
                                     objres['is_verified'] = imgss['is_verified']
-                                objres['organization_id'] = aobj['organization_iid']
-                                org = await self.db.organizations.find_one({'iid': aobj['organization_iid']})
-                                if org:
-                                    objres['organization'] = org['name']
+                                if aobj:
+                                    objres['organization_id'] = aobj['organization_iid']
+                                    org = await self.db.organizations.find_one({'iid': aobj['organization_iid']})
+                                    if org:
+                                        objres['organization'] = org['name']
                             objres['cv_confidence'] = None
                             objres['cv_prediction'] = None
                             objres['whisker_confidence'] = None
                             objres['whisker_prediction'] = None
                             if k in capabilities['valid_cv_lion_ids'] and k in mcalc['cv']:
+                                # objres['cv_confidence'] = mcalc['cv'][k]
+                                # objres['cv_prediction'] = cv_pred_accu
                                 objres['cv_confidence'] = cv_pred_accu
                                 objres['cv_prediction'] = mcalc['cv'][k]
                             if k in capabilities['valid_whisker_lion_ids'] and k in mcalc['whisker']:
+                                # objres['whisker_confidence'] = mcalc['whisker'][k]
+                                # objres['whisker_prediction'] = whisker_pred_accu
                                 objres['whisker_confidence'] = whisker_pred_accu
                                 objres['whisker_prediction'] = mcalc['whisker'][k]
                             output['results'].append(objres)
+                        # Order the results taking the top values for both
                         output['results'] = sorted(
                             output['results'],
-                            key=lambda k: (-(k['cv_prediction'] if k['cv_prediction'] else 0.0),
-                                           -(k['whisker_prediction'] if k['whisker_prediction'] else 0.0)))
+                            key=lambda k: (-(k['cv_prediction'] if k['cv_prediction'] else 0.0), -(k['whisker_prediction'] if k['whisker_prediction'] else 0.0)))
+                        # Limit list to 20 lions
                         output['results'] = output['results'][:20]
                         assoc = {'id': None, 'name': None}
                         reqstatus = '-'
@@ -216,9 +232,9 @@ class CVResultsHandler(BaseHandler):
                 try:
                     idcvres = ObjId(updobj['_id'])
                     del updobj['_id']
-                    newhres = await self.db.cvresults_history.insert(updobj)
+                    newhres = await self.db.cvresults_history.insert_one(updobj)
                     info(newhres)
-                    cvres = await self.CVResults.remove({'_id': idcvres})
+                    cvres = await self.CVResults.delete_one({'_id': idcvres})
                     info(cvres)
                     self.response(200, 'CVresult successfully deleted.')
                 except Exception as e:

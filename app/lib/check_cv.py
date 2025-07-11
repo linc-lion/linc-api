@@ -20,6 +20,7 @@
 
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest, HTTPError
 from tornado.httputil import HTTPHeaders
+
 from logging import info
 from datetime import datetime
 from json import dumps, loads
@@ -29,23 +30,28 @@ from os import environ
 
 async def checkresults(db, api):
     ini = time()
-    info('========================================================================')
+    info('=========================================================================')
     info(' Starting CV Request processing - {}'.format(datetime.now().isoformat()))
-    info('========================================================================')
+    info('=========================================================================')
     try:
         time_limit = int(environ.get('CVREQ_TIMELIMIT', 7200))
     except Exception as e:
         info(e)
         time_limit = 7200
+    # Check results execute GET in the CV Server URL to acquire results for cv requests
     AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient")
     http_client = AsyncHTTPClient()
     cvreqs = db.cvrequests.find()
+    # retrieve data from the cursor
     lcvreqids = [x['iid'] for x in cvreqs]
-    rmcv = db.cvresults.remove({'cvrequest_iid': {'$nin': lcvreqids}}, multi=True)
+    rmcv = db.cvresults.delete_many({'cvrequest_iid': {'$nin': lcvreqids}})
     info('    Clear cvresults without cvrequests: {}'.format(rmcv))
+    # Get ids with status != finished or error
     cvreqs = db.cvrequests.find({'status': {'$nin': ['finished', 'error']}})
+    # retrieve data from the cursor
     cvreqs = [x for x in cvreqs]
     info('    CV Request not finished of error - count: ' + str(len(cvreqs)))
+    # Connection preset
     params = {
         'headers': HTTPHeaders({"content-type": "application/json", "ApiKey": api['CV_APIKEY']}),
         'url': api['CVSERVER_URL'] + '/linc/v1/classify',
@@ -53,28 +59,31 @@ async def checkresults(db, api):
         'body': '',
         'request_timeout': 5,
         'validate_cert': False}
+    # Check if cvresults exists
     for cvreq in cvreqs:
         info("========================================================================")
         info(" ### Checking CV Request: " + str(cvreq['iid']) + " ###")
         info("  ## Image set submitted: " + str(cvreq['image_set_iid']) + " ##")
         cvres = db.cvresults.find_one({'cvrequest_iid': cvreq['iid']})
+        # Restart after 10 minutes
         if cvres:
             info('  >> Created at: {}'.format(cvres['created_at']))
             info('  >>        now: {}'.format(datetime.now()))
             if (datetime.now() - cvres['created_at']).seconds > time_limit:
+                #info("  !!! The recognition process took more than 10 minutes... restarting")
                 info("!!! The CV Request took more than 2 hours to finish")
                 info("!!! Marking it with error status")
-                db.cvrequests.update({'iid': cvreq['iid']}, {'$set': {'status': 'error', 'updated_at': datetime.now()}})
-                cvrem_restart = db.cvresults.remove({'cvrequest_iid': cvreq['iid']})
+                db.cvrequests.update_one({'iid': cvreq['iid']}, {'$set': {'status': 'error', 'updated_at': datetime.now()}})
+                cvrem_restart = db.cvresults.delete_one({'cvrequest_iid': cvreq['iid']})
                 cvres = None
                 info("========================================================================")
                 continue
         if not cvres:
-            iid = db.counters.find_and_modify(
-                query={'_id': 'cvresults'},
+            # Create the CVResults
+            iid = db.counters.find_one_and_update(
+                filter={'_id': 'cvresults'},
                 update={'$inc': {'next': 1}},
-                new=True,
-                upsert=True)
+                return_document=True, upsert=True)
             newcvres = dict()
             newcvres['cvrequest_iid'] = cvreq['iid']
             newcvres['iid'] = iid['next']
@@ -82,25 +91,31 @@ async def checkresults(db, api):
             dt = datetime.now()
             newcvres['created_at'] = dt
             newcvres['updated_at'] = dt
-            ncvresobjid = db.cvresults.insert(newcvres)
-            info('CV results created id: ' + str(ncvresobjid))
+            ncvresobjid = db.cvresults.insert_one(newcvres)
+            info('CV results created id: ' + str(ncvresobjid.inserted_id))
             cvres = db.cvresults.find_one({'cvrequest_iid': cvreq['iid']})
+        # Cvres exists, so try to get data
         info('  ## CV Results id.....: {}  ## '.format(cvres['iid']))
         req_body = loads(cvreq['request_body'])
         resp_cvr = loads(cvres['match_probability'])
         if len(resp_cvr) == 0:
             resp_cvr['cv'] = list()
             resp_cvr['whisker'] = list()
+        # Check for cv results
+        # cv_topk_classifier_accuracy
+        # whisker_topk_classifier_accuracy
         if not req_body.get('classifiers', False):
             info(' >>> CV Request invalid - id: {}'.format(cvreq['iid']))
             info(' >>> No classifiers found.')
         else:
+            # Check CV
             finished = {'cv': 0, 'whisker': 0}
             for clf in ['cv', 'whisker']:
                 if req_body['classifiers'].get(clf, False):
                     info('    Processing calls for the classifier {}'.format(clf.upper()))
                     add = len(resp_cvr[clf]) == 0
                     if add:
+                        # Submit requests
                         for n, clf_call in enumerate(req_body[clf + '_calls']):
                             dparams = params.copy()
                             dparams['body'] = dumps(clf_call)
@@ -120,8 +135,10 @@ async def checkresults(db, api):
                                 info('          Call {} #{} - fail'.format(clf.upper(), n))
                                 resp_cvr[clf].append('FAILURE')
                     else:
+                        # Check results
                         for n, clf_call in enumerate(req_body[clf + '_calls']):
                             info(resp_cvr[clf][n])
+                            # {'id': '432f7612-8b7d-4132-baae-f93f094abb7f', 'status': 'PENDING', 'errors': []}
                             if isinstance(resp_cvr[clf][n], dict) and resp_cvr[clf][n].get('status', None) == 'finished':
                                 info('          Request CV #{} finished'.format(n))
                                 finished[clf] += 1
@@ -172,14 +189,14 @@ async def checkresults(db, api):
                     response = None
                 if response.code in [200, 201]:
                     info(' ### CV Request finished ###')
-                    db.cvrequests.update({'iid': cvreq['iid']}, {'$set': {'status': 'finished', 'updated_at': dt}})
+                    db.cvrequests.update_one({'iid': cvreq['iid']}, {'$set': {'status': 'finished', 'updated_at': dt}})
                     resp_cvr['capabilities'] = loads(response.body.decode('utf-8'))
                     resp_cvr['execution'] = dt.timestamp() - cvres['created_at'].timestamp()
                 else:
                     info(' Fail to retrieve capabilities info...')
-            db.cvresults.update({'cvrequest_iid': cvreq['iid']}, {'$set': {'match_probability': dumps(resp_cvr), 'updated_at': dt}})
+            db.cvresults.update_one({'cvrequest_iid': cvreq['iid']}, {'$set': {'match_probability': dumps(resp_cvr), 'updated_at': dt}})
             api['cache'].delete('imgset-' + str(cvreq['image_set_iid']))
             info('   Cache delete for image set id: {}'.format(cvreq['image_set_iid']))
-    info('========================================================================')
+    info('=========================================================================')
     info(' CV Request processing finished - Execution time: {0:.2f} s'.format(time() - ini))
-    info('========================================================================')
+    info('=========================================================================')

@@ -7,6 +7,7 @@ from os.path import realpath, dirname
 from uuid import uuid4
 from hashlib import md5
 from models.imageset import Image
+from json import dumps
 from datetime import datetime
 from schematics.exceptions import ValidationError
 from lib.rolecheck import api_authenticated
@@ -16,6 +17,7 @@ from lib.upload_s3 import upload_to_s3
 from os import remove, path
 import logging
 from http import HTTPStatus
+
 
 
 
@@ -61,7 +63,8 @@ class AutoCropperUploadHandler(BaseHandler):
     async def post(self):
 
         if 'image' not in self.input_data.keys():
-            self.response(400, 'The request to add image require the key                 "image" with the file encoded with base64.')
+            self.response(400, 'The request to add image require the key \
+                "image" with the file encoded with base64.')
             return
         if 'joined' in self.input_data.keys():
             self.response(400, 'The "joined" attribute can\'t be defined for a new image.')
@@ -76,7 +79,8 @@ class AutoCropperUploadHandler(BaseHandler):
             fh.close()
         except Exception as e:
             self.remove_file(imgname)
-            self.response(400, 'The encoded image is invalid,                 you must remake the encode using base64.')
+            self.response(400, 'The encoded image is invalid, \
+                you must remake the encode using base64.')
             return
         # Ok, image is valid
         # Now, check if it already exists in the database
@@ -148,7 +152,7 @@ class AutoCropperUploadHandler(BaseHandler):
                     # adding the hash pre calculed
                     newobj['hashcheck'] = filehash
                     if 'exif_data' in newobj.keys() and isinstance(newobj['exif_data'], dict):
-                        newobj['exif_data'] = json.dumps(newobj['exif_data'])
+                        newobj['exif_data'] = dumps(newobj['exif_data'])
                     else:
                         logging.info('No exif data found.')
                         newobj['exif_data'] = {}
@@ -185,8 +189,8 @@ class AutoCropperUploadHandler(BaseHandler):
                     newimage.validate()
                     # the new object is valid, so try to save
                     try:
-                        result = await self.Images.insert_one(newimage.to_native())
-                        newsaved = result.inserted_id
+                        newsaved = await self.Images.insert_one(newimage.to_native())
+                        newsaved = newsaved.inserted_id
                         updurl = await self.Images.update_one({'_id': newsaved}, {'$set': {'url': url + str(newsaved)}})
                         logging.info(updurl)
                         output = newimage.to_native()
@@ -198,7 +202,7 @@ class AutoCropperUploadHandler(BaseHandler):
                         self.switch_iid(output)
                         # if is Cover
                         if values['iscover']:
-                            updiscover = await self.ImageSets.update_one(
+                            updiscover = self.ImageSets.update_one(
                                 {'iid': output['image_set_id']},
                                 {'$set': {'updated_at': datetime.now(), 'main_image_iid': output['id']}})
                             logging.info(updiscover)

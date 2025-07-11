@@ -79,9 +79,12 @@ class AnimalsRelativesHandler(BaseHandler):
         else:
             self.response(404, 'Relations not found ' + fmsg)
 
-    async def relation_is_valid(self, lobj, robj, relation, callback=None):
+    async def relation_is_valid(self, lobj, robj, relation):
+        # lobj = is the data object of the lion
+        # robj = is the relative lion object
         valid_relations = [
             'mother', 'suspected_father', 'sibling', 'associate']
+        # check gender
         try:
             gender = await self.ImageSets.find_one({'iid': robj['primary_image_set_iid']}, {'gender': 1})
             gender = gender.get('gender', None)
@@ -98,7 +101,7 @@ class AnimalsRelativesHandler(BaseHandler):
             resp = False, relation.lower(), gender
         else:
             resp = True, relation.lower(), gender
-        callback(resp)
+        return resp
 
     @check_relative_endpoint
     @api_authenticated
@@ -107,6 +110,7 @@ class AnimalsRelativesHandler(BaseHandler):
         if not lobj:
             self.response(404, 'Animal not found for the id: ' + str(animal_id))
             return
+        # check data
         id_from = animal_id
         id_to = self.input_data.get('relative_id', None)
         if int(id_from) == int(id_to):
@@ -135,7 +139,7 @@ class AnimalsRelativesHandler(BaseHandler):
             self.response(400, 'Invalid relationship assignment request with the relation: %s. (The individual with the id %d is a "%s" animal.)' % (relation, int(id_to), gender))
             return
         try:
-            radd = await self.Relatives.insert(
+            radd = await self.Relatives.insert_one(
                 {'id_from': int(animal_id),
                  'id_to': int(id_to),
                  'relation': relation.lower(),
@@ -171,7 +175,7 @@ class AnimalsRelativesHandler(BaseHandler):
                 relation, int(relid), gender))
             return
         try:
-            radd = await self.Relatives.update(
+            radd = await self.Relatives.update_one(
                 {'_id': already_relative['_id']},
                 {'$set': {
                     'relation': relation.lower(),
@@ -195,7 +199,7 @@ class AnimalsRelativesHandler(BaseHandler):
         already_relative = already_relative_f or already_relative_t
         if already_relative:
             try:
-                resp = self.Relatives.remove(
+                resp = self.Relatives.delete_one(
                     {'id_from': already_relative['id_from'],
                      'id_to': already_relative['id_to']})
             except Exception as e:

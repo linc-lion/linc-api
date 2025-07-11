@@ -21,6 +21,8 @@
 # For more information or to contact visit linclion.org or email tech@linclion.org
 
 from handlers.base import BaseHandler
+# from models.animal import Animal
+# from models.imageset import ImageSet
 from datetime import datetime, time
 # from bson import ObjectId as ObjId
 from uuid import uuid4
@@ -29,47 +31,12 @@ from datetime import timedelta
 from lib.rolecheck import api_authenticated
 # from schematics.exceptions import ValidationError
 from logging import info
-from tornado.ioloop import IOLoop
+# from json import loads, dumps
+# from os import listdir
 
 
 class AnimalsListHandler(BaseHandler):
     SUPPORTED_METHODS = ('GET', 'POST')
-
-    @api_authenticated
-    async def process_list(self, token, objs, orgnames):
-        try:
-            info('===========================================================')
-            info('initiating trello data processing: %s'
-                 % datetime.now(self.utc).time())
-            info('===========================================================')
-            outputs = await self.list(objs, orgnames)
-            # Saving New Trello data on Redis Cache
-            expiresat = (
-                datetime.now(self.utc) +
-                timedelta(seconds=60)).strftime("%Y/%m/%d/ %H:%M:%S")
-            data = {'status_code': 200,
-                    'message': 'Os dados foram processados.',
-                    'data': outputs,
-                    'expires': expiresat}
-
-            await self.write_token(token, data, 60)
-            info('<><><><><><><><><><><><><><><><><><><><><><><><><><><>')
-            info('processing ended: %s' % datetime.now(self.utc).time())
-            info('<><><><><><><><><><><><><><><><><><><><><><><><><><><>')
-
-        except Exception as e:
-            expiresat = (
-                datetime.now(self.utc) +
-                timedelta(seconds=60)).strftime("%Y/%m/%d/ %H:%M:%S")
-            data = {'status_code': 400,
-                    'message': 'Falha no processamento dos dados.',
-                    'data': {},
-                    'expires': expiresat}
-            await self.write_token(token, data, 60)
-            info('<><><><><><><><><><><><><><><><><><><><><><><><><><><>')
-            info('Processing error... %s', str(e))
-            info('<><><><><><><><><><><><><><><><><><><><><><><><><><><>')
-
 
     @api_authenticated
     async def get(self):
@@ -79,6 +46,7 @@ class AnimalsListHandler(BaseHandler):
         if not auth:
             self.response(403, 'O token informado não é válido.', {})
             return
+        # try:
         message = auth['message']
         info('message %s', message)
         if auth['status_code'] == 206:
@@ -86,6 +54,11 @@ class AnimalsListHandler(BaseHandler):
                 auth['message'] + ' Token válido até: ' + auth['expires'])
         self.response(
             auth['status_code'], message, auth['data'])
+        # return
+        # except Exception as e:
+        #     info(str(e))
+        #     self.response(400, 'Falha na execução desta operação.', {})
+        #     return
 
     @api_authenticated
     async def post(self):
@@ -118,6 +91,7 @@ class AnimalsListHandler(BaseHandler):
             'status_code': 206,
             'message': 'Os dados estão sendo processados.',
             'data': {}, 'expires': expiresat}
+        # try:
         if True:
             org_filter = self.get_argument('org_id', None)
             info("org_filter: %s", org_filter)
@@ -134,8 +108,7 @@ class AnimalsListHandler(BaseHandler):
             if not len(objs):
                 self.response(404, 'Not found.')
                 return
-
-            # Process data directly instead of using APScheduler
+            await self.write_token(key=token, data=data, expiration_s=expiration_ex)
             outputs = await self.list(objs, orgnames)
             expiresat = (
                 datetime.now(self.utc) +
@@ -149,8 +122,12 @@ class AnimalsListHandler(BaseHandler):
                 200,
                 'Dados processados com sucesso.',
                 {'token': {'id': token, 'expires': expiresat}})
+        # except Exception as e:
+        #     info(str(e))
+        #     if token:
+        #         yield Task(self.clear_token, token)
+        #     self.response(400, "Falha no Processamento dos dados.")
 
-    @api_authenticated
     async def list(self, objs, orgnames):
         """Implement the list output used for UI in the website."""
         is_admin = (self.current_user['role'] == 'admin')
@@ -177,7 +154,10 @@ class AnimalsListHandler(BaseHandler):
             ivcquery = {'animal_iid': x['iid'], 'is_verified': False,
                         'iid': {"$ne": x['primary_image_set_iid']}}
             ivc = await self.ImageSets.count_documents(ivcquery)
-            obj['is_verified'] = (ivc == 0)
+            if ivc == 0:
+                obj['is_verified'] = True
+            else:
+                obj['is_verified'] = False
             obj['thumbnail'] = ''
             obj['image'] = ''
             if x['primary_image_set_iid'] > 0:
@@ -190,10 +170,24 @@ class AnimalsListHandler(BaseHandler):
                     else:
                         obj['age'] = '-'
                         obj['date_of_birth'] = '-'
-                    obj['date_stamp'] = imgset['date_stamp'] if imgset['date_stamp'] else '-'
-                    obj['tags'] = imgset['tags'] if imgset['tags'] else None
-                    obj['geopos_private'] = imgset.get('geopos_private', False)
-                    obj['notes'] = imgset.get('notes', '')
+                    if imgset['date_stamp']:
+                        obj['date_stamp'] = imgset['date_stamp']
+                    else:
+                        obj['date_stamp'] = '-'
+                    if imgset['tags']:
+                        obj['tags'] = imgset['tags']
+                    else:
+                        obj['tags'] = None
+
+                    if 'geopos_private' in imgset.keys():
+                        obj['geopos_private'] = imgset['geopos_private']
+                    else:
+                        obj['geopos_private'] = False
+
+                    if imgset['notes']:
+                        obj['notes'] = imgset['notes']
+                    else:
+                        obj['notes'] = ''
 
                     can_show = (True if (is_admin or org_iid == obj['organization_id']) else False) if obj['geopos_private'] else True
                     if can_show:
@@ -203,18 +197,24 @@ class AnimalsListHandler(BaseHandler):
                         else:
                             obj['latitude'] = None
                             obj['longitude'] = None
-                        obj['tag_location'] = imgset.get('tag_location')
+
+                        if 'tag_location' in imgset.keys():
+                            obj['tag_location'] = imgset['tag_location']
+                        else:
+                            obj['tag_location'] = None
                     else:
                         obj['latitude'] = None
                         obj['longitude'] = None
                         obj['tag_location'] = None
 
                     obj['gender'] = imgset['gender']
-                    img = await self.Images.find_one({'iid': imgset['main_image_iid']})
+                    # obj['is_verified'] = imgset['is_verified']
+                    img = await self.Images.find_one(
+                        {'iid': imgset['main_image_iid']})
                     if img:
-                        obj['thumbnail'] = await self.imgurl(img['url'], 'icon')
-                        obj['image'] = await self.imgurl(img['url'], 'medium')
-
+                        obj['thumbnail'] = self.imgurl(img['url'], 'icon') # self.settings['S3_URL'] + img['url'] + '_icon.jpg'
+                        obj['image'] = self.imgurl(img['url'], 'medium') # self.settings['S3_URL'] + img['url'] + '_medium.jpg'
+            # Check algorithms
             limagesets = await self.ImageSets.find({'animal_iid': x['iid']}, {'iid': 1}).to_list(None)
             limagesets = [x['iid'] for x in limagesets]
             resp_cv = None
@@ -222,9 +222,10 @@ class AnimalsListHandler(BaseHandler):
             try:
                 resp_cv = await self.Images.count_documents(
                     {'image_tags': ['cv'],
-                     'image_set_iid': {'$in': limagesets}})
+                        'image_set_iid': {'$in': limagesets}})
                 resp_wh = await self.Images.count_documents(
                     {'$or': [
+                        # {'image_tags': ['whisker']},
                         {'image_tags': ['whisker-left']},
                         {'image_tags': ['whisker-right']}],
                      'image_set_iid': {'$in': limagesets}})
@@ -235,7 +236,6 @@ class AnimalsListHandler(BaseHandler):
             output.append(obj)
         return output
 
-    @api_authenticated
     async def prepare_output(self, objs, noimages=False):
         is_admin = (self.current_user['role'] == 'admin')
         org_iid = self.current_user['org_id']
@@ -245,62 +245,84 @@ class AnimalsListHandler(BaseHandler):
         objanimal['name'] = objs['name']
         objanimal['organization_id'] = objs['organization_iid']
         objanimal['primary_image_set_id'] = objs['primary_image_set_iid']
-        objanimal['dead'] = objs.get('dead', False)
-
-        imgsets = await self.ImageSets.find({'animal_iid': objanimal['id']}).to_list(None)
+        if 'dead' in objs.keys():
+            objanimal['dead'] = objs['dead']
+        else:
+            objanimal['dead'] = False
+        # Get imagesets for the animal
+        imgsets = await self.ImageSets.find(
+            {'animal_iid': objanimal['id']}).to_list(None)
         imgsets_output = list()
         for oimgst in imgsets:
             obj = dict()
             obj['id'] = oimgst['iid']
             obj['is_verified'] = oimgst['is_verified']
-            obj['geopos_private'] = oimgst.get('geopos_private', False)
+
+            if 'geopos_private' in oimgst.keys():
+                obj['geopos_private'] = oimgst['geopos_private']
+            else:
+                obj['geopos_private'] = False
 
             can_show = (True if (is_admin or org_iid == objs['organization_id']) else False) if obj['geopos_private'] else True
             if can_show:
-                if 'location' in oimgst and oimgst['location']:
+                if 'location' in oimgst.keys() and oimgst['location']:
                     obj['latitude'] = oimgst['location'][0][0]
                     obj['longitude'] = oimgst['location'][0][1]
                 else:
                     obj['latitude'] = None
                     obj['longitude'] = None
-                obj['tag_location'] = oimgst.get('tag_location')
+                if 'tag_location' in oimgst.keys():
+                    obj['tag_location'] = oimgst['tag_location']
+                else:
+                    obj['tag_location'] = None
             else:
                 obj['latitude'] = None
                 obj['longitude'] = None
                 obj['tag_location'] = None
 
             obj['gender'] = oimgst['gender']
-            obj['date_of_birth'] = oimgst['date_of_birth'].strftime('%Y-%m-%dT%H:%M:%S.%fZ') if oimgst['date_of_birth'] else None
+            if oimgst['date_of_birth']:
+                obj['date_of_birth'] = oimgst['date_of_birth'].strftime('%Y-%m-%dT%H:%M:%S.%fZ')
+            else:
+                obj['date_of_birth'] = None
             obj['main_image_id'] = oimgst['main_image_iid']
             obj['uploading_organization_id'] = oimgst['uploading_organization_iid']
             obj['notes'] = oimgst['notes']
             obj['owner_organization_id'] = oimgst['owner_organization_iid']
             obj['user_id'] = oimgst['uploading_user_iid']
-
-            cvreq = await self.CVRequests.find_one({'image_set_iid': oimgst['iid']})
-            obj['has_cv_request'] = bool(cvreq)
-            obj['has_cv_result'] = bool(await self.CVResults.find_one({'cvrequest_iid': cvreq['iid']})) if cvreq else False
-
+            cvreq = await self.CVRequests.find_one(
+                {'image_set_iid': oimgst['iid']})
+            if cvreq:
+                obj['has_cv_request'] = True
+                cvres = await self.CVResults.find_one(
+                    {'cvrequest_iid': cvreq['iid']})
+                if cvres:
+                    obj['has_cv_result'] = True
+                else:
+                    obj['has_cv_result'] = False
+            else:
+                obj['has_cv_request'] = False
+                obj['has_cv_result'] = False
             if not noimages:
-                images = await self.Images.find({'image_set_iid': oimgst['iid']}).to_list(None)
-                outimages = []
+                images = await self.Images.find(
+                    {'image_set_iid': oimgst['iid']}).to_list(None)
+                outimages = list()
                 for image in images:
-                    obji = {
-                        'id': image['iid'],
-                        'image_tags': image.get('image_tags', []),
-                        'is_public': image['is_public'],
-                        'thumbnail_url': '',
-                        'main_url': '',
-                        'url': ''
-                    }
+                    obji = dict()
+                    obji['id'] = image['iid']
+                    obji['image_tags'] = image['image_tags'] if 'image_tags' in image else []
+                    obji['is_public'] = image['is_public']
+                    # This will be recoded
+                    obji['thumbnail_url'] = ''
+                    obji['main_url'] = ''
+                    obji['url'] = ''
                     img = await self.Images.find_one({'iid': image['iid']})
                     if img:
-                        obji['thumbnail_url'] = await self.imgurl(img['url'], 'thumbnail')
-                        obji['main_url'] = await self.imgurl(img['url'], 'full')
-                        obji['url'] = await self.imgurl(img['url'], 'full')
+                        obji['thumbnail_url'] = self.imgurl(img['url'], 'thumbnail') # self.settings['S3_URL'] + img['url'] + '_thumbnail.jpg'
+                        obji['main_url'] = self.imgurl(img['url'], 'full') # self.settings['S3_URL'] + img['url'] + '_full.jpg'
+                        obji['url'] = self.imgurl(img['url'], 'full') # self.settings['S3_URL'] + img['url'] + '_full.jpg'
                     outimages.append(obji)
                 obj['_embedded'] = {'images': outimages}
             imgsets_output.append(obj)
-
         objanimal['_embedded'] = {'image_sets': imgsets_output}
         return objanimal

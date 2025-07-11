@@ -21,7 +21,6 @@
 # For more information or to contact visit linclion.org or email tech@linclion.org
 
 import os
-import asyncio
 from handlers.base import BaseHandler
 from models.imageset import Image
 from bson import ObjectId as ObjId
@@ -91,7 +90,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
             if len(limgs) > 0:
                 urls = list()
                 for x in limgs:
-                    iurl = await self.imgurl(x['url'], 'full')
+                    iurl = self.imgurl(x['url'], 'full')
                     if 'filename' not in x.keys() or x['filename'] == '':
                         fname = 'imageset_' + str(x['image_set_iid']) + '_image_' + str(x['iid']) + '.jpg'
                     else:
@@ -109,6 +108,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                     objs = await self.Images.find().skip(self.skip).limit(self.limit).to_list(None)
                     self.response(200, 'Images list.', self.list(objs))
                 else:
+                    # return a specific image accepting as id the integer id, hash and name
                     query = self.query_id(image_id)
                     info(query)
                     objs = await self.Images.find_one(query)
@@ -119,13 +119,15 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                         del objimage['_id']
                         objimage['image_set_id'] = objimage['image_set_iid']
                         del objimage['image_set_iid']
-                        objimage['url'] = await self.imgurl(objimage['url'], 'medium')
+                        objimage['url'] = self.imgurl(objimage['url'], 'medium')
+
                         self.set_status(200)
                         self.finish(self.json_encode({'status': 'success', 'data': objimage}))
                     else:
                         self.set_status(404)
                         self.finish(self.json_encode({'status': 'error', 'message': 'not found'}))
             else:
+                # return a list of images
                 objs = await self.Images.find().skip(self.skip).limit(self.limit).to_list(None)
                 output = list()
                 for x in objs:
@@ -135,9 +137,11 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                     self.switch_iid(obj)
                     obj['image_set_id'] = obj['image_set_iid']
                     del obj['image_set_iid']
-                    obj['url'] = await self.imgurl(obj['url'], 'medium')
+                    obj['url'] = self.imgurl(obj['url'], 'medium')
                     output.append(obj)
                 self.set_status(200)
+                # self.finish(self.json_encode({'status': 'success', 'message': 'Images list.', 'data': output}))
+                # Pagination stats
                 n_images = await self.Images.count_documents({})
                 stats = {'number_of_images': n_images, 'skip': self.skip, 'limit': self.limit}
                 self.response(200, 'Images list.', output, stats=stats)
@@ -145,10 +149,22 @@ class ImagesHandler(BaseHandler, ProcessMixin):
     @api_authenticated
     async def post(self, updopt=None):
         info(updopt)
+        # if updopt == 'start':
+        #     info('Success calling from itself.')
+        #     self.response(200, 'Success calling from itself.')
+        #     return
+        # create a new image
+        ########################################################################
+        # Checking everything
+        ########################################################################
         if not updopt:
             self.response(400, 'Uploads must be requested \
                 calling /images/upload.')
             return
+        # if not self.s3con:
+        #    self.response(500, 'Fail to connect to S3. You must request support.')
+        #    return
+        # Check if file was sent and if its hash md5 already exists
         if 'image' not in self.input_data.keys():
             self.response(400, 'The request to add image require the key \
                 "image" with the file encoded with base64.')
@@ -156,6 +172,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
         if 'joined' in self.input_data.keys():
             self.response(400, 'The "joined" attribute can\'t be defined for a new image.')
             return
+        # Check if its a valid image
         dirfs = dirname(realpath(__file__))
         imgname = dirfs + '/' + str(uuid4()) + '.img'
         try:
@@ -167,17 +184,25 @@ class ImagesHandler(BaseHandler, ProcessMixin):
             self.response(400, 'The encoded image is invalid, \
                 you must remake the encode using base64.')
             return
+        # Ok, image is valid
+        # Now, check if it already exists in the database
         image_file = open(imgname, 'rb').read()
         filehash = md5(image_file).hexdigest()
-        imgaexists = await self.Images.find_one({'hashcheck': filehash})
+        imgaexists = await self.Images.find_one(
+            {'hashcheck': filehash})
         if imgaexists:
             self.remove_file(imgname)
             info('File already exists!')
             self.response(409, 'The file already exists in the system.')
             return
-
+        #####
+        # everything checked, so good to go.
+        #####
+        # parse data recept by POST and get only fields of the object
         newobj = self.parseInput(Image)
+        # getting new integer id
         newobj['iid'] = await self.new_iid(Image.collection())
+        # prepare new obj
         dt = datetime.now()
         newobj['created_at'] = dt
         newobj['updated_at'] = dt
@@ -202,43 +227,54 @@ class ImagesHandler(BaseHandler, ProcessMixin):
             folder_name = 'imageset_' + str(isexists['iid']) + '_' + str(isexists['_id'])
             url = folder_name + '/' + dt.date().isoformat() + '_image_' + str(newobj['iid']) + '_'
             newobj['url'] = url
+            # adding the hash pre calculed
             newobj['hashcheck'] = filehash
+            # info(newobj)
             if 'exif_data' in newobj.keys() and isinstance(newobj['exif_data'], dict):
                 newobj['exif_data'] = dumps(newobj['exif_data'])
             else:
                 info('No exif data found.')
                 newobj['exif_data'] = {}
+            # Force joined as None since only associated imagesets can have images joined to the primary imageset
             newobj['joined'] = 0
+            # info(newobj)
             newimage = Image(newobj)
             newimage.validate()
+            # the new object is valid, so try to save
             try:
-                newsaved = await self.Images.insert(newimage.to_native())
-                updurl = await self.Images.update({'_id': newsaved}, {'$set': {'url': url + str(newsaved)}})
+                newsaved = await self.Images.insert_one(newimage.to_native())
+                updurl = await self.Images.update_one({'_id': newsaved.inserted_id}, {'$set': {'url': url + str(newsaved.inserted_id)}})
                 info(updurl)
                 output = newimage.to_native()
-                output['obj_id'] = str(newsaved)
-                output['url'] = url + str(newsaved)
+                # File data saved, now start to
+                output['obj_id'] = str(newsaved.inserted_id)
+                output['url'] = url + str(newsaved.inserted_id)
                 output['image_set_id'] = output['image_set_iid']
                 del output['image_set_iid']
                 self.switch_iid(output)
+                # if is Cover
                 if self.input_data['iscover']:
-                    updiscover = self.ImageSets.update(
+                    updiscover = self.ImageSets.update_one(
                         {'iid': output['image_set_id']},
                         {'$set': {'updated_at': datetime.now(), 'main_image_iid': output['id']}})
                     info(updiscover)
+                # Info to processing image
                 self.process = True
                 self.imgname = imgname
                 self.imgid = str(output['id'])
                 self.dt = dt
                 self.imgobjid = output['obj_id']
                 self.folder_name = folder_name
+                # Remove Imageset Cache
                 rem = await self.cache_remove(output['image_set_id'], 'imgset')
+                # Returning success
                 self.response(201, 'New image saved. The image processing will start for this new image.', output)
             except ValidationError as e:
                 self.remove_file(imgname)
                 self.response(400, 'Fail to save image. Errors: ' + str(e) + '.')
         except ValidationError as e:
             self.remove_file(imgname)
+            # received data is invalid in some way
             self.response(400, 'Invalid input data. Errors: ' + str(e) + '.')
 
     @api_authenticated
@@ -281,7 +317,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                             jimgset = await self.ImageSets.find_one(
                                 {'iid': int(id_imgset)})
                             if jimgset:
-                                resp = await self.Images.update(
+                                resp = await self.Images.update_one(
                                     {'iid': int(imgobj['iid'])},
                                     {'$set': {'joined': vjoined}})
                                 info(resp)
@@ -327,8 +363,11 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                 updobj['updated_at'] = dt
                 try:
                     if updurl:
+                        # The url will be changed since the imageset will be other
                         folder_name = 'imageset_' + str(imgset['iid']) + '_' + str(imgset['_id'])
                         url = folder_name + '/' + updobj['created_at'].date().isoformat() + '_image_' + str(updobj['iid']) + '_' + str(updobj['_id'])
+                        # copy image
+                        # No need to specify the target bucket if we're copying inside the same bucket
                         oldimgset = await self.ImageSets.find_one({'iid': orig_imgset_id})
                         srcurl = self.settings['S3_FOLDER'] + '/imageset_' + str(oldimgset['iid']) + '_' + str(oldimgset['_id']) + '/'
                         srcurl = srcurl + updobj['created_at'].date().isoformat() + '_image_' + str(updobj['iid']) + '_' + str(updobj['_id'])
@@ -338,33 +377,48 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                     updobj = Image(updobj)
                     updobj.validate()
                     updobj = updobj.to_native()
+                    # the object is valid, so try to save
                     try:
                         updobj['_id'] = objupdid
-                        saved = await self.Images.update(query, updobj)
+                        saved = await self.Images.update_one(query, updobj)
                         info(saved)
+                        # Ok, data saved so operate s3
+                        # Copy the image to the new imageset
+                        # Copy the full for backup
                         output = updobj
                         output['obj_id'] = str(objupdid)
                         del output['_id']
+                        # Change iid to id in the output
                         self.switch_iid(output)
 
                         if 'image_set_id' in self.input_data.keys() and updobj['image_set_iid'] != imgiid:
+                            # image set was changed
                             try:
                                 bkpcopy = self.settings['S3_FOLDER'] + '/backup/' + updobj['created_at'].date().isoformat() + '_image_' + str(updobj['iid']) + '_' + str(updobj['_id'])
                             except Exception as e:
                                 pass
+                            # self.s3con.copy(srcurl+'_full.jpg', self.settings['S3_BUCKET'],bkpcopy+'_full.jpg')
                             if not s3_copy(self.settings['S3_ACCESS_KEY'], self.settings['S3_SECRET_KEY'], self.settings['S3_BUCKET'], srcurl + '_full.jpg', bkpcopy + '_full.jpg'):
                                 info('Fail to copy ' + str(srcurl) + ' to ' + str(bkpcopy + '_full.jpg'))
                             for suf in ['_full.jpg', '_icon.jpg', '_medium.jpg', '_thumbnail.jpg']:
+                                # Copy the files
+                                # self.s3con.copy(srcurl+suf, self.settings['S3_BUCKET'],desurl+suf)
                                 if not s3_copy(self.settings['S3_ACCESS_KEY'], self.settings['S3_SECRET_KEY'], self.settings['S3_BUCKET'], srcurl + suf, desurl + suf):
-                                    info('Fail to copy ' + str(srcurl + suf) + ' to ' + str(desurl + suf))
+                                        info('Fail to copy ' + str(srcurl + suf) + ' to ' + str(desurl + suf))
+                                # Delete the source file
+                                # self.s3con.delete(srcurl+suf, self.settings['S3_BUCKET'])
                                 if not s3_delete(self.settings['S3_ACCESS_KEY'], self.settings['S3_SECRET_KEY'], self.settings['S3_BUCKET'], srcurl + suf):
                                     info('Fail to delete ' + str(srcurl + suf))
                         output['image_set_id'] = output['image_set_iid']
                         del output['image_set_iid']
+
+                        # self.finish(self.json_encode({'status': 'success', 'message': 'image updated', 'data':output}))
                         self.response(200, 'Image id ' + str(output['id']) + ' updated successfully.', output)
                     except Exception as e:
+                        # duplicated index error
                         self.response(409, 'Key violation. Errors: ' + str(e) + '.')
                 except ValidationError as e:
+                    # received data is invalid in some way
                     self.response(400, 'Invalid input data. Errors: ' + str(e) + '.')
             else:
                 self.response(404, 'Image not found.')
@@ -378,25 +432,34 @@ class ImagesHandler(BaseHandler, ProcessMixin):
             query = self.query_id(image_id)
             updobj = await self.Images.find_one(query)
             if updobj:
+                # check for references
                 try:
-                    delobj = await self.Images.remove(query)
+                    # info(updobj)
+                    delobj = await self.Images.delete_one(query)
                     info(delobj)
+                    # Delete the source file
                     bkpcopy = self.settings['S3_FOLDER'] + '/backup/' + updobj['created_at'].date().isoformat() + '_image_' + str(updobj['iid']) + '_' + str(updobj['_id']) + '_full.jpg'
                     info(bkpcopy)
                     imgset = await self.ImageSets.find_one({'iid': updobj['image_set_iid']})
                     srcurl = self.settings['S3_FOLDER'] + '/imageset_' + str(imgset['iid']) + '_' + str(imgset['_id']) + '/'
                     srcurl = srcurl + updobj['created_at'].date().isoformat() + '_image_' + str(updobj['iid']) + '_' + str(updobj['_id'])
-                    resp = await self.ImageSets.update({'main_image_iid': updobj['iid']}, {'$set': {'main_image_iid': None}})
+                    # try:
+                    #    self.s3con.delete(bkpcopy, self.settings['S3_BUCKET'])
+                    # except Exception as e:
+                    #    pass
+                    # Remove joined info from imagesets
+                    resp = await self.ImageSets.update_one({'main_image_iid': updobj['iid']}, {'$set': {'main_image_iid': None}})
                     info(resp)
                     rmlist = list()
                     try:
                         for suf in ['_full.jpg', '_icon.jpg', '_medium.jpg', '_thumbnail.jpg']:
+                            # self.s3con.delete(srcurl+suf, self.settings['S3_BUCKET'])
                             rmlist.append(srcurl + suf)
                     except Exception as e:
                         self.response(200, 'Image successfully deleted but can\'t remove files from S3. Errors: %s.' % (str(e)))
                         return
                     if len(rmlist):
-                        rmladd = await self.db.dellist.insert({'list': rmlist, 'ts': datetime.now()})
+                        rmladd = await self.db.dellist.insert_one({'list': rmlist, 'ts': datetime.now()})
                         info(rmladd)
                     self.response(200, 'Image successfully deleted.')
                 except Exception as e:
@@ -406,13 +469,13 @@ class ImagesHandler(BaseHandler, ProcessMixin):
         else:
             self.response(400, 'Remove requests (DELETE) must have a resource ID.')
 
-    async def list(self, objs, callback=None):
+    def list(self, objs):
         """Implement the list output used for UI in the website."""
         output = list()
         for x in objs:
             obj = dict()
             obj['id'] = x['iid']
-            url = await self.imgurl(x['url'], 'icon')
+            url = self.imgurl(x['url'], 'icon')
             obj['url'] = url
             output.append(obj)
         return output
@@ -426,23 +489,35 @@ class ImagesVocHandler(BaseHandler, ProcessMixin):
     async def post(self, process=False):
         info(process)
         dirfs = dirname(realpath(__file__))
+        # upload_folder = dirfs + '/upload_folder'
+        # info(upload_folder)
+        # if not exists(upload_folder):
+        #     os.mkdir(upload_folder)
         if process == 'start':
             dictheaders = {}
+            # if hasattr(self, 'current_user') and self.current_user and 'token' in self.current_user:
+            #     dictheaders['Linc-Api-AuthToken'] = self.current_user.get('token', '')
+            #     info(dictheaders)
             info(self.input_data)
             info("Launching ThreadPoolExecutor")
             EXECUTOR = ThreadPoolExecutor(max_workers=2)
-            loop = asyncio.get_event_loop()
-            future = loop.run_in_executor(EXECUTOR, process_voc, self, dirfs, self.input_data["API_URL"], self.input_data)
+            future = EXECUTOR.submit(process_voc, self, dirfs, self.input_data["API_URL"], self.input_data)
+            # yield future
+            # future.add_done_callback(lambda future: info("Processing has been done.))
+            # future.add_done_callback(lambda future: send_to_api(future.result()))
             self.response(200, 'Received start.')
             return
+        # Check whether image file.
         elif 'image_file' in self.input_data.keys():
             image_file = self.input_data['image_file']
             imgname = dirfs + '/' + image_file['filename']
             try:
+                # Save image
                 fh = open(imgname, 'wb')
                 fh.write(b64decode(image_file['image']))
                 fh.close()
                 del image_file['image']
+                # Save image metadata
                 fh = open(splitext(imgname)[0] + '.json', 'w')
                 fh.write(dumps(image_file))
                 fh.close()
@@ -453,6 +528,7 @@ class ImagesVocHandler(BaseHandler, ProcessMixin):
                 return
             self.response(200, "Image file received.")
             return
+        # Check whether voc file.
         elif 'xml_file' in self.input_data.keys():
             xmlname = dirfs + '/' + self.input_data['xml_file']['filename']
             try:

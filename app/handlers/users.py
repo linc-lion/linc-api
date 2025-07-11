@@ -86,6 +86,7 @@ class UsersHandler(BaseHandler):
                 self.response(200, 'Conservationists list.', orglist)
                 return
             else:
+                # return a specific user accepting as id the integer id, hash and name
                 query = self.query_id(user_id)
                 objs = await self.Users.find_one(query)
                 agree = await self.Agreements.find_one({'user_iid': int(user_id)})
@@ -131,8 +132,12 @@ class UsersHandler(BaseHandler):
     @api_authenticated
     @allowedRole('admin')
     async def post(self):
+        # create a new user
+        # parse data recept by POST and get only fields of the object
         newobj = self.parseInput(User)
+        # getting new integer id
         newobj['iid'] = await self.new_iid(User.collection())
+        # encrypt password
         newobj['encrypted_password'] = self.encryptPassword(self.input_data['password'])
         orgiid = self.input_data['organization_id']
         orgexists = await self.Orgs.find_one({'iid': orgiid})
@@ -144,10 +149,11 @@ class UsersHandler(BaseHandler):
         try:
             newuser = User(newobj)
             newuser.validate()
+            # the new object is valid, so try to save
             try:
-                newsaved = await self.Users.insert(newuser.to_native())
+                newsaved = await self.Users.insert_one(newuser.to_native())
                 output = newuser.to_native()
-                output['obj_id'] = str(newsaved)
+                output['obj_id'] = str(newsaved.inserted_id)
                 output['organization_id'] = output['organization_iid']
                 del output['organization_iid']
                 self.switch_iid(output)
@@ -157,13 +163,17 @@ class UsersHandler(BaseHandler):
                      'message': 'New user added.',
                      'data': output}))
             except Exception as e:
+                # duplicated index error
                 self.response(409, 'Key violation.')
         except ValidationError as e:
+            # received data is invalid in some way
             self.response(400, 'Invalid input data. Errors: %s.' % (str(e)))
 
     @api_authenticated
     @allowedRole('admin')
     async def put(self, user_id=None):
+        # update an user
+        # parse data recept by PUT and get only fields of the object
         update_data = self.parseInput(User)
         fields_allowed_to_be_update = ['email', 'organization_iid', 'admin', 'password']
         if 'organization_id' in self.input_data.keys():
@@ -174,6 +184,7 @@ class UsersHandler(BaseHandler):
             else:
                 self.response(409, "Organization referenced doesn't exist.")
                 return
+        # validate the input for update
         update_ok = False
         for k in fields_allowed_to_be_update:
             if k in self.input_data.keys():
@@ -194,22 +205,26 @@ class UsersHandler(BaseHandler):
                 try:
                     updobj = User(updobj)
                     updobj.validate()
+                    # the object is valid, so try to save
                     try:
                         updobj = updobj.to_native()
                         updobj['_id'] = updid
-                        saved = await self.Users.update({'_id': updid}, updobj)
+                        saved = await self.Users.update_one({'_id': updid}, updobj)
                         info(saved)
                         output = updobj
                         output['obj_id'] = str(updid)
                         del output['_id']
+                        # Change iid to id in the output
                         self.switch_iid(output)
                         del output['encrypted_password']
                         output['organization_id'] = output['organization_iid']
                         del output['organization_iid']
                         self.finish(self.json_encode({'status': 'success', 'message': 'User updated.', 'data': output}))
                     except Exception as e:
+                        # duplicated index error
                         self.response(409, 'Invalid data for update.')
                 except ValidationError as e:
+                    # received data is invalid in some way
                     self.response(400, 'Invalid input data. Errors: ' + str(e) + '.')
             else:
                 self.response(404, 'User not found.')
@@ -219,11 +234,14 @@ class UsersHandler(BaseHandler):
     @api_authenticated
     @allowedRole('admin')
     async def delete(self, user_id=None):
+        # delete an user
         if user_id:
             query = self.query_id(user_id)
             updobj = await self.Users.find_one(query)
             if updobj:
                 iid = updobj['iid']
+                # imageset - uploading_user_iid
+                # Imagesets now will be uploaded by the admin iid
                 imgsetrc = await self.ImageSets.update_many(
                     {'uploading_user_iid': iid},
                     {'$set':
@@ -231,9 +249,9 @@ class UsersHandler(BaseHandler):
                          'updated_at': datetime.now()}})
                 info(imgsetrc)
                 try:
-                    rmagree = await self.Agreements.remove({'user_iid': int(user_id)})
+                    rmagree = await self.Agreements.delete_one({'user_iid': int(user_id)})
                     info("user agree removed %s", rmagree)
-                    updobj = await self.Users.remove(query)
+                    updobj = await self.Users.delete_one(query)
                     self.response(200, 'User successfully deleted.')
                 except Exception as e:
                     info(e)
@@ -244,6 +262,8 @@ class UsersHandler(BaseHandler):
             self.response(400, 'Remove requests (DELETE) must have a resource ID.')
 
     def list(self, objs, orgnames=None):
+        """ Implements the list output used for UI in the website
+        """
         output = list()
         info(orgnames)
         for x in objs:

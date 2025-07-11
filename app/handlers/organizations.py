@@ -20,7 +20,6 @@
 #
 # For more information or to contact visit linclion.org or email tech@linclion.org
 
-from tornado.web import RequestHandler
 from handlers.base import BaseHandler
 from models.organization import Organization
 from bson import ObjectId as ObjId
@@ -85,28 +84,38 @@ class OrganizationsHandler(BaseHandler):
     @api_authenticated
     @allowedRole('admin')
     async def post(self):
+        # create a new organization
+        # parse data recept by POST and get only fields of the object
         newobj = self.parseInput(Organization)
+        # getting new integer id
         newobj['iid'] = await self.new_iid(Organization.collection())
         try:
             neworg = Organization(newobj)
             neworg.validate()
+            # the new object is valid, so try to save
             try:
-                newsaved = await self.db.organizations.insert(neworg.to_native())
+                newsaved = await self.db.organizations.insert_one(neworg.to_native())
                 output = neworg.to_native()
                 info(output)
                 output['obj_id'] = str(newsaved)
+                # Change iid to id in the output
                 self.switch_iid(output)
                 self.finish(self.json_encode({'status': 'success', 'message': 'new organization saved', 'data': output}))
             except Exception as e:
+                # duplicated index error
                 self.response(409, 'Duplicated name for an organization.')
         except Exception as e:
+            # received data is invalid in some way
             self.response(400, 'Invalid input data.')
 
     @api_authenticated
     @allowedRole('admin')
     async def put(self, org_id=None):
+        # update an organization
+        # parse data recept by PUT and get only fields of the object
         update_data = self.input_data
         fields_allowed_to_be_update = ['name']
+        # validate the input for update
         update_ok = False
         for k in fields_allowed_to_be_update:
             if k in update_data.keys():
@@ -124,8 +133,9 @@ class OrganizationsHandler(BaseHandler):
                     if updict:
                         updict['updated_at'] = datetime.now()
                         updid = updobj['_id']
+                        # the object is valid, so try to save
                         try:
-                            saved = await self.db.organizations.update(
+                            saved = await self.db.organizations.update_one(
                                 {'_id': updid},
                                 {'$set': updict})
                             info(saved)
@@ -134,13 +144,16 @@ class OrganizationsHandler(BaseHandler):
                             del output['_id']
                             for k, v in updict.items():
                                 output[k] = v
+                            # Change iid to id in the output
                             self.switch_iid(output)
                             self.finish(self.json_encode({'status': 'success', 'message': 'organization updated', 'data': output}))
                         except Exception as e:
+                            # duplicated index error
                             self.response(409, 'Duplicated name for an organization.')
                     else:
                         self.response(400, 'No data provided to be updated.')
                 except Exception as e:
+                    # received data is invalid in some way
                     self.response(400, 'Invalid input data.')
             else:
                 self.response(404, 'Organization not found.')
@@ -150,33 +163,37 @@ class OrganizationsHandler(BaseHandler):
     @api_authenticated
     @allowedRole('admin')
     async def delete(self, org_id=None):
+        # delete an organization
         if org_id:
             query = self.query_id(org_id)
             updobj = await self.db.organizations.find_one(query)
             if updobj:
+                # check for references
                 iid = updobj['iid']
+                # user - organization_iid
                 userrc = await self.Users.update_many(
                     {'organization_iid': iid},
-                    {'$set': {'organization_iid': self.current_user['org_id'], 'updated_at': datetime.now()}})
+                    {'$set': {'organization_iid': self.current_user['org_id'],
+                              'updated_at': datetime.now()}})
                 info(userrc)
+                # imageset - uploading_organization_iid
+                # imageset - owner_organization_iid
                 imgsetrc1 = await self.ImageSets.update_many(
                     {'uploading_organization_iid': iid},
-                    {'$set': {'uploading_organization_iid': self.current_user['org_id'], 'updated_at': datetime.now()}})
+                    {'$set':
+                        {'uploading_organization_iid': self.current_user['org_id'],
+                         'updated_at': datetime.now()}})
                 info(imgsetrc1)
-                imgsetrc2 = await self.ImageSets.update_many(
-                    {'owner_organization_iid': iid},
-                    {'$set': {'owner_organization_iid': self.current_user['org_id'], 'updated_at': datetime.now()}})
+                imgsetrc2 = await self.ImageSets.update_many({'owner_organization_iid': iid}, {'$set': {'owner_organization_iid': self.current_user['org_id'], 'updated_at': datetime.now()}})
                 info(imgsetrc2)
-                animalsrc = await self.Animals.update_many(
-                    {'organization_iid': iid},
-                    {'$set': {'organization_iid': self.current_user['org_id'], 'updated_at': datetime.now()}})
+                # animal - organization_iid
+                animalsrc = await self.Animals.update_many({'organization_iid': iid}, {'$set': {'organization_iid': self.current_user['org_id'], 'updated_at': datetime.now()}})
                 info(animalsrc)
-                cvreqrc = await self.CVRequests.update_many(
-                    {'requesting_organization_iid': iid},
-                    {'$set': {'requesting_organization_iid': self.current_user['org_id'], 'updated_at': datetime.now()}})
+                # cvrequest - uploading_organization_iid
+                cvreqrc = await self.CVRequests.update_many({'requesting_organization_iid': iid}, {'$set': {'requesting_organization_iid': self.current_user['org_id'], 'updated_at': datetime.now()}})
                 info(cvreqrc)
                 try:
-                    updobj = await self.db.organizations.remove(query)
+                    updobj = await self.db.organizations.delete_one(query)
                     self.response(200, 'Organization successfully deleted.')
                 except Exception as e:
                     self.response(500, 'Fail to delete organization.')

@@ -33,18 +33,21 @@ from lib.tokens import token_decode
 from os import remove
 from lib.db import DBMethods
 from lib.http import HTTPMethods
-import aiosmtplib
-from email.mime.text import MIMEText
+import smtplib
 from tornado.web import HTTPError
 from lib.upload_s3 import RemoteS3Files
-import asyncio
 
 
 class BaseHandler(RequestHandler, DBMethods, HTTPMethods):
+    # A class to collect common handler methods - all other handlers should inherit this one.
+
     def initialize(self):
+        # Strings configured with the specific animal
         self.animal = self.settings['animal']
         self.animals = self.settings['animals']
+        # Database reference
         self.db = self.settings['db']
+        # Collections references
         self.Agreements = self.settings['db'].agreements
         self.Animals = self.settings['db'][self.settings['animals'].lower()]
         self.Users = self.settings['db'].users
@@ -56,6 +59,7 @@ class BaseHandler(RequestHandler, DBMethods, HTTPMethods):
         self.CVResults = self.settings['db'].cvresults
         self.cache = self.settings['cache']
         self.scheduler = self.settings['scheduler']
+        # Creating remote s3 instance
         self.remote = RemoteS3Files({
             'access_key': self.settings['S3_ACCESS_KEY'],
             'secret_key': self.settings['S3_SECRET_KEY'],
@@ -65,6 +69,7 @@ class BaseHandler(RequestHandler, DBMethods, HTTPMethods):
         self.utc = pytz.timezone('UTC')
 
     def prepare(self):
+        # self.auth_check()
         self.input_data = dict()
         if self.request.method in ['POST', 'PUT'] and \
            "Content-Type" in self.request.headers.keys() and \
@@ -77,6 +82,7 @@ class BaseHandler(RequestHandler, DBMethods, HTTPMethods):
                         self.input_data[k] = v[0].decode("utf-8")
             except ValueError:
                 self.response(400, 'Fail to parse input data.')
+        # Pagination
         try:
             self.skip = int(self.get_argument('skip', 0))
         except Exception as e:
@@ -90,14 +96,17 @@ class BaseHandler(RequestHandler, DBMethods, HTTPMethods):
 
     def get_current_user(self):
         max_days_valid = 365
+        # check for https comunication
         using_ssl = (self.request.headers.get('X-Scheme', 'http') == 'https')
         if not using_ssl:
             info('Not using SSL')
         else:
             info('Using SSL')
+        # get the token for authentication
         token = self.request.headers.get("Linc-Api-AuthToken")
         res = None
         if token:
+            # Decode to test
             try:
                 token = token_decode(token, self.settings['token_secret'])
                 vtoken = web.decode_signed_value(self.settings["cookie_secret"], 'authtoken', token, max_age_days=max_days_valid)
@@ -110,6 +119,7 @@ class BaseHandler(RequestHandler, DBMethods, HTTPMethods):
                    self.settings['tokens'][dtoken['username']]['token'] == dtoken['token']:
                     res = dtoken
             else:
+                # Validation error
                 self.token_passed_but_invalid = True
         return res
 
@@ -126,7 +136,7 @@ class BaseHandler(RequestHandler, DBMethods, HTTPMethods):
         del obj['iid']
 
     def json_encode(self, value):
-        return dumps(value, default=str).replace("</", "<\/")
+        return dumps(value, default=str).replace("</", "<\\/")
 
     def set_default_headers(self):
         self.set_header('Content-Type', 'application/json; charset=UTF-8')
@@ -144,7 +154,8 @@ class BaseHandler(RequestHandler, DBMethods, HTTPMethods):
     def checkPassword(self, password, hashed):
         return bcrypt.hashpw(password, hashed) == hashed
 
-    async def imgurl(self, urlpath, imgtype='thumbnail'):
+    def imgurl(self, urlpath, imgtype='thumbnail'):
+        # type can be: full,medium,thumbnail and icon
         if imgtype == 'thumbnail':
             urlpath = urlpath + '_thumbnail.jpg'
         elif imgtype == 'full':
@@ -153,34 +164,37 @@ class BaseHandler(RequestHandler, DBMethods, HTTPMethods):
             urlpath = urlpath + '_icon.jpg'
         else:
             urlpath = urlpath + '_medium.jpg'
-        
-        url = await self.get_url_token(urlpath)
+        # Capturing object url from memory
+        url = self.get_url_token(urlpath) 
+        # Checking if the url is in memory
         if not url:
-            # Generate new URL synchronously since S3 presigned URL generation is not async
+            # Generating a new url
             url = self.remote.generate_presigned_url(
                 urlpath, expires_in=self.settings['S3_URL_EXPIRE_SECONDS'])
-            if url:
-                await self.set_url_token(urlpath, url)
-        
-        # Handle bytes vs string conversion
+            # Adding url to memory
+            self.set_url_token(urlpath, url)
+        # Decoding object url, if needed
         return url.decode('utf-8') if isinstance(url, bytes) else url
 
-    async def set_url_token(self, token, value):
+    def set_url_token(self, token, value):
+        # Attempting redis connection
         for attempt in range(5):
             try:
-                await self.settings['cache'].set('urltoken-' + token,
+                self.settings['cache'].set('urltoken-' + token, 
                     value, ex=self.settings['S3_URL_EXPIRE_SECONDS'])
                 break
             except:
-                await asyncio.sleep(0.5)
+                # Sleeping
+                time.sleep(0.5)
 
-    async def get_url_token(self, token):
+    def get_url_token(self, token):
+        # Attempting redis connection
         for attempt in range(5):
             try:
-                result = await self.settings['cache'].get('urltoken-' + token)
-                return result
+                return self.settings['cache'].get('urltoken-' + token)
             except:
-                await asyncio.sleep(0.5)
+                # Sleeping
+                time.sleep(0.5)
         return False
 
     def remove_file(self, fname):
@@ -194,93 +208,100 @@ class BaseHandler(RequestHandler, DBMethods, HTTPMethods):
         return ''.join(c for c in strs if c in txt)
 
     async def sendEmail(self, toaddr, msg):
+        resp = True
         try:
             fromaddr = self.settings['EMAIL_FROM']
             smtp_server = self.settings['SMTP_SERVER']
             smtp_username = self.settings['SMTP_USERNAME']
             smtp_password = self.settings['SMTP_PASSWORD']
             smtp_port = self.settings['SMPT_PORT']
-            
-            # Create message
-            message = MIMEText(msg)
-            message["From"] = fromaddr
-            message["To"] = toaddr
-            
-            # Send email asynchronously
-            async with aiosmtplib.SMTP(hostname=smtp_server,
-                                     port=smtp_port,
-                                     use_tls=True) as server:
-                await server.login(smtp_username, smtp_password)
-                await server.send_message(message)
-            return True
+            server = smtplib.SMTP(host=smtp_server,
+                                  port=smtp_port,
+                                  timeout=10)
+            server.set_debuglevel(10)
+            server.starttls()
+            server.ehlo()
+            server.login(smtp_username, smtp_password)
+            server.sendmail(fromaddr, toaddr, msg)
+            server.quit()
         except Exception as e:
             info(e)
-            return False
+            resp = False
+        return resp
 
     async def cache_read(self, key, prefix):
+        resp = None
         if key:
-            val = await self.cache.get(str(prefix) + '-' + str(key))
+            val = self.cache.get(str(prefix) + '-' + str(key))
             if val:
                 try:
-                    return loads(val)
+                    resp = loads(val)
                 except Exception as e:
                     info(e)
                     raise HTTPError('Fail to deserialize data from cache.')
-        return None
+        return resp
 
     async def cache_set(self, key, prefix, data=None, ttl=432000):
+        resp = None
         if key and prefix and data:
-            return await self.cache.set(str(prefix) + '-' + str(key), dumps(data), ttl)
-        return None
+            resp = self.cache.set(str(prefix) + '-' + str(key), dumps(data), ttl)
+        return resp
 
     async def cache_remove(self, key, prefix):
+        resp = None
         if key and prefix:
-            return await self.cache.delete(str(prefix) + '-' + str(key))
-        return None
+            resp = self.cache.delete(str(prefix) + '-' + str(key))
+        return resp
 
     def write_error(self, status_code=404, **kwargs):
         if status_code == 404:
-            self.response(status_code, 'Resource not found.')
+            self.response(
+                status_code, 'Resource not found.')
         elif status_code == 405:
-            self.response(status_code, 'Method not allowed in this resource. Check your verb (GET, POST, PUT and DELETE).')
+            self.response(
+                status_code, 'Method not allowed in this resource. ' +
+                'Check your verb (GET, POST, PUT and DELETE).')
         elif status_code == 403:
-            self.response(status_code, 'Resource forbidden.')
+            self.response(
+                status_code, 'Resource forbidden.'
+            )
         elif status_code == 401:
-            self.response(status_code, 'Authentication required')
+            self.response(
+                status_code, 'Authentication required'
+            )
         else:
             info(kwargs)
             self.response(status_code, 'Error: ' + str(kwargs))
 
     async def read_token(self, key):
         email = self.current_user['username']
-        name = f'polling:{email}:{key}'
+        prefix = 'polling:'+ email + ':'
+        name = prefix + str(key)
         info(name)
-        cache = await self.cache.get(name)
+        cache = self.cache.get(name)
         if cache:
             cache = loads(cache)
         return cache
 
     async def write_token(self, key='', data='', expiration_s=60):
         email = self.current_user['username']
-        name = f'polling:{email}:{key}'
+        name = 'polling:'+ email + ':' + str(key)
         info(name)
-        return await self.cache.set(
+        rresult = self.cache.set(
             name=name, value=dumps(data, default=str), ex=expiration_s)
+        return rresult
 
     async def check_token(self, key=''):
         email = self.current_user['username']
-        prefix = f'polling:{email}:'
+        prefix = 'polling:'+ email + ':'
         size = len(prefix)
         name = prefix + str(key)
-        lkeys = await self.cache.keys()
+        lkeys = self.cache.keys()
         cache = dict()
         for k in lkeys:
             try:
-                # Convert both to bytes for comparison
-                k_bytes = k if isinstance(k, bytes) else k.encode('utf-8')
-                name_bytes = name.encode('utf-8')
-                if name_bytes in k_bytes[size:]:
-                    data = loads(await self.cache.get(k))
+                if bytes(name, encoding='utf-8') in k[size:]:
+                    data = loads(self.cache.get(k))
                     sid = k.decode('utf-8')
                     cache = {
                         'cache': data,
@@ -291,17 +312,17 @@ class BaseHandler(RequestHandler, DBMethods, HTTPMethods):
 
     async def clear_token(self, token=None):
         email = self.current_user['username']
-        prefix = f'polling:{email}:'
+        prefix = 'polling:'+ email + ':'
         size = len(prefix)
         name = prefix + str(token)
         if token:
-            await self.cache.delete(name)
+            self.cache.delete(name)
         else:
-            lkeys = await self.cache.keys()
+            lkeys = self.cache.keys()
             for k in lkeys:
                 try:
                     if bytes(name, encoding='utf-8') in k[size:]:
-                        await self.cache.delete(k)
+                        self.cache.delete(k)
                 except Exception as e:
                     info(e)
         return True

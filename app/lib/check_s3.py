@@ -17,9 +17,15 @@
 #
 # For more information or to contact visit linclion.org or email tech@linclion.org
 
+from logging import info
+import boto
+from boto.s3.connection import Bucket, Key, OrdinaryCallingFormat
+
+
 async def checkS3(db, api):
     # Get list for DELETE
-    dellist = await db.dellist.find().to_list(None)
+    dellist = db.dellist.find()
+    dellist = [x for x in dellist]
     if len(dellist) > 0:
         # Connect to S3
         S3_ACCESS_KEY = api['S3_ACCESS_KEY']
@@ -47,7 +53,7 @@ async def checkS3(db, api):
                         if k.exists():
                             alldeleted = False
                     if alldeleted:
-                        res = await db.dellist.remove({'_id': rmlist['_id']})
+                        res = db.dellist.delete_one({'_id': rmlist['_id']})
                         info(res)
                 except Exception as e:
                     info(e)
