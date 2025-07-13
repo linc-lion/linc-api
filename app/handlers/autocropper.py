@@ -190,7 +190,7 @@ class AutoCropperUploadHandler(BaseHandler):
                     # the new object is valid, so try to save
                     try:
                         newsaved = await self.Images.insert_one(newimage.to_native())
-                        newsaved = newsaved.inserted_id
+
                         updurl = await self.Images.update_one({'_id': newsaved}, {'$set': {'url': url + str(newsaved)}})
                         logging.info(updurl)
                         output = newimage.to_native()

@@ -92,7 +92,7 @@ async def checkresults(db, api):
             newcvres['created_at'] = dt
             newcvres['updated_at'] = dt
             ncvresobjid = db.cvresults.insert_one(newcvres)
-            info('CV results created id: ' + str(ncvresobjid.inserted_id))
+            info('CV results created id: ' + str(ncvresobjid))
             cvres = db.cvresults.find_one({'cvrequest_iid': cvreq['iid']})
         # Cvres exists, so try to get data
         info('  ## CV Results id.....: {}  ## '.format(cvres['iid']))

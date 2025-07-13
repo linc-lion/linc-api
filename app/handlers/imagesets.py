@@ -379,7 +379,7 @@ class ImageSetsHandler(BaseHandler):
                             newsaved = CVRequest(newobj)
                             newsaved.validate()
                             newreqadd = await self.CVRequests.insert_one(newsaved.to_native())
-                            newreqadd = newreqadd.inserted_id
+
                         except Exception as e:
                             info(e)
                             self.response(500, 'Fail to create the CV Request.')

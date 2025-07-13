@@ -350,7 +350,7 @@ class AnimalsHandler(BaseHandler):
             try:
                 newsaved = await self.Animals.insert_one(newanimal.to_primitive())
                 output = newanimal.to_primitive()
-                output['obj_id'] = str(newsaved.inserted_id)
+                output['obj_id'] = str(newsaved)
                 self.switch_iid(output)
 
                 output['organization_id'] = output['organization_iid']

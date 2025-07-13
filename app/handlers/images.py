@@ -243,12 +243,12 @@ class ImagesHandler(BaseHandler, ProcessMixin):
             # the new object is valid, so try to save
             try:
                 newsaved = await self.Images.insert_one(newimage.to_native())
-                updurl = await self.Images.update_one({'_id': newsaved.inserted_id}, {'$set': {'url': url + str(newsaved.inserted_id)}})
+                updurl = await self.Images.update_one({'_id': newsaved}, {'$set': {'url': url + str(newsaved)}})
                 info(updurl)
                 output = newimage.to_native()
                 # File data saved, now start to
-                output['obj_id'] = str(newsaved.inserted_id)
-                output['url'] = url + str(newsaved.inserted_id)
+                output['obj_id'] = str(newsaved)
+                output['url'] = url + str(newsaved)
                 output['image_set_id'] = output['image_set_iid']
                 del output['image_set_iid']
                 self.switch_iid(output)
