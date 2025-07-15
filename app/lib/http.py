@@ -1,5 +1,4 @@
-from tornado.web import asynchronous
-from tornado.gen import engine
+
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest, HTTPError
 from tornado.httputil import HTTPHeaders
 from logging import info
@@ -38,9 +37,7 @@ class HTTPMethods:
         self.write(self.json_encode(output_response))
         self.finish()
 
-    @asynchronous
-    @engine
-    def api(self, url, method, body=None, headers=None, auth_username=None, auth_password=None, callback=None):
+    async def api(self, url, method, body=None, headers=None, auth_username=None, auth_password=None):
         AsyncHTTPClient.configure(
             "tornado.curl_httpclient.CurlAsyncHTTPClient")
         http_client = AsyncHTTPClient()
@@ -62,7 +59,7 @@ class HTTPMethods:
             params['auth_password'] = auth_password
         request = HTTPRequest(**params)
         try:
-            response = yield http_client.fetch(request)
+            response = await http_client.fetch(request)
         except HTTPError as e:
             info('HTTTP error returned... ')
             info(str(e))
@@ -77,4 +74,4 @@ class HTTPMethods:
             # Other errors are possible, such as IOError.
             info("Other Errors: " + str(e))
             response = e
-        callback(response)
+        return response

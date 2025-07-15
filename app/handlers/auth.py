@@ -20,8 +20,6 @@
 #
 # For more information or to contact visit linclion.org or email tech@linclion.org
 
-from tornado.web import asynchronous
-from tornado.gen import coroutine, Task
 from handlers.base import BaseHandler
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
@@ -56,16 +54,14 @@ class CheckAuthHandler(BaseHandler):
 class LoginHandler(BaseHandler):
     SUPPORTED_METHODS = ('POST')
 
-    @asynchronous
-    @coroutine
-    def post(self):
+    async def post(self):
         if 'username' in self.input_data.keys() and \
            'password' in self.input_data.keys():
             username = self.input_data['username']
             password = self.input_data['password']
             wlist = self.settings['wait_list']
             count = self.settings['attempts']
-            ouser = yield Task(self.get_user_by_email, username)
+            ouser = await self.get_user_by_email(username)
             if username in wlist.keys():
                 dt = wlist[username]
                 if datetime.now() < dt + timedelta(minutes=30):
@@ -77,7 +73,7 @@ class LoginHandler(BaseHandler):
             if ouser:
                 if self.checkPassword(utf8(password), utf8(ouser['encrypted_password'])):
 
-                    agree = yield self.Agreements.find_one({'user_iid': ouser['iid']})
+                    agree = await self.Agreements.find_one({'user_iid': ouser['iid']})
                     dp = datetime.now() - relativedelta(months=6)
                     # if agree:
                     # info('agree date: %s = %s days ago', agree['agree_date'], (datetime.now() - agree['agree_date']).days)
@@ -108,7 +104,7 @@ class LoginHandler(BaseHandler):
                         role = 'admin'
                     else:
                         role = 'user'
-                    org = yield Task(self.get_org_by_id, ouser['organization_iid'])
+                    org = await self.get_org_by_id(ouser['organization_iid'])
                     orgname = ''
                     if org:
                         orgname = org['name']
@@ -131,7 +127,7 @@ class LoginHandler(BaseHandler):
                         'current_sign_in_at': datetime.now(),
                         'current_sign_in_ip': remote_ip
                     }}
-                    upduser = yield self.Users.update({'iid': ouser['iid']}, datupd)
+                    upduser = await self.Users.update_one({'iid': ouser['iid']}, datupd)
                     authtoken = web.create_signed_value(
                         self.settings['cookie_secret'], 'authtoken', dumps(objuser))
                     if username in wlist.keys():
@@ -173,14 +169,12 @@ class LoginHandler(BaseHandler):
 class AgreementHandler(BaseHandler):
     SUPPORTED_METHODS = ('POST', 'DELETE')
 
-    @asynchronous
-    @coroutine
-    def post(self):
+    async def post(self):
         if 'agree_code' in self.input_data.keys():
             agree_code = self.input_data['agree_code']
             detoken = loads(token_decode(agree_code, self.settings['token_secret'][:10]))
 
-            ouser = yield Task(self.get_user_by_email, detoken['email'])
+            ouser = await self.get_user_by_email(detoken['email'])
             if ouser:
                 user_id = str(ouser['_id'])
                 obj = loads(self.cache.get('agreement:' + user_id))
@@ -189,7 +183,7 @@ class AgreementHandler(BaseHandler):
                     dtnow = datetime.now()
 
                     # Ok: token match
-                    agree = yield self.Agreements.find_one({'user_iid': ouser['iid']})
+                    agree = await self.Agreements.find_one({'user_iid': ouser['iid']})
                     if not agree:
                         info('not agree')
                         agree_data = {
@@ -202,7 +196,7 @@ class AgreementHandler(BaseHandler):
                         try:
                             newagree = Agreement(agree_data)
                             newagree.validate()
-                            yield self.Agreements.insert(newagree.to_native())
+                            await self.Agreements.insert_one(newagree.to_native())
                         except Exception as e:
                             # agree register exist - continue
                             info(e)
@@ -211,7 +205,7 @@ class AgreementHandler(BaseHandler):
                         try:
                             query = {'$set':{'agree_date': dtnow, 'updated_at': dtnow}}
                             info(query)
-                            yield self.Agreements.update({'_id': agree['_id']}, query)
+                            await self.Agreements.update_one({'_id': agree['_id']}, query)
                         except Exception as e:
                             info(e)
 
@@ -221,7 +215,7 @@ class AgreementHandler(BaseHandler):
                         role = 'admin'
                     else:
                         role = 'user'
-                    org = yield Task(self.get_org_by_id, ouser['organization_iid'])
+                    org = await self.get_org_by_id(ouser['organization_iid'])
                     orgname = ''
                     if org:
                         orgname = org['name']
@@ -244,7 +238,7 @@ class AgreementHandler(BaseHandler):
                         'current_sign_in_at': datetime.now(),
                         'current_sign_in_ip': remote_ip
                     }}
-                    upduser = yield self.Users.update({'iid': ouser['iid']}, datupd)
+                    upduser = await self.Users.update_one({'iid': ouser['iid']}, datupd)
                     # update({'iid': ouser['iid']}, datupd)
                     authtoken = web.create_signed_value(
                         self.settings['cookie_secret'], 'authtoken', dumps(objuser))
@@ -267,15 +261,14 @@ class AgreementHandler(BaseHandler):
         else:
             self.response(400, 'Authentication requires token')
 
-    @coroutine
     @api_authenticated
-    def delete(self, user_id=None):
+    async def delete(self, user_id=None):
         # delete a agree by id
         if user_id:
-            updobj = yield self.Agreements.find_one({'user_iid': int(user_id)})
+            updobj = await self.Agreements.find_one({'user_iid': int(user_id)})
             if updobj:
                 try:
-                    rmstatus = yield self.Agreements.remove({'_id': updobj['_id']})
+                    rmstatus = await self.Agreements.delete_one({'_id': updobj['_id']})
                     info('agree removed %s', rmstatus)
                     self.response(200, 'Agreement successfully removed.')
                 except Exception as e:
@@ -304,16 +297,14 @@ class LogoutHandler(BaseHandler):
 class ChangePasswordHandler(BaseHandler):
     SUPPORTED_METHODS = ('POST')
 
-    @asynchronous
-    @coroutine
     @api_authenticated
-    def post(self):
+    async def post(self):
         if 'new_password' in self.input_data.keys():
             if len(self.input_data['new_password']) >= 6:
                 resp = self.db
-                ouser = yield Task(self.get_user_by_email, self.current_user['username'])
+                ouser = await self.get_user_by_email(self.current_user['username'])
                 if ouser:
-                    resp = yield Task(self.changePassword, ouser, self.input_data['new_password'])
+                    resp = await self.changePassword(ouser, self.input_data['new_password'])
                     self.response(resp[0], resp[1])
                 else:
                     self.response(400, 'Invalid user requesting password change.')
@@ -374,9 +365,7 @@ class RecoveryPassword(BaseHandler):
     #     else:
     #         self.response(400, 'An code is required to use this resource.')
 
-    @asynchronous
-    @coroutine
-    def post(self, code=None):
+    async def post(self, code=None):
         if code:
             if 'password' in self.input_data.keys() and len(self.input_data['password']) >= 8:
                 response = {
@@ -397,11 +386,11 @@ class RecoveryPassword(BaseHandler):
                             obj = loads(self.settings['cache'].get(i))
                             if obj['email'] == detoken['email'] and\
                                     obj['token'] == detoken['token'] and obj['key'] == detoken['key']:
-                                ouser = yield self.Users.find_one({'email': detoken['email']})
+                                ouser = await self.Users.find_one({'email': detoken['email']})
                                 user_id = str(ouser['_id'])
                                 if ouser:
                                     try:
-                                        resp = yield Task(self.changePassword, ouser, self.input_data['password'])
+                                        resp = await self.changePassword(ouser, self.input_data['password'])
                                         if resp:
                                             self.settings['cache'].delete('update_password:' + user_id)
                                             response['title'] = 'Change Password!'
@@ -425,7 +414,7 @@ class RecoveryPassword(BaseHandler):
         elif 'email' in self.input_data.keys():
             email = self.input_data['email']
             # password = self.input_data['password']
-            ouser = yield self.Users.find_one({'email': email})
+            ouser = await self.Users.find_one({'email': email})
             if ouser:
                 try:
                     user_id = str(ouser['_id'])
@@ -464,7 +453,7 @@ class RecoveryPassword(BaseHandler):
                     message = message.encode('utf-8')
                     toaddrs = [toaddr]
 
-                    pemail = yield Task(self.sendEmail, toaddrs, message)
+                    pemail = await self.sendEmail(toaddrs, message)
 
                     if pemail:
                         self.response(200, 'A new password was sent to the user.')
@@ -483,9 +472,7 @@ class RecoveryPassword(BaseHandler):
 class RequestAccessHandler(BaseHandler):
     SUPPORTED_METHODS = ("POST")
 
-    @asynchronous
-    @coroutine
-    def post(self):
+    async def post(self):
         if 'email' in self.input_data.keys():
             msg = """From: %s\nTo: %s\nSubject: LINC Lion: Request New Access to Linc\n
 
@@ -499,7 +486,7 @@ A new user is requesting access to Linc.\nThe user data is:\nemail: %s\nFull Nam
                 self.input_data['fullname'],
                 self.input_data['organization'],
                 self.input_data['geographical'])
-            pemail = yield Task(self.sendEmail, self.settings['EMAIL_NEWUSER'], msg)
+            pemail = await self.sendEmail(self.settings['EMAIL_NEWUSER'], msg)
             if pemail:
                 self.response(200, 'A new access request email was sent to %s.' % (self.settings['EMAIL_NEWUSER']))
             else:

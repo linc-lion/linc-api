@@ -17,14 +17,12 @@
 #
 # For more information or to contact visit linclion.org or email tech@linclion.org
 
-from tornado import gen
 from logging import info
 import boto
 from boto.s3.connection import Bucket, Key, OrdinaryCallingFormat
 
 
-@gen.coroutine
-def checkS3(db, api):
+async def checkS3(db, api):
     # Get list for DELETE
     dellist = db.dellist.find()
     dellist = [x for x in dellist]
@@ -55,7 +53,7 @@ def checkS3(db, api):
                         if k.exists():
                             alldeleted = False
                     if alldeleted:
-                        res = db.dellist.remove({'_id': rmlist['_id']})
+                        res = db.dellist.delete_one({'_id': rmlist['_id']})
                         info(res)
                 except Exception as e:
                     info(e)

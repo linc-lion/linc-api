@@ -21,8 +21,6 @@
 # For more information or to contact visit linclion.org or email tech@linclion.org
 
 import os
-from tornado.web import asynchronous
-from tornado.gen import engine, coroutine, Task
 from handlers.base import BaseHandler
 from models.imageset import Image
 from bson import ObjectId as ObjId
@@ -83,14 +81,12 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                 return
         return query
 
-    @asynchronous
-    @coroutine
     @api_authenticated
-    def get(self, image_id=None):
+    async def get(self, image_id=None):
         download = self.get_argument('download', None)
         if download:
             dimg = [int(x) for x in download.split(',')]
-            limgs = yield self.Images.find({'iid': {'$in': dimg}}).to_list(None)
+            limgs = await self.Images.find({'iid': {'$in': dimg}}).to_list(None)
             if len(limgs) > 0:
                 urls = list()
                 for x in limgs:
@@ -109,13 +105,13 @@ class ImagesHandler(BaseHandler, ProcessMixin):
             info(image_id)
             if image_id:
                 if image_id == 'list':
-                    objs = yield self.Images.find().skip(self.skip).limit(self.limit).to_list(None)
+                    objs = await self.Images.find().skip(self.skip).limit(self.limit).to_list(None)
                     self.response(200, 'Images list.', self.list(objs))
                 else:
                     # return a specific image accepting as id the integer id, hash and name
                     query = self.query_id(image_id)
                     info(query)
-                    objs = yield self.Images.find_one(query)
+                    objs = await self.Images.find_one(query)
                     if objs:
                         objimage = objs
                         self.switch_iid(objimage)
@@ -132,7 +128,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                         self.finish(self.json_encode({'status': 'error', 'message': 'not found'}))
             else:
                 # return a list of images
-                objs = yield self.Images.find().skip(self.skip).limit(self.limit).to_list(None)
+                objs = await self.Images.find().skip(self.skip).limit(self.limit).to_list(None)
                 output = list()
                 for x in objs:
                     obj = dict(x)
@@ -146,14 +142,12 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                 self.set_status(200)
                 # self.finish(self.json_encode({'status': 'success', 'message': 'Images list.', 'data': output}))
                 # Pagination stats
-                n_images = yield self.Images.count()
+                n_images = await self.Images.count_documents({})
                 stats = {'number_of_images': n_images, 'skip': self.skip, 'limit': self.limit}
                 self.response(200, 'Images list.', output, stats=stats)
 
-    @asynchronous
-    @engine
     @api_authenticated
-    def post(self, updopt=None):
+    async def post(self, updopt=None):
         info(updopt)
         # if updopt == 'start':
         #     info('Success calling from itself.')
@@ -194,7 +188,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
         # Now, check if it already exists in the database
         image_file = open(imgname, 'rb').read()
         filehash = md5(image_file).hexdigest()
-        imgaexists = yield self.Images.find_one(
+        imgaexists = await self.Images.find_one(
             {'hashcheck': filehash})
         if imgaexists:
             self.remove_file(imgname)
@@ -207,7 +201,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
         # parse data recept by POST and get only fields of the object
         newobj = self.parseInput(Image)
         # getting new integer id
-        newobj['iid'] = yield Task(self.new_iid, Image.collection())
+        newobj['iid'] = await self.new_iid(Image.collection())
         # prepare new obj
         dt = datetime.now()
         newobj['created_at'] = dt
@@ -221,7 +215,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
             else:
                 newobj[field] = self.input_data[field]
         imgsetid = self.input_data['image_set_id']
-        isexists = yield self.ImageSets.find_one({'iid': imgsetid})
+        isexists = await self.ImageSets.find_one({'iid': imgsetid})
         if isexists:
             newobj['image_set_iid'] = imgsetid
             del newobj['image_set_id']
@@ -248,8 +242,8 @@ class ImagesHandler(BaseHandler, ProcessMixin):
             newimage.validate()
             # the new object is valid, so try to save
             try:
-                newsaved = yield self.Images.insert(newimage.to_native())
-                updurl = yield self.Images.update({'_id': newsaved}, {'$set': {'url': url + str(newsaved)}})
+                newsaved = await self.Images.insert_one(newimage.to_native())
+                updurl = await self.Images.update_one({'_id': newsaved}, {'$set': {'url': url + str(newsaved)}})
                 info(updurl)
                 output = newimage.to_native()
                 # File data saved, now start to
@@ -260,7 +254,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                 self.switch_iid(output)
                 # if is Cover
                 if self.input_data['iscover']:
-                    updiscover = self.ImageSets.update(
+                    updiscover = self.ImageSets.update_one(
                         {'iid': output['image_set_id']},
                         {'$set': {'updated_at': datetime.now(), 'main_image_iid': output['id']}})
                     info(updiscover)
@@ -272,7 +266,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                 self.imgobjid = output['obj_id']
                 self.folder_name = folder_name
                 # Remove Imageset Cache
-                rem = yield Task(self.cache_remove, output['image_set_id'], 'imgset')
+                rem = await self.cache_remove(output['image_set_id'], 'imgset')
                 # Returning success
                 self.response(201, 'New image saved. The image processing will start for this new image.', output)
             except ValidationError as e:
@@ -283,10 +277,8 @@ class ImagesHandler(BaseHandler, ProcessMixin):
             # received data is invalid in some way
             self.response(400, 'Invalid input data. Errors: ' + str(e) + '.')
 
-    @asynchronous
-    @coroutine
     @api_authenticated
-    def put(self, image_id=None):
+    async def put(self, image_id=None):
         # update an image
         # parse data recept by PUT and get only fields of the object
         update_data = self.parseInput(Image)
@@ -296,15 +288,15 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                 self.response(400, 'When the "joined" is submitted, no other key should be sent together.')
                 return
             else:
-                imgobj = yield self.Images.find_one(
+                imgobj = await self.Images.find_one(
                     {'iid': int(image_id)})
                 if imgobj:
-                    imgset = yield self.ImageSets.find_one(
+                    imgset = await self.ImageSets.find_one(
                         {'$and': [{'iid': int(imgobj['image_set_iid'])},
                                   {'animal_iid': {'$ne': None}}]})
                     # Check if is Primary and its associated
                     if imgset:
-                        imgprim = yield self.Animals.find({}, {'primary_image_set_iid': 1, 'iid': 1}).to_list(None)
+                        imgprim = await self.Animals.find({}, {'primary_image_set_iid': 1, 'iid': 1}).to_list(None)
                         if imgset['iid'] in [x['primary_image_set_iid'] for x in imgprim]:
                             self.response(400, 'The image is already from a primary image set.')
                             return
@@ -322,10 +314,10 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                         except Exception as e:
                             vjoined = 0
                         try:
-                            jimgset = yield self.ImageSets.find_one(
+                            jimgset = await self.ImageSets.find_one(
                                 {'iid': int(id_imgset)})
                             if jimgset:
-                                resp = yield self.Images.update(
+                                resp = await self.Images.update_one(
                                     {'iid': int(imgobj['iid'])},
                                     {'$set': {'joined': vjoined}})
                                 info(resp)
@@ -343,7 +335,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                     return
         if 'image_set_id' in self.input_data.keys():
             imgiid = self.input_data['image_set_id']
-            imgset = yield self.ImageSets.find_one({'iid': imgiid})
+            imgset = await self.ImageSets.find_one({'iid': imgiid})
             if imgset:
                 update_data['image_set_id'] = imgiid
             else:
@@ -357,7 +349,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                 break
         if image_id and update_ok:
             query = self.query_id(image_id)
-            updobj = yield self.Images.find_one(query)
+            updobj = await self.Images.find_one(query)
             updurl = False
             if updobj:
                 for field in fields_allowed_to_be_update:
@@ -376,7 +368,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                         url = folder_name + '/' + updobj['created_at'].date().isoformat() + '_image_' + str(updobj['iid']) + '_' + str(updobj['_id'])
                         # copy image
                         # No need to specify the target bucket if we're copying inside the same bucket
-                        oldimgset = yield self.ImageSets.find_one({'iid': orig_imgset_id})
+                        oldimgset = await self.ImageSets.find_one({'iid': orig_imgset_id})
                         srcurl = self.settings['S3_FOLDER'] + '/imageset_' + str(oldimgset['iid']) + '_' + str(oldimgset['_id']) + '/'
                         srcurl = srcurl + updobj['created_at'].date().isoformat() + '_image_' + str(updobj['iid']) + '_' + str(updobj['_id'])
                         desurl = self.settings['S3_FOLDER'] + '/' + url
@@ -388,7 +380,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                     # the object is valid, so try to save
                     try:
                         updobj['_id'] = objupdid
-                        saved = yield self.Images.update(query, updobj)
+                        saved = await self.Images.update_one(query, updobj)
                         info(saved)
                         # Ok, data saved so operate s3
                         # Copy the image to the new imageset
@@ -433,24 +425,22 @@ class ImagesHandler(BaseHandler, ProcessMixin):
         else:
             self.response(400, 'Update requests (PUT) must have a resource ID and update pairs for key and value.')
 
-    @asynchronous
-    @coroutine
     @api_authenticated
-    def delete(self, image_id=None):
+    async def delete(self, image_id=None):
         # delete an image
         if image_id:
             query = self.query_id(image_id)
-            updobj = yield self.Images.find_one(query)
+            updobj = await self.Images.find_one(query)
             if updobj:
                 # check for references
                 try:
                     # info(updobj)
-                    delobj = yield self.Images.remove(query)
+                    delobj = await self.Images.delete_one(query)
                     info(delobj)
                     # Delete the source file
                     bkpcopy = self.settings['S3_FOLDER'] + '/backup/' + updobj['created_at'].date().isoformat() + '_image_' + str(updobj['iid']) + '_' + str(updobj['_id']) + '_full.jpg'
                     info(bkpcopy)
-                    imgset = yield self.ImageSets.find_one({'iid': updobj['image_set_iid']})
+                    imgset = await self.ImageSets.find_one({'iid': updobj['image_set_iid']})
                     srcurl = self.settings['S3_FOLDER'] + '/imageset_' + str(imgset['iid']) + '_' + str(imgset['_id']) + '/'
                     srcurl = srcurl + updobj['created_at'].date().isoformat() + '_image_' + str(updobj['iid']) + '_' + str(updobj['_id'])
                     # try:
@@ -458,7 +448,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                     # except Exception as e:
                     #    pass
                     # Remove joined info from imagesets
-                    resp = yield self.ImageSets.update({'main_image_iid': updobj['iid']}, {'$set': {'main_image_iid': None}})
+                    resp = await self.ImageSets.update_one({'main_image_iid': updobj['iid']}, {'$set': {'main_image_iid': None}})
                     info(resp)
                     rmlist = list()
                     try:
@@ -469,7 +459,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                         self.response(200, 'Image successfully deleted but can\'t remove files from S3. Errors: %s.' % (str(e)))
                         return
                     if len(rmlist):
-                        rmladd = yield self.db.dellist.insert({'list': rmlist, 'ts': datetime.now()})
+                        rmladd = await self.db.dellist.insert_one({'list': rmlist, 'ts': datetime.now()})
                         info(rmladd)
                     self.response(200, 'Image successfully deleted.')
                 except Exception as e:
@@ -479,7 +469,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
         else:
             self.response(400, 'Remove requests (DELETE) must have a resource ID.')
 
-    def list(self, objs, callback=None):
+    def list(self, objs):
         """Implement the list output used for UI in the website."""
         output = list()
         for x in objs:
@@ -495,10 +485,8 @@ class ImagesVocHandler(BaseHandler, ProcessMixin):
     """A class that handles requests about VOC files."""
     SUPPORTED_METHODS = ('POST')
 
-    @asynchronous
-    @engine
     @api_authenticated
-    def post(self, process=False):
+    async def post(self, process=False):
         info(process)
         dirfs = dirname(realpath(__file__))
         # upload_folder = dirfs + '/upload_folder'

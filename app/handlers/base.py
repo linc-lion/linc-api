@@ -20,8 +20,7 @@
 #
 # For more information or to contact visit linclion.org or email tech@linclion.org
 
-from tornado.web import RequestHandler, asynchronous
-from tornado.gen import engine
+from tornado.web import RequestHandler
 from tornado import web
 import string
 import time
@@ -208,9 +207,7 @@ class BaseHandler(RequestHandler, DBMethods, HTTPMethods):
         txt = "%s%s" % (string.ascii_letters, string.digits)
         return ''.join(c for c in strs if c in txt)
 
-    @asynchronous
-    @engine
-    def sendEmail(self, toaddr, msg, callback):
+    async def sendEmail(self, toaddr, msg):
         resp = True
         try:
             fromaddr = self.settings['EMAIL_FROM']
@@ -230,10 +227,9 @@ class BaseHandler(RequestHandler, DBMethods, HTTPMethods):
         except Exception as e:
             info(e)
             resp = False
-        callback(resp)
+        return resp
 
-    @engine
-    def cache_read(self, key, prefix, callback=None):
+    async def cache_read(self, key, prefix):
         resp = None
         if key:
             val = self.cache.get(str(prefix) + '-' + str(key))
@@ -243,21 +239,19 @@ class BaseHandler(RequestHandler, DBMethods, HTTPMethods):
                 except Exception as e:
                     info(e)
                     raise HTTPError('Fail to deserialize data from cache.')
-        callback(resp)
+        return resp
 
-    @engine
-    def cache_set(self, key, prefix, data=None, ttl=432000, callback=None):
+    async def cache_set(self, key, prefix, data=None, ttl=432000):
         resp = None
         if key and prefix and data:
             resp = self.cache.set(str(prefix) + '-' + str(key), dumps(data), ttl)
-        callback(resp)
+        return resp
 
-    @engine
-    def cache_remove(self, key, prefix, callback=None):
+    async def cache_remove(self, key, prefix):
         resp = None
         if key and prefix:
             resp = self.cache.delete(str(prefix) + '-' + str(key))
-        callback(resp)
+        return resp
 
     def write_error(self, status_code=404, **kwargs):
         if status_code == 404:
@@ -279,8 +273,7 @@ class BaseHandler(RequestHandler, DBMethods, HTTPMethods):
             info(kwargs)
             self.response(status_code, 'Error: ' + str(kwargs))
 
-    @engine
-    def read_token(self, key, callback=None):
+    async def read_token(self, key):
         email = self.current_user['username']
         prefix = 'polling:'+ email + ':'
         name = prefix + str(key)
@@ -288,19 +281,17 @@ class BaseHandler(RequestHandler, DBMethods, HTTPMethods):
         cache = self.cache.get(name)
         if cache:
             cache = loads(cache)
-        callback(cache)
+        return cache
 
-    @engine
-    def write_token(self, key='', data='', expiration_s=60, callback=None):
+    async def write_token(self, key='', data='', expiration_s=60):
         email = self.current_user['username']
         name = 'polling:'+ email + ':' + str(key)
         info(name)
         rresult = self.cache.set(
             name=name, value=dumps(data, default=str), ex=expiration_s)
-        callback(rresult)
+        return rresult
 
-    @engine
-    def check_token(self, key='', callback=None):
+    async def check_token(self, key=''):
         email = self.current_user['username']
         prefix = 'polling:'+ email + ':'
         size = len(prefix)
@@ -317,10 +308,9 @@ class BaseHandler(RequestHandler, DBMethods, HTTPMethods):
                         'token': {'id': sid[size:], 'expires': data['expires']}}
             except Exception as e:
                 info(e)
-        callback(cache)
+        return cache
 
-    @engine
-    def clear_token(self, token=None, callback=None):
+    async def clear_token(self, token=None):
         email = self.current_user['username']
         prefix = 'polling:'+ email + ':'
         size = len(prefix)
@@ -335,7 +325,7 @@ class BaseHandler(RequestHandler, DBMethods, HTTPMethods):
                         self.cache.delete(k)
                 except Exception as e:
                     info(e)
-        callback(True)
+        return True
 
 
 class VersionHandler(BaseHandler):
