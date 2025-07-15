@@ -39,6 +39,40 @@ from logging import info
 class AnimalsListHandler(BaseHandler):
     SUPPORTED_METHODS = ('GET', 'POST')
 
+    async def process_list(self, token, objs, orgnames):
+        try:
+            info('===========================================================')
+            info('initiating trello data processing: %s'
+                 % datetime.now(self.utc).time())
+            info('===========================================================')
+            outputs = await self.list(objs, orgnames)
+            # Saving New Trello data on Redis Cache
+            expiresat = (
+                datetime.now(self.utc) +
+                timedelta(seconds=60)).strftime("%Y/%m/%d/ %H:%M:%S")
+            data = {'status_code': 200,
+                    'message': 'Os dados foram processados.',
+                    'data': outputs,
+                    'expires': expiresat}
+
+            await self.write_token(token, data, 60)
+            info('<><><><><><><><><><><><><><><><><><><><><><><><><><><>')
+            info('processing ended: %s' % datetime.now(self.utc).time())
+            info('<><><><><><><><><><><><><><><><><><><><><><><><><><><>')
+
+        except Exception as e:
+            expiresat = (
+                datetime.now(self.utc) +
+                timedelta(seconds=60)).strftime("%Y/%m/%d/ %H:%M:%S")
+            data = {'status_code': 400,
+                    'message': 'Falha no processamento dos dados.',
+                    'data': {},
+                    'expires': expiresat}
+            await self.write_token(token, data, 60)
+            info('<><><><><><><><><><><><><><><><><><><><><><><><><><><>')
+            info('Processing error... %s', str(e))
+            info('<><><><><><><><><><><><><><><><><><><><><><><><><><><>')
+
     @api_authenticated
     async def get(self):
         # Token authentication
@@ -122,40 +156,6 @@ class AnimalsListHandler(BaseHandler):
         #     if token:
         #         yield Task(self.clear_token, token)
         #     self.response(400, "Falha no Processamento dos dados.")
-
-    async def process_list(self, token, objs, orgnames):
-        try:
-            info('===========================================================')
-            info('initiating trello data processing: %s'
-                 % datetime.now(self.utc).time())
-            info('===========================================================')
-            outputs = await self.list(objs, orgnames)
-            # Saving New Trello data on Redis Cache
-            expiresat = (
-                datetime.now(self.utc) +
-                timedelta(seconds=60)).strftime("%Y/%m/%d/ %H:%M:%S")
-            data = {'status_code': 200,
-                    'message': 'Os dados foram processados.',
-                    'data': outputs,
-                    'expires': expiresat}
-
-            await self.write_token(token, data, 60)
-            info('<><><><><><><><><><><><><><><><><><><><><><><><><><><>')
-            info('processing ended: %s' % datetime.now(self.utc).time())
-            info('<><><><><><><><><><><><><><><><><><><><><><><><><><><>')
-
-        except Exception as e:
-            expiresat = (
-                datetime.now(self.utc) +
-                timedelta(seconds=60)).strftime("%Y/%m/%d/ %H:%M:%S")
-            data = {'status_code': 400,
-                    'message': 'Falha no processamento dos dados.',
-                    'data': {},
-                    'expires': expiresat}
-            await self.write_token(token, data, 60)
-            info('<><><><><><><><><><><><><><><><><><><><><><><><><><><>')
-            info('Processing error... %s', str(e))
-            info('<><><><><><><><><><><><><><><><><><><><><><><><><><><>')
 
     async def list(self, objs, orgnames):
         """Implement the list output used for UI in the website."""
