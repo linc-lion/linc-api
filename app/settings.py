@@ -80,7 +80,7 @@ api['animals'] = 'lions'
 # MongoDB Connection
 URI = os.environ.get("MONGOLAB_URI", "local")
 if URI == "local":
-    dbname = 'linc-dev'
+    dbname = 'heroku_twzd61j5'
     conn = connect("mongodb://localhost:27017")
     pm = MongoClient("mongodb://localhost:27017")
     db = conn[dbname]

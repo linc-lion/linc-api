@@ -592,7 +592,7 @@ class ImageSetsHandler(BaseHandler):
                     objimgset = objimgset.to_native()
                     # objimgset['_id'] = imgid
                     updnobj = await \
-                        self.ImageSets.update(
+                        self.ImageSets.update_one(
                             {'_id': imgid}, {'$set': objimgset}, upsert=True)
                     info(updnobj)
                     output = objimgset
