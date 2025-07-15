@@ -20,6 +20,7 @@
 #
 # For more information or to contact visit linclion.org or email tech@linclion.org
 
+import tornado.ioloop
 from handlers.base import BaseHandler
 # from models.animal import Animal
 # from models.imageset import ImageSet
@@ -109,7 +110,27 @@ class AnimalsListHandler(BaseHandler):
                 self.response(404, 'Not found.')
                 return
             await self.write_token(key=token, data=data, expiration_s=expiration_ex)
+            # Schedule background processing using Tornado IOLoop
+            ioloop = tornado.ioloop.IOLoop.current()
+            ioloop.call_later(0, self.process_list, token, objs, orgnames)
+            self.response(
+                200,
+                'Processamento Agendado. Token para obter os dados: '
+                '?token=<id>.', {'token': {'id': token, 'expires': expiresat}})
+        # except Exception as e:
+        #     info(str(e))
+        #     if token:
+        #         yield Task(self.clear_token, token)
+        #     self.response(400, "Falha no Processamento dos dados.")
+
+    async def process_list(self, token, objs, orgnames):
+        try:
+            info('===========================================================')
+            info('initiating trello data processing: %s'
+                 % datetime.now(self.utc).time())
+            info('===========================================================')
             outputs = await self.list(objs, orgnames)
+            # Saving New Trello data on Redis Cache
             expiresat = (
                 datetime.now(self.utc) +
                 timedelta(seconds=60)).strftime("%Y/%m/%d/ %H:%M:%S")
@@ -117,16 +138,24 @@ class AnimalsListHandler(BaseHandler):
                     'message': 'Os dados foram processados.',
                     'data': outputs,
                     'expires': expiresat}
+
             await self.write_token(token, data, 60)
-            self.response(
-                200,
-                'Dados processados com sucesso.',
-                {'token': {'id': token, 'expires': expiresat}})
-        # except Exception as e:
-        #     info(str(e))
-        #     if token:
-        #         yield Task(self.clear_token, token)
-        #     self.response(400, "Falha no Processamento dos dados.")
+            info('<><><><><><><><><><><><><><><><><><><><><><><><><><><>')
+            info('processing ended: %s' % datetime.now(self.utc).time())
+            info('<><><><><><><><><><><><><><><><><><><><><><><><><><><>')
+
+        except Exception as e:
+            expiresat = (
+                datetime.now(self.utc) +
+                timedelta(seconds=60)).strftime("%Y/%m/%d/ %H:%M:%S")
+            data = {'status_code': 400,
+                    'message': 'Falha no processamento dos dados.',
+                    'data': {},
+                    'expires': expiresat}
+            await self.write_token(token, data, 60)
+            info('<><><><><><><><><><><><><><><><><><><><><><><><><><><>')
+            info('Processing error... %s', str(e))
+            info('<><><><><><><><><><><><><><><><><><><><><><><><><><><>')
 
     async def list(self, objs, orgnames):
         """Implement the list output used for UI in the website."""
