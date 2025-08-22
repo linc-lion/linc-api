@@ -153,7 +153,7 @@ class UsersHandler(BaseHandler):
             try:
                 newsaved = await self.Users.insert_one(newuser.to_native())
                 output = newuser.to_native()
-                output['obj_id'] = str(newsaved)
+                output['obj_id'] = str(newsaved.inserted_id)
                 output['organization_id'] = output['organization_iid']
                 del output['organization_iid']
                 self.switch_iid(output)

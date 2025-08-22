@@ -233,7 +233,7 @@ class CVResultsHandler(BaseHandler):
                     idcvres = ObjId(updobj['_id'])
                     del updobj['_id']
                     newhres = await self.db.cvresults_history.insert_one(updobj)
-                    info(newhres)
+                    info(newhres.inserted_id)
                     cvres = await self.CVResults.delete_one({'_id': idcvres})
                     info(cvres)
                     self.response(200, 'CVresult successfully deleted.')

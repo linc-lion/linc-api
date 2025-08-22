@@ -243,12 +243,12 @@ class ImagesHandler(BaseHandler, ProcessMixin):
             # the new object is valid, so try to save
             try:
                 newsaved = await self.Images.insert_one(newimage.to_native())
-                updurl = await self.Images.update_one({'_id': newsaved}, {'$set': {'url': url + str(newsaved)}})
+                updurl = await self.Images.update_one({'_id': newsaved.inserted_id}, {'$set': {'url': url + str(newsaved.inserted_id)}})
                 info(updurl)
                 output = newimage.to_native()
                 # File data saved, now start to
-                output['obj_id'] = str(newsaved)
-                output['url'] = url + str(newsaved)
+                output['obj_id'] = str(newsaved.inserted_id)
+                output['url'] = url + str(newsaved.inserted_id)
                 output['image_set_id'] = output['image_set_iid']
                 del output['image_set_iid']
                 self.switch_iid(output)
@@ -460,7 +460,7 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                         return
                     if len(rmlist):
                         rmladd = await self.db.dellist.insert_one({'list': rmlist, 'ts': datetime.now()})
-                        info(rmladd)
+                        info(rmladd.inserted_id)
                     self.response(200, 'Image successfully deleted.')
                 except Exception as e:
                     self.response(500, 'Fail to delete image. Errors: %s.' % (str(e)))

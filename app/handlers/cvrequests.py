@@ -94,11 +94,11 @@ class CVRequestsHandler(BaseHandler):
                         del cvres['_id']
                         info(cvres)
                         newhres = await self.db.cvresults_history.insert_one(cvres)
-                        info(newhres)
+                        info(newhres.inserted_id)
                         cvres = await self.CVResults.delete_one({'_id': idcvres})
                     del updobj['_id']
                     newhreq = await self.db.cvrequests_history.insert_one(updobj)
-                    info(newhreq)
+                    info(newhreq.inserted_id)
                     cvreq = await self.CVRequests.delete_one(query)
                     info(cvreq)
                     self.response(200, 'CV Request successfully deleted.')

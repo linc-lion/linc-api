@@ -160,7 +160,7 @@ class DBMethods:
             newobj = await self.db.imagesets.insert_one(newimgset.to_native())
             output = newimgset.to_native()
             self.switch_iid(output)
-            output['obj_id'] = str(newobj)
+            output['obj_id'] = str(newobj.inserted_id)
             output['owner_organization_id'] = output['owner_organization_iid']
             del output['owner_organization_iid']
             output['uploading_organization_id'] = output['uploading_organization_iid']

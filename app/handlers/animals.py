@@ -350,7 +350,7 @@ class AnimalsHandler(BaseHandler):
             try:
                 newsaved = await self.Animals.insert_one(newanimal.to_primitive())
                 output = newanimal.to_primitive()
-                output['obj_id'] = str(newsaved)
+                output['obj_id'] = str(newsaved.inserted_id)
                 self.switch_iid(output)
 
                 output['organization_id'] = output['organization_iid']
@@ -514,7 +514,7 @@ class AnimalsHandler(BaseHandler):
                 if len(rmlist) > 0:
                     rmladd = await self.db.dellist.insert_one(
                         {'list': rmlist, 'ts': datetime.now()})
-                    info(rmladd)
+                    info(rmladd.inserted_id)
                 rmved = await self.Images.delete_many({'image_set_iid': rem_pis})
                 info(str(rmved))
                 # 4 - Removing association

@@ -388,7 +388,7 @@ class ImageSetsHandler(BaseHandler):
                         rem = await self.cache_remove(str(imageset_id), 'imgset')
                         info(rem)
                         output = newsaved.to_native()
-                        output['obj_id'] = str(newreqadd)
+                        output['obj_id'] = str(newreqadd.inserted_id)
                         self.switch_iid(output)
                         del output['request_body']
                         output['requesting_organization_id'] = output['requesting_organization_iid']
@@ -659,7 +659,7 @@ class ImageSetsHandler(BaseHandler):
                         return
                 if len(rmlist) > 0:
                     rmladd = await self.db.dellist.insert_one({'list': rmlist, 'ts': datetime.now()})
-                    info(rmladd)
+                    info(rmladd.inserted_id)
                 rmved = await self.Images.delete_many({'image_set_iid': imgobj['iid']})
                 info(str(rmved))
                 # 3 - Removing cvrequests and cvresults

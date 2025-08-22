@@ -97,7 +97,7 @@ class OrganizationsHandler(BaseHandler):
                 newsaved = await self.db.organizations.insert_one(neworg.to_native())
                 output = neworg.to_native()
                 info(output)
-                output['obj_id'] = str(newsaved)
+                output['obj_id'] = str(newsaved.inserted_id)
                 # Change iid to id in the output
                 self.switch_iid(output)
                 self.finish(self.json_encode({'status': 'success', 'message': 'new organization saved', 'data': output}))
