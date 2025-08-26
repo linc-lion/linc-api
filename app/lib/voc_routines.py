@@ -41,7 +41,7 @@ from logging.handlers import WatchedFileHandler
 from os.path import dirname, basename, splitext, abspath, isfile, exists, join, isdir, realpath
 from base64 import b64encode
 from lib.tags_map import classes, tag_key
-from tornado.gen import coroutine, Task
+
 from tornado.httputil import HTTPHeaders
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest, HTTPError
 from requests import Request, Session
@@ -218,8 +218,7 @@ class AnnotatedImage:
         return
 
 
-@coroutine
-def process_voc(inst, _dir=None, _API_URL=None, headers=None):
+async def process_voc(inst, _dir=None, _API_URL=None, headers=None):
 
     path = dirname(realpath(__file__)) + "/uploaded_files" if _dir == None else _dir
     if os.path.exists(path):
@@ -305,7 +304,7 @@ Log of voc upload operation:\n\n%s\nLinc Lion Team\n
                     str(inst.current_user['username']),
                     lines)
         info(msg)
-        resp = yield Task(inst.sendEmail, str(inst.current_user['username']), msg)
+        resp = await inst.sendEmail(str(inst.current_user['username']), msg)
     time.sleep(5)
     info("Removing log file.")
     os.remove(path_log)

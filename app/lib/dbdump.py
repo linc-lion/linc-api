@@ -20,7 +20,7 @@
 
 from logging import info
 from datetime import datetime
-from tornado.gen import coroutine
+
 from json import dumps
 from time import time
 import zipfile
@@ -52,8 +52,7 @@ class BaseDump:
         return url.decode('utf-8') if isinstance(url, bytes) else url
 
 
-@coroutine
-def dbdump(db, settings, file_path):
+async def dbdump(db, settings, file_path):
     ini = time()
     info('================================')
     info('== Starting DB Dump ==')

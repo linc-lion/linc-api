@@ -20,8 +20,7 @@
 #
 # For more information or to contact visit linclion.org or email tech@linclion.org
 
-from tornado.web import asynchronous
-from tornado.gen import coroutine, engine, Task
+import tornado.ioloop
 from handlers.base import BaseHandler
 # from models.animal import Animal
 # from models.imageset import ImageSet
@@ -40,15 +39,13 @@ from logging import info
 class AnimalsListHandler(BaseHandler):
     SUPPORTED_METHODS = ('GET', 'POST')
 
-    @coroutine
-    @api_authenticated
-    def process_list(self, token, objs, orgnames):
+    async def process_list(self, token, objs, orgnames):
         try:
             info('===========================================================')
             info('initiating trello data processing: %s'
                  % datetime.now(self.utc).time())
             info('===========================================================')
-            outputs = yield Task(self.list, objs, orgnames)
+            outputs = await self.list(objs, orgnames)
             # Saving New Trello data on Redis Cache
             expiresat = (
                 datetime.now(self.utc) +
@@ -58,7 +55,7 @@ class AnimalsListHandler(BaseHandler):
                     'data': outputs,
                     'expires': expiresat}
 
-            yield Task(self.write_token, token, data, 60)
+            await self.write_token(token, data, 60)
             info('<><><><><><><><><><><><><><><><><><><><><><><><><><><>')
             info('processing ended: %s' % datetime.now(self.utc).time())
             info('<><><><><><><><><><><><><><><><><><><><><><><><><><><>')
@@ -71,20 +68,16 @@ class AnimalsListHandler(BaseHandler):
                     'message': 'Falha no processamento dos dados.',
                     'data': {},
                     'expires': expiresat}
-            yield Task(self.write_token, token, data, 60)
+            await self.write_token(token, data, 60)
             info('<><><><><><><><><><><><><><><><><><><><><><><><><><><>')
             info('Processing error... %s', str(e))
             info('<><><><><><><><><><><><><><><><><><><><><><><><><><><>')
 
-
-    @asynchronous
-    @coroutine
     @api_authenticated
-    def get(self):
+    async def get(self):
         # Token authentication
         info(self.get_argument('token', None))
-        auth = yield Task(
-            self.read_token, self.get_argument('token', None))
+        auth = await self.read_token(self.get_argument('token', None))
         if not auth:
             self.response(403, 'O token informado não é válido.', {})
             return
@@ -102,11 +95,9 @@ class AnimalsListHandler(BaseHandler):
         #     self.response(400, 'Falha na execução desta operação.', {})
         #     return
 
-    @asynchronous
-    @engine
     @api_authenticated
-    def post(self):
-        token = yield Task(self.check_token)
+    async def post(self):
+        token = await self.check_token()
         if token and token['cache']:
             cache = token['cache']
             message = cache['message']
@@ -125,7 +116,7 @@ class AnimalsListHandler(BaseHandler):
             elif cache['status_code'] == 200:
                 info('clear token')
                 data = token['token']
-                yield Task(self.clear_token, data)
+                await self.clear_token(data)
         token = str(uuid4())
         expiration_ex = 600
         expiresat = (
@@ -144,18 +135,18 @@ class AnimalsListHandler(BaseHandler):
             if org_filter:
                 query_ani = {'organization_iid': int(org_filter)}
                 query_org = {'iid': int(org_filter)}
-            objs = yield self.Animals.find(query_ani).to_list(None)
-            orgs = yield self.db.organizations.find(query_org).to_list(None)
+            objs = await self.Animals.find(query_ani).to_list(None)
+            orgs = await self.db.organizations.find(query_org).to_list(None)
             orgnames = dict()
             for org in orgs:
                 orgnames[org['iid']] = org['name']
             if not len(objs):
                 self.response(404, 'Not found.')
                 return
-            yield Task(self.write_token, key=token, data=data, expiration_s=expiration_ex)
-            # Inserting task on APSchedule
-            self.scheduler.add_job(
-                AnimalsListHandler.process_list, args=(self, token, objs, orgnames), id='process_list')
+            await self.write_token(key=token, data=data, expiration_s=expiration_ex)
+            # Schedule background processing using Tornado IOLoop
+            ioloop = tornado.ioloop.IOLoop.current()
+            ioloop.call_later(0, self.process_list, token, objs, orgnames)
             self.response(
                 200,
                 'Processamento Agendado. Token para obter os dados: '
@@ -166,9 +157,7 @@ class AnimalsListHandler(BaseHandler):
         #         yield Task(self.clear_token, token)
         #     self.response(400, "Falha no Processamento dos dados.")
 
-    @asynchronous
-    @engine
-    def list(self, objs, orgnames, callback=None):
+    async def list(self, objs, orgnames):
         """Implement the list output used for UI in the website."""
         is_admin = (self.current_user['role'] == 'admin')
         org_iid = self.current_user['org_id']
@@ -193,7 +182,7 @@ class AnimalsListHandler(BaseHandler):
             obj['gender'] = None
             ivcquery = {'animal_iid': x['iid'], 'is_verified': False,
                         'iid': {"$ne": x['primary_image_set_iid']}}
-            ivc = yield self.ImageSets.find(ivcquery).count()
+            ivc = await self.ImageSets.count_documents(ivcquery)
             if ivc == 0:
                 obj['is_verified'] = True
             else:
@@ -201,7 +190,7 @@ class AnimalsListHandler(BaseHandler):
             obj['thumbnail'] = ''
             obj['image'] = ''
             if x['primary_image_set_iid'] > 0:
-                imgset = yield self.ImageSets.find_one(
+                imgset = await self.ImageSets.find_one(
                     {'iid': x['primary_image_set_iid']})
                 if imgset:
                     if imgset['date_of_birth']:
@@ -249,36 +238,34 @@ class AnimalsListHandler(BaseHandler):
 
                     obj['gender'] = imgset['gender']
                     # obj['is_verified'] = imgset['is_verified']
-                    img = yield self.Images.find_one(
+                    img = await self.Images.find_one(
                         {'iid': imgset['main_image_iid']})
                     if img:
                         obj['thumbnail'] = self.imgurl(img['url'], 'icon') # self.settings['S3_URL'] + img['url'] + '_icon.jpg'
                         obj['image'] = self.imgurl(img['url'], 'medium') # self.settings['S3_URL'] + img['url'] + '_medium.jpg'
             # Check algorithms
-            limagesets = yield self.ImageSets.find({'animal_iid': x['iid']}, {'iid': 1}).to_list(None)
+            limagesets = await self.ImageSets.find({'animal_iid': x['iid']}, {'iid': 1}).to_list(None)
             limagesets = [x['iid'] for x in limagesets]
             resp_cv = None
             resp_wh = None
             try:
-                resp_cv = yield self.Images.find(
+                resp_cv = await self.Images.count_documents(
                     {'image_tags': ['cv'],
-                        'image_set_iid': {'$in': limagesets}}).count()
-                resp_wh = yield self.Images.find(
+                        'image_set_iid': {'$in': limagesets}})
+                resp_wh = await self.Images.count_documents(
                     {'$or': [
                         # {'image_tags': ['whisker']},
                         {'image_tags': ['whisker-left']},
                         {'image_tags': ['whisker-right']}],
-                     'image_set_iid': {'$in': limagesets}}).count()
+                     'image_set_iid': {'$in': limagesets}})
             except Exception as e:
                 info(e)
             obj['cv'] = bool(resp_cv)
             obj['whisker'] = bool(resp_wh)
             output.append(obj)
-        callback(output)
+        return output
 
-    @asynchronous
-    @engine
-    def prepare_output(self, objs, noimages=False, callback=None):
+    async def prepare_output(self, objs, noimages=False):
         is_admin = (self.current_user['role'] == 'admin')
         org_iid = self.current_user['org_id']
 
@@ -292,7 +279,7 @@ class AnimalsListHandler(BaseHandler):
         else:
             objanimal['dead'] = False
         # Get imagesets for the animal
-        imgsets = yield self.ImageSets.find(
+        imgsets = await self.ImageSets.find(
             {'animal_iid': objanimal['id']}).to_list(None)
         imgsets_output = list()
         for oimgst in imgsets:
@@ -332,11 +319,11 @@ class AnimalsListHandler(BaseHandler):
             obj['notes'] = oimgst['notes']
             obj['owner_organization_id'] = oimgst['owner_organization_iid']
             obj['user_id'] = oimgst['uploading_user_iid']
-            cvreq = yield self.CVRequests.find_one(
+            cvreq = await self.CVRequests.find_one(
                 {'image_set_iid': oimgst['iid']})
             if cvreq:
                 obj['has_cv_request'] = True
-                cvres = yield self.CVResults.find_one(
+                cvres = await self.CVResults.find_one(
                     {'cvrequest_iid': cvreq['iid']})
                 if cvres:
                     obj['has_cv_result'] = True
@@ -346,7 +333,7 @@ class AnimalsListHandler(BaseHandler):
                 obj['has_cv_request'] = False
                 obj['has_cv_result'] = False
             if not noimages:
-                images = yield self.Images.find(
+                images = await self.Images.find(
                     {'image_set_iid': oimgst['iid']}).to_list(None)
                 outimages = list()
                 for image in images:
@@ -358,7 +345,7 @@ class AnimalsListHandler(BaseHandler):
                     obji['thumbnail_url'] = ''
                     obji['main_url'] = ''
                     obji['url'] = ''
-                    img = yield self.Images.find_one({'iid': image['iid']})
+                    img = await self.Images.find_one({'iid': image['iid']})
                     if img:
                         obji['thumbnail_url'] = self.imgurl(img['url'], 'thumbnail') # self.settings['S3_URL'] + img['url'] + '_thumbnail.jpg'
                         obji['main_url'] = self.imgurl(img['url'], 'full') # self.settings['S3_URL'] + img['url'] + '_full.jpg'
@@ -367,4 +354,4 @@ class AnimalsListHandler(BaseHandler):
                 obj['_embedded'] = {'images': outimages}
             imgsets_output.append(obj)
         objanimal['_embedded'] = {'image_sets': imgsets_output}
-        callback(objanimal)
+        return objanimal

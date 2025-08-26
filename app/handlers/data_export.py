@@ -2,9 +2,7 @@ from lib.rolecheck import api_authenticated
 from base import BaseHandler
 from collections import OrderedDict as odict
 from logging import info
-from tornado.gen import engine, Task, coroutine
 from pymongo import ASCENDING
-from tornado.web import asynchronous
 
 
 class DataExportHandler(BaseHandler):
@@ -39,8 +37,7 @@ class DataExportHandler(BaseHandler):
                     return True
         return False
 
-    @engine
-    def get_data(self, idslist=None, animals=False, callback=None):
+    async def get_data(self, idslist=None, animals=False):
         keys = self.standard_keys(animals)
         fieldnames = list(keys.values())
         lines = list()
@@ -51,18 +48,18 @@ class DataExportHandler(BaseHandler):
         else:
             cursor = self.ImageSets.find(query)
         cursor.sort([('iid', ASCENDING)])
-        while (yield cursor.fetch_next):
+        while (await cursor.fetch_next):
                 obj = cursor.next_object()
                 if not animals:
                     imgset = obj
                     animal = None
                     if imgset['animal_iid']:
-                        animal = yield self.Animals.find_one({ "iid": imgset['animal_iid']  })
+                        animal = await self.Animals.find_one({ "iid": imgset['animal_iid']  })
                 else:
                     animal = obj
                     imgset = None
                     if animal['primary_image_set_iid']:
-                        imgset = yield self.ImageSets.find_one({ "iid": animal['primary_image_set_iid']  })
+                        imgset = await self.ImageSets.find_one({ "iid": animal['primary_image_set_iid']  })
                     
                 rowdata = list()
                 for k, v in keys.items():
@@ -81,13 +78,13 @@ class DataExportHandler(BaseHandler):
                         elif k == 'organization':
                             organization = None
                             if animal and 'organization_iid' in animal and animal['organization_iid']:
-                                organization = yield self.Orgs.find_one({ "iid": animal['organization_iid'] })
+                                organization = await self.Orgs.find_one({ "iid": animal['organization_iid'] })
                                 
                             elif imgset:
                                 if 'owner_organization_iid' in imgset and imgset['owner_organization_iid']:
-                                    organization = yield self.Orgs.find_one({ "iid": imgset['owner_organization_iid'] })
+                                    organization = await self.Orgs.find_one({ "iid": imgset['owner_organization_iid'] })
                                 elif 'uploading_organization_iid' in imgset and imgset['uploading_organization_iid']:
-                                    organization = yield self.Orgs.find_one({ "iid": imgset['uploading_organization_iid'] })
+                                    organization = await self.Orgs.find_one({ "iid": imgset['uploading_organization_iid'] })
                             rowdata.append(organization['name'] if organization and 'name' in organization and organization['name'] else ' ')
                         elif k == 'latitude':
                             rowdata.append(imgset['location'][0][0] if imgset and 'location' in imgset else ' ')
@@ -114,12 +111,10 @@ class DataExportHandler(BaseHandler):
                 lines.append(rowdata)
         
         resp = {'fnames': fieldnames.copy(), 'lines': lines.copy()}
-        callback(resp)
+        return resp
 
-    @asynchronous
-    @coroutine
     @api_authenticated
-    def post(self):
+    async def post(self):
         animals = None
         if self.check_structure('lions', self.input_data):
             animals = True
@@ -132,5 +127,5 @@ class DataExportHandler(BaseHandler):
             idslist = self.input_data['lions']
         else:
             idslist = self.input_data['imagesets']
-        resp = yield Task(self.get_data, idslist=idslist, animals=animals)
+        resp = await self.get_data(idslist=idslist, animals=animals)
         self.response(200, 'Data selected.', resp)

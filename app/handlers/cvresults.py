@@ -20,8 +20,6 @@
 #
 # For more information or to contact visit linclion.org or email tech@linclion.org
 
-from tornado.web import asynchronous
-from tornado.gen import engine, coroutine
 from handlers.base import BaseHandler
 from bson import ObjectId as ObjId
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest
@@ -48,17 +46,15 @@ class CVResultsHandler(BaseHandler):
                 return
         return query
 
-    @asynchronous
-    @coroutine
     @api_authenticated
-    def get(self, res_id=None, xlist=None):
+    async def get(self, res_id=None, xlist=None):
         if res_id:
             if res_id == 'list':
-                objs = yield self.CVResults.find().skip(self.skip).limit(self.limit).to_list(None)
+                objs = await self.CVResults.find().skip(self.skip).limit(self.limit).to_list(None)
                 self.response(200, 'CV Results list.', self.list(objs))
             else:
                 query = self.query_id(res_id)
-                obj_cvr = yield self.CVResults.find_one(query)
+                obj_cvr = await self.CVResults.find_one(query)
                 if obj_cvr:
                     if not xlist:
                         objres = dict(obj_cvr)
@@ -70,7 +66,7 @@ class CVResultsHandler(BaseHandler):
                         output = objres
                     else:
                         # List data following the website form
-                        obj_cvq = yield self.CVRequests.find_one({'iid': obj_cvr['cvrequest_iid']})
+                        obj_cvq = await self.CVRequests.find_one({'iid': obj_cvr['cvrequest_iid']})
                         if obj_cvq['status'] not in ['finished', 'error']:
                             self.response(400, 'CV Request still processing...')
                             return
@@ -128,18 +124,18 @@ class CVResultsHandler(BaseHandler):
                             objres['organization'] = ''
                             objres['organization_id'] = ''
                             # get the animal
-                            aobj = yield self.Animals.find_one({'iid': objres['id']})
+                            aobj = await self.Animals.find_one({'iid': objres['id']})
                             if aobj:
                                 objres['name'] = aobj['name']
                                 objres['primary_image_set_id'] = aobj['primary_image_set_iid']
-                                img = yield self.Images.find_one(
+                                img = await self.Images.find_one(
                                     {'image_set_iid': aobj['primary_image_set_iid'],
                                      'image_tags': 'main-id'})
                                 if img:
                                     objres['thumbnail'] = self.imgurl(img['url'], 'icon')  # self.settings['S3_URL'] + img['url'] + '_icon.jpg'
                                     objres['image'] = self.imgurl(img['url'], 'medium')  # self.settings['S3_URL'] + img['url'] + '_medium.jpg'
                                 else:
-                                    img = yield self.Images.find(
+                                    img = await self.Images.find(
                                         {'image_set_iid': aobj['primary_image_set_iid']}).to_list(length=1)
                                     if len(img) > 0:
                                         objres['thumbnail'] = self.imgurl(img[0]['url'], 'thumbnail')  # self.settings['S3_URL'] + img[0]['url'] + '_icon.jpg'
@@ -147,7 +143,7 @@ class CVResultsHandler(BaseHandler):
                                     else:
                                         objres['thumbnail'] = ''
                                         objres['image'] = ''
-                                imgss = yield self.ImageSets.find_one({'iid': aobj['primary_image_set_iid']})
+                                imgss = await self.ImageSets.find_one({'iid': aobj['primary_image_set_iid']})
                                 if imgss:
                                     objres['age'] = self.age(imgss['date_of_birth'])
                                     objres['gender'] = imgss['gender']
@@ -155,7 +151,7 @@ class CVResultsHandler(BaseHandler):
                                     objres['is_verified'] = imgss['is_verified']
                                 if aobj:
                                     objres['organization_id'] = aobj['organization_iid']
-                                    org = yield self.db.organizations.find_one({'iid': aobj['organization_iid']})
+                                    org = await self.db.organizations.find_one({'iid': aobj['organization_iid']})
                                     if org:
                                         objres['organization'] = org['name']
                             objres['cv_confidence'] = None
@@ -184,11 +180,11 @@ class CVResultsHandler(BaseHandler):
                         if obj_cvq:
                             reqid = obj_cvq['iid']
                             reqstatus = obj_cvq['status']
-                            imgset = yield self.ImageSets.find_one({'iid': obj_cvq['image_set_iid']})
+                            imgset = await self.ImageSets.find_one({'iid': obj_cvq['image_set_iid']})
                             if imgset:
                                 assoc['id'] = imgset['animal_iid']
                                 if imgset['animal_iid']:
-                                    lname = yield self.Animals.find_one({'iid': imgset['animal_iid']})
+                                    lname = await self.Animals.find_one({'iid': imgset['animal_iid']})
                                     if lname:
                                         assoc['name'] = lname['name']
                         output = {
@@ -204,7 +200,7 @@ class CVResultsHandler(BaseHandler):
                 else:
                     self.response(404, 'CV results not found. Another user may have deleted the CV results.')
         else:
-            objs = yield self.CVResults.find().skip(self.skip).limit(self.limit).to_list(None)
+            objs = await self.CVResults.find().skip(self.skip).limit(self.limit).to_list(None)
             output = list()
             for x in objs:
                 obj = dict(x)
@@ -224,23 +220,21 @@ class CVResultsHandler(BaseHandler):
     def put(self, res_id=None):
         self.response(400, "CV Results objects are updated automatically, you can't PUT to update them.")
 
-    @asynchronous
-    @coroutine
     @api_authenticated
-    def delete(self, res_id=None):
+    async def delete(self, res_id=None):
         # delete an res
         if res_id:
             query = self.query_id(res_id)
-            updobj = yield self.CVResults.find_one(query)
+            updobj = await self.CVResults.find_one(query)
             if updobj:
                 # removing cvrequest and cvresult related and they will be added in
                 # a history collection
                 try:
                     idcvres = ObjId(updobj['_id'])
                     del updobj['_id']
-                    newhres = yield self.db.cvresults_history.insert(updobj)
-                    info(newhres)
-                    cvres = yield self.CVResults.remove({'_id': idcvres})
+                    newhres = await self.db.cvresults_history.insert_one(updobj)
+                    info(newhres.inserted_id)
+                    cvres = await self.CVResults.delete_one({'_id': idcvres})
                     info(cvres)
                     self.response(200, 'CVresult successfully deleted.')
                 except Exception as e:
@@ -264,9 +258,7 @@ class CVResultsHandler(BaseHandler):
             output.append(obj)
         return output
 
-    @asynchronous
-    @engine
-    def checkresult(self, jobid, callback=None):
+    async def checkresult(self, jobid):
         AsyncHTTPClient.configure("tornado.curl_httpclient.CurlAsyncHTTPClient")
         http_client = AsyncHTTPClient()
         url = self.settings['CVSERVER_URL_RESULTS']
@@ -278,10 +270,10 @@ class CVResultsHandler(BaseHandler):
             'request_timeout': 720
         })
         try:
-            response = yield http_client.fetch(request)
+            response = await http_client.fetch(request)
             rbody = json_decode(response.body)
             rbody['code'] = response.code
             rbody['reason'] = response.reason
         except Exception as e:
             rbody = {}
-        callback(rbody)
+        return rbody

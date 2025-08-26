@@ -20,7 +20,7 @@
 
 from tornado.httpclient import AsyncHTTPClient, HTTPRequest, HTTPError
 from tornado.httputil import HTTPHeaders
-from tornado import gen
+
 from logging import info
 from datetime import datetime
 from json import dumps, loads
@@ -28,8 +28,7 @@ from time import time
 from os import environ
 
 
-@gen.coroutine
-def checkresults(db, api):
+async def checkresults(db, api):
     ini = time()
     info('=========================================================================')
     info(' Starting CV Request processing - {}'.format(datetime.now().isoformat()))
@@ -45,7 +44,7 @@ def checkresults(db, api):
     cvreqs = db.cvrequests.find()
     # retrieve data from the cursor
     lcvreqids = [x['iid'] for x in cvreqs]
-    rmcv = db.cvresults.remove({'cvrequest_iid': {'$nin': lcvreqids}}, multi=True)
+    rmcv = db.cvresults.delete_many({'cvrequest_iid': {'$nin': lcvreqids}})
     info('    Clear cvresults without cvrequests: {}'.format(rmcv))
     # Get ids with status != finished or error
     cvreqs = db.cvrequests.find({'status': {'$nin': ['finished', 'error']}})
@@ -74,18 +73,17 @@ def checkresults(db, api):
                 #info("  !!! The recognition process took more than 10 minutes... restarting")
                 info("!!! The CV Request took more than 2 hours to finish")
                 info("!!! Marking it with error status")
-                db.cvrequests.update({'iid': cvreq['iid']}, {'$set': {'status': 'error', 'updated_at': datetime.now()}})
-                cvrem_restart = db.cvresults.remove({'cvrequest_iid': cvreq['iid']})
+                db.cvrequests.update_one({'iid': cvreq['iid']}, {'$set': {'status': 'error', 'updated_at': datetime.now()}})
+                cvrem_restart = db.cvresults.delete_one({'cvrequest_iid': cvreq['iid']})
                 cvres = None
                 info("========================================================================")
                 continue
         if not cvres:
             # Create the CVResults
-            iid = db.counters.find_and_modify(
-                query={'_id': 'cvresults'},
+            iid = db.counters.find_one_and_update(
+                filter={'_id': 'cvresults'},
                 update={'$inc': {'next': 1}},
-                new=True,
-                upsert=True)
+                return_document=True, upsert=True)
             newcvres = dict()
             newcvres['cvrequest_iid'] = cvreq['iid']
             newcvres['iid'] = iid['next']
@@ -93,7 +91,7 @@ def checkresults(db, api):
             dt = datetime.now()
             newcvres['created_at'] = dt
             newcvres['updated_at'] = dt
-            ncvresobjid = db.cvresults.insert(newcvres)
+            ncvresobjid = db.cvresults.insert_one(newcvres)
             info('CV results created id: ' + str(ncvresobjid))
             cvres = db.cvresults.find_one({'cvrequest_iid': cvreq['iid']})
         # Cvres exists, so try to get data
@@ -123,7 +121,7 @@ def checkresults(db, api):
                             dparams['body'] = dumps(clf_call)
                             request = HTTPRequest(**dparams)
                             try:
-                                response = yield http_client.fetch(request)
+                                response = await http_client.fetch(request)
                             except HTTPError as e:
                                 info(e)
                                 response = e.response
@@ -154,7 +152,7 @@ def checkresults(db, api):
                                 dparams['url'] = url
                                 request = HTTPRequest(**dparams)
                                 try:
-                                    response = yield http_client.fetch(request)
+                                    response = await http_client.fetch(request)
                                 except HTTPError as e:
                                     info(e)
                                     response = e.response
@@ -182,7 +180,7 @@ def checkresults(db, api):
                 dparams['url'] = api['CVSERVER_URL'] + '/linc/v1/capabilities'
                 request = HTTPRequest(**dparams)
                 try:
-                    response = yield http_client.fetch(request)
+                    response = await http_client.fetch(request)
                 except HTTPError as e:
                     info(e)
                     response = e.response
@@ -191,12 +189,12 @@ def checkresults(db, api):
                     response = None
                 if response.code in [200, 201]:
                     info(' ### CV Request finished ###')
-                    db.cvrequests.update({'iid': cvreq['iid']}, {'$set': {'status': 'finished', 'updated_at': dt}})
+                    db.cvrequests.update_one({'iid': cvreq['iid']}, {'$set': {'status': 'finished', 'updated_at': dt}})
                     resp_cvr['capabilities'] = loads(response.body.decode('utf-8'))
                     resp_cvr['execution'] = dt.timestamp() - cvres['created_at'].timestamp()
                 else:
                     info(' Fail to retrieve capabilities info...')
-            db.cvresults.update({'cvrequest_iid': cvreq['iid']}, {'$set': {'match_probability': dumps(resp_cvr), 'updated_at': dt}})
+            db.cvresults.update_one({'cvrequest_iid': cvreq['iid']}, {'$set': {'match_probability': dumps(resp_cvr), 'updated_at': dt}})
             api['cache'].delete('imgset-' + str(cvreq['image_set_iid']))
             info('   Cache delete for image set id: {}'.format(cvreq['image_set_iid']))
     info('=========================================================================')
