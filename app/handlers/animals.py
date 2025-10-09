@@ -453,7 +453,7 @@ class AnimalsHandler(BaseHandler):
                     # the object is valid, so try to save
                     try:
                         updated = await self.Animals.update_one(
-                            {'_id': updid}, animals.to_native())
+                            {'_id': updid}, {'$set': animals.to_native()})
                         info(updated)
                         output = updobj
                         output['obj_id'] = str(updid)
