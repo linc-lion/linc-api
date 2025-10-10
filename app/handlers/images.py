@@ -379,15 +379,13 @@ class ImagesHandler(BaseHandler, ProcessMixin):
                     updobj = updobj.to_native()
                     # the object is valid, so try to save
                     try:
-                        updobj['_id'] = objupdid
-                        saved = await self.Images.update_one(query, updobj)
+                        saved = await self.Images.update_one(query, {'$set': updobj})
                         info(saved)
                         # Ok, data saved so operate s3
                         # Copy the image to the new imageset
                         # Copy the full for backup
                         output = updobj
                         output['obj_id'] = str(objupdid)
-                        del output['_id']
                         # Change iid to id in the output
                         self.switch_iid(output)
 

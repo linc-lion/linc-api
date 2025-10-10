@@ -208,12 +208,10 @@ class UsersHandler(BaseHandler):
                     # the object is valid, so try to save
                     try:
                         updobj = updobj.to_native()
-                        updobj['_id'] = updid
-                        saved = await self.Users.update_one({'_id': updid}, updobj)
+                        saved = await self.Users.update_one({'_id': updid}, {'$set': updobj})
                         info(saved)
                         output = updobj
                         output['obj_id'] = str(updid)
-                        del output['_id']
                         # Change iid to id in the output
                         self.switch_iid(output)
                         del output['encrypted_password']
